@@ -5,6 +5,7 @@ mod placement;
 mod platform;
 mod player;
 mod render;
+mod wander;
 
 fn main() {
     let result = run();

@@ -6,6 +6,7 @@ use crate::{
     catalog::Catalog,
     player::Player,
     render::{self, Bounds, Frame},
+    wander::{DEFAULT_DISTANCE_BIAS, DEFAULT_WALK_CHANCE, Direction, Wander},
 };
 use serde::{Deserialize, Serialize};
 use std::{
@@ -14,13 +15,13 @@ use std::{
     ffi::c_void,
     mem::size_of,
     path::PathBuf,
-    time::{Duration, Instant},
+    time::{Duration, Instant, SystemTime, UNIX_EPOCH},
 };
 use windows::{
     Win32::{
         Foundation::*,
         Graphics::Gdi::*,
-        System::LibraryLoader::GetModuleHandleW,
+        System::{LibraryLoader::GetModuleHandleW, SystemServices::SS_RIGHT},
         UI::{Controls::*, HiDpi::*, Input::KeyboardAndMouse::*, WindowsAndMessaging::*},
     },
     core::{PCWSTR, w},
@@ -52,6 +53,18 @@ const BACKGROUND_LABEL: usize = 304;
 const LOOP_LABEL: usize = 305;
 const MENU_DEBUG: u32 = 400;
 const MENU_EXIT: u32 = 401;
+const MENU_SETTINGS: u32 = 402;
+const WALK_CHANCE: usize = 500;
+const WALK_LABEL: usize = 501;
+const WALK_VALUE: usize = 502;
+const WALK_OFF: usize = 503;
+const WALK_OFTEN: usize = 504;
+const SETTINGS_NOTE: usize = 505;
+const DISTANCE_BIAS: usize = 506;
+const DISTANCE_LABEL: usize = 507;
+const DISTANCE_VALUE: usize = 508;
+const DISTANCE_SHORT: usize = 509;
+const DISTANCE_LONG: usize = 510;
 const SHOW_DEBUG: u32 = WM_APP + 1;
 const RATES: [f64; 7] = [0.25, 0.5, 0.75, 1.0, 1.5, 2.0, 4.0];
 
@@ -84,6 +97,16 @@ struct Settings {
     anchor_x: i32,
     anchor_y: i32,
     scale: u32,
+    #[serde(default = "default_walk_chance")]
+    walk_probability: u8,
+    #[serde(default = "default_distance_bias")]
+    walk_distance_bias: u8,
+}
+fn default_walk_chance() -> u8 {
+    DEFAULT_WALK_CHANCE
+}
+fn default_distance_bias() -> u8 {
+    DEFAULT_DISTANCE_BIAS
 }
 fn settings_path() -> PathBuf {
     PathBuf::from(std::env::var_os("LOCALAPPDATA").unwrap_or_default())
@@ -153,12 +176,17 @@ struct App {
     player: Player,
     pet: HWND,
     debug: HWND,
+    settings: HWND,
     controls: HashMap<usize, HWND>,
     font: HFONT,
+    settings_font: HFONT,
     visible: Vec<usize>,
     categories: Vec<String>,
     bounds: Bounds,
     motion_bounds: Bounds,
+    wander_bounds: Bounds,
+    walk_clips: [usize; 4],
+    wander: Wander,
     scale: u32,
     effective_scale: u32,
     anchor: POINT,
@@ -167,6 +195,7 @@ struct App {
     last_clock: Instant,
     last_status: Instant,
     last_frame: Option<(usize, usize, bool, u32)>,
+    last_position: Option<(i32, i32)>,
     preview: Option<Frame>,
     preview_rect: RECT,
     preview_dirty: bool,
@@ -178,22 +207,46 @@ struct App {
 }
 
 impl App {
-    fn new(catalog: Catalog, pet: HWND, debug: HWND, smoke: bool) -> Self {
+    fn new(catalog: Catalog, pet: HWND, debug: HWND, settings: HWND, smoke: bool) -> Self {
         let idle = catalog.idle_index();
         let bounds = render::clip_bounds(&catalog, &catalog.clips[idle], false);
-        let motion_bounds = render::clip_bounds(&catalog, &catalog.clips[idle], true);
+        let walk_clips = Direction::ALL.map(|direction| {
+            catalog
+                .clips
+                .iter()
+                .position(|c| c.id == direction.clip_id())
+                .expect("Missing verified walk clip")
+        });
+        // All automatic poses share one allowed area. Changing from a narrow
+        // walk sprite to the wider idle must not push the pet sideways.
+        let mut wander_bounds = bounds;
+        for index in walk_clips {
+            let b = render::clip_bounds(&catalog, &catalog.clips[index], true);
+            wander_bounds.point(b.left, b.top);
+            wander_bounds.point(b.right, b.bottom);
+        }
+        let seed = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .unwrap_or_default()
+            .as_nanos() as u64
+            ^ std::process::id() as u64;
         let player = Player::new(idle, &catalog.clips[idle]);
         Self {
             catalog,
             player,
             pet,
             debug,
+            settings,
             controls: HashMap::new(),
             font: HFONT::default(),
+            settings_font: HFONT::default(),
             visible: vec![],
             categories: vec![],
             bounds,
-            motion_bounds,
+            motion_bounds: wander_bounds,
+            wander_bounds,
+            walk_clips,
+            wander: Wander::new(seed),
             scale: 4,
             effective_scale: 4,
             anchor: POINT { x: 0, y: 0 },
@@ -202,6 +255,7 @@ impl App {
             last_clock: Instant::now(),
             last_status: Instant::now(),
             last_frame: None,
+            last_position: None,
             preview: None,
             preview_rect: RECT::default(),
             preview_dirty: true,
@@ -391,11 +445,171 @@ impl App {
         self.sync_selection();
         self.layout();
         send(self.control(LIST), LB_SETTOPINDEX, 0, 0);
+        self.create_settings_controls()?;
         Ok(())
     }
+    unsafe fn create_settings_controls(&mut self) -> windows::core::Result<()> {
+        let module = GetModuleHandleW(None)?;
+        for (id, class, label, style) in [
+            (WALK_LABEL, w!("STATIC"), "随机走动概率", 0),
+            (WALK_VALUE, w!("STATIC"), "", SS_RIGHT.0),
+            (
+                WALK_CHANCE,
+                TRACKBAR_CLASSW,
+                "随机走动概率",
+                TBS_NOTICKS | WS_TABSTOP.0,
+            ),
+            (WALK_OFF, w!("STATIC"), "不走动", 0),
+            (WALK_OFTEN, w!("STATIC"), "经常走动", SS_RIGHT.0),
+            (DISTANCE_LABEL, w!("STATIC"), "走动距离倾向", 0),
+            (
+                DISTANCE_BIAS,
+                TRACKBAR_CLASSW,
+                "走动距离倾向",
+                TBS_NOTICKS | WS_TABSTOP.0,
+            ),
+            (DISTANCE_VALUE, w!("STATIC"), "", SS_RIGHT.0),
+            (DISTANCE_SHORT, w!("STATIC"), "更倾向短路线", 0),
+            (DISTANCE_LONG, w!("STATIC"), "更倾向长路线", SS_RIGHT.0),
+            (
+                SETTINGS_NOTE,
+                w!("STATIC"),
+                "每次距离仍随机，距离倾向从下次走动生效。\r\n设置自动保存，行走速度保持原速。\r\n停下时仍会左右摇晃。",
+                0,
+            ),
+        ] {
+            let label = wide(label);
+            let hwnd = CreateWindowExW(
+                WINDOW_EX_STYLE(0),
+                class,
+                PCWSTR(label.as_ptr()),
+                WS_CHILD | WS_VISIBLE | WINDOW_STYLE(style),
+                0,
+                0,
+                10,
+                10,
+                Some(self.settings),
+                Some(HMENU(id as *mut c_void)),
+                Some(module.into()),
+                None,
+            )?;
+            self.controls.insert(id, hwnd);
+        }
+        for id in [WALK_CHANCE, DISTANCE_BIAS] {
+            send(self.control(id), TBM_SETRANGEMIN, 0, 0);
+            send(self.control(id), TBM_SETRANGEMAX, 1, 100);
+            send(self.control(id), TBM_SETPAGESIZE, 0, 10);
+        }
+        self.sync_walk_chance();
+        self.sync_distance_bias();
+        self.update_settings_font();
+        self.layout_settings();
+        Ok(())
+    }
+    unsafe fn sync_walk_chance(&self) {
+        let probability = self.wander.probability();
+        send(
+            self.control(WALK_CHANCE),
+            TBM_SETPOS,
+            1,
+            probability as isize,
+        );
+        text(self.control(WALK_VALUE), &format!("{probability}%"));
+    }
+    unsafe fn sync_distance_bias(&self) {
+        let bias = self.wander.distance_bias();
+        send(self.control(DISTANCE_BIAS), TBM_SETPOS, 1, bias as isize);
+        self.update_distance_label();
+    }
+    unsafe fn update_distance_label(&self) {
+        let label = match self.wander.distance_bias() {
+            0..50 => "偏短",
+            50 => "长短均衡",
+            _ => "偏长",
+        };
+        text(self.control(DISTANCE_VALUE), label);
+    }
+    unsafe fn update_settings_font(&mut self) {
+        let font = Self::make_font(self.settings);
+        for (&id, &hwnd) in &self.controls {
+            if id >= WALK_CHANCE {
+                send(hwnd, WM_SETFONT, font.0 as usize, 1);
+            }
+        }
+        if !self.settings_font.is_invalid() {
+            let _ = DeleteObject(self.settings_font.into());
+        }
+        self.settings_font = font;
+    }
+    unsafe fn layout_settings(&self) {
+        if !self.controls.contains_key(&WALK_CHANCE) {
+            return;
+        }
+        let mut client = RECT::default();
+        let _ = GetClientRect(self.settings, &mut client);
+        let dpi = GetDpiForWindow(self.settings).max(96) as f64 / 96.0;
+        let width = client.right as f64 / dpi;
+        for (id, x, y, w, h) in [
+            (WALK_LABEL, 24.0, 24.0, width - 140.0, 26.0),
+            (WALK_VALUE, width - 104.0, 24.0, 80.0, 26.0),
+            (WALK_CHANCE, 20.0, 64.0, width - 40.0, 32.0),
+            (WALK_OFF, 24.0, 104.0, 100.0, 26.0),
+            (WALK_OFTEN, width - 124.0, 104.0, 100.0, 26.0),
+            (DISTANCE_LABEL, 24.0, 164.0, width - 160.0, 26.0),
+            (DISTANCE_VALUE, width - 124.0, 164.0, 100.0, 26.0),
+            (DISTANCE_BIAS, 20.0, 204.0, width - 40.0, 32.0),
+            (DISTANCE_SHORT, 24.0, 244.0, 150.0, 26.0),
+            (DISTANCE_LONG, width - 174.0, 244.0, 150.0, 26.0),
+            (SETTINGS_NOTE, 24.0, 294.0, width - 48.0, 72.0),
+        ] {
+            let _ = MoveWindow(
+                self.control(id),
+                (x * dpi) as i32,
+                (y * dpi) as i32,
+                (w * dpi) as i32,
+                (h * dpi) as i32,
+                true,
+            );
+        }
+    }
+    unsafe fn show_settings(&mut self) {
+        if !IsWindowVisible(self.settings).as_bool() {
+            let work = self.work_area();
+            let dpi = GetDpiForWindow(self.settings).max(96) as i32;
+            let width = 480 * dpi / 96;
+            let height = 420 * dpi / 96;
+            let _ = SetWindowPos(
+                self.settings,
+                None,
+                work.left + (work.right - work.left - width) / 2,
+                work.top + (work.bottom - work.top - height) / 2,
+                width,
+                height,
+                SWP_NOACTIVATE | SWP_NOZORDER,
+            );
+        }
+        self.sync_walk_chance();
+        self.sync_distance_bias();
+        self.layout_settings();
+        let _ = ShowWindow(self.settings, SW_RESTORE);
+        let _ = SetForegroundWindow(self.settings);
+        let _ = SetFocus(Some(self.control(WALK_CHANCE)));
+    }
     unsafe fn update_font(&mut self) {
-        let dpi = GetDpiForWindow(self.debug).max(96);
-        let font = CreateFontW(
+        let font = Self::make_font(self.debug);
+        for (&id, &hwnd) in &self.controls {
+            if id < WALK_CHANCE {
+                send(hwnd, WM_SETFONT, font.0 as usize, 1);
+            }
+        }
+        if !self.font.is_invalid() {
+            let _ = DeleteObject(self.font.into());
+        }
+        self.font = font;
+    }
+    unsafe fn make_font(window: HWND) -> HFONT {
+        let dpi = GetDpiForWindow(window).max(96);
+        CreateFontW(
             -(((16 * dpi) / 96) as i32),
             0,
             0,
@@ -410,14 +624,7 @@ impl App {
             CLEARTYPE_QUALITY,
             0,
             w!("Microsoft YaHei UI"),
-        );
-        for hwnd in self.controls.values() {
-            send(*hwnd, WM_SETFONT, font.0 as usize, 1);
-        }
-        if !self.font.is_invalid() {
-            let _ = DeleteObject(self.font.into());
-        }
-        self.font = font;
+        )
     }
     unsafe fn layout(&mut self) {
         let mut client = RECT::default();
@@ -556,18 +763,21 @@ impl App {
             }
         }
     }
-    unsafe fn fit(&mut self) {
+    unsafe fn work_bounds(&self) -> Bounds {
         let area = self.work_area();
+        Bounds {
+            left: area.left as f64,
+            top: area.top as f64,
+            right: area.right as f64,
+            bottom: area.bottom as f64,
+        }
+    }
+    unsafe fn fit(&mut self) {
         let ((x, y), scale) = crate::placement::fit(
             (self.anchor.x, self.anchor.y),
             self.scale,
             self.motion_bounds,
-            Bounds {
-                left: area.left as f64,
-                top: area.top as f64,
-                right: area.right as f64,
-                bottom: area.bottom as f64,
-            },
+            self.work_bounds(),
         );
         self.anchor = POINT { x, y };
         self.effective_scale = scale;
@@ -578,6 +788,8 @@ impl App {
             .and_then(|b| serde_json::from_slice::<Settings>(&b).ok());
         if let Some(s) = settings {
             self.scale = s.scale.clamp(1, 8);
+            self.wander.set_probability(s.walk_probability);
+            self.wander.set_distance_bias(s.walk_distance_bias);
             self.anchor = POINT {
                 x: s.anchor_x,
                 y: s.anchor_y,
@@ -600,6 +812,8 @@ impl App {
             anchor_x: self.anchor.x,
             anchor_y: self.anchor.y,
             scale: self.scale,
+            walk_probability: self.wander.probability(),
+            walk_distance_bias: self.wander.distance_bias(),
         };
         if let (Some(parent), Ok(bytes)) = (path.parent(), serde_json::to_vec_pretty(&data))
             && std::fs::create_dir_all(parent).is_ok()
@@ -658,15 +872,29 @@ impl App {
     unsafe fn select(&mut self, index: usize) {
         self.player.select(index, &self.catalog.clips[index]);
         self.bounds = render::clip_bounds(&self.catalog, &self.catalog.clips[index], false);
-        self.motion_bounds = render::clip_bounds(&self.catalog, &self.catalog.clips[index], true);
+        self.motion_bounds = if self.debug_open {
+            render::clip_bounds(&self.catalog, &self.catalog.clips[index], true)
+        } else {
+            self.wander_bounds
+        };
         self.last_frame = None;
         self.preview_dirty = true;
         self.fit();
-        self.sync_selection();
+        if self.debug_open {
+            self.sync_selection();
+        }
         self.last_clock = Instant::now();
     }
+    unsafe fn reset_wander(&mut self) {
+        self.wander.reset();
+        self.select(self.catalog.idle_index());
+    }
     unsafe fn show_debug(&mut self) {
+        let was_open = self.debug_open;
         self.debug_open = true;
+        if !was_open {
+            self.reset_wander();
+        }
         self.preview_dirty = true;
         let _ = ShowWindow(self.debug, SW_RESTORE);
         let _ = SetForegroundWindow(self.debug);
@@ -675,7 +903,7 @@ impl App {
     unsafe fn close_debug(&mut self) {
         self.debug_open = false;
         let _ = ShowWindow(self.debug, SW_HIDE);
-        self.select(self.catalog.idle_index());
+        self.reset_wander();
         self.save_settings();
     }
     unsafe fn exit(&mut self) {
@@ -686,13 +914,18 @@ impl App {
         self.save_settings();
         let _ = KillTimer(Some(self.pet), 1);
         let _ = DestroyWindow(self.debug);
+        let _ = DestroyWindow(self.settings);
         let _ = DestroyWindow(self.pet);
         PostQuitMessage(0);
     }
     unsafe fn menu(&mut self) {
+        if !self.debug_open {
+            self.reset_wander();
+        }
         let Ok(menu) = CreatePopupMenu() else {
             return;
         };
+        let _ = AppendMenuW(menu, MF_STRING, MENU_SETTINGS as usize, w!("设置"));
         let _ = AppendMenuW(menu, MF_STRING, MENU_DEBUG as usize, w!("Debug · 动作预览"));
         let _ = AppendMenuW(menu, MF_STRING, MENU_EXIT as usize, w!("关闭"));
         let mut point = POINT::default();
@@ -710,7 +943,9 @@ impl App {
         .0 as u32;
         let _ = DestroyMenu(menu);
         self.last_clock = Instant::now();
-        if command == MENU_DEBUG {
+        if command == MENU_SETTINGS {
+            self.show_settings();
+        } else if command == MENU_DEBUG {
             self.show_debug();
         } else if command == MENU_EXIT {
             self.exit();
@@ -777,11 +1012,42 @@ impl App {
         let now = Instant::now();
         let dt = now.duration_since(self.last_clock).as_secs_f64();
         self.last_clock = now;
-        let clip = &self.catalog.clips[self.player.selected];
         // Resuming from sleep or a suspended process should not jump across an entire scene.
         if dt < 2.0 {
-            self.player.advance(dt, self.catalog.game_fps, clip);
+            if !self.debug_open && self.drag.is_none() {
+                let limits = crate::placement::anchor_limits(
+                    self.effective_scale,
+                    self.wander_bounds,
+                    self.work_bounds(),
+                );
+                let (x, y) = self.wander.advance(
+                    dt,
+                    self.catalog.game_fps,
+                    self.effective_scale,
+                    (self.anchor.x, self.anchor.y),
+                    limits,
+                );
+                self.anchor = POINT { x, y };
+                let selected = self
+                    .wander
+                    .direction()
+                    .map(|d| self.walk_clips[d as usize])
+                    .unwrap_or_else(|| self.catalog.idle_index());
+                if self.player.selected != selected {
+                    self.select(selected);
+                    // select() resets the preview clock; automatic walking must
+                    // still account for all time between timer callbacks.
+                    self.last_clock = now;
+                }
+                let clip = &self.catalog.clips[selected];
+                self.player.tick =
+                    (self.wander.animation_seconds() * self.catalog.game_fps) % clip.duration();
+            } else {
+                let clip = &self.catalog.clips[self.player.selected];
+                self.player.advance(dt, self.catalog.game_fps, clip);
+            }
         }
+        let clip = &self.catalog.clips[self.player.selected];
         let index = self.player.index(clip);
         let key = (
             self.player.selected,
@@ -829,7 +1095,7 @@ impl App {
                 SourceConstantAlpha: 255,
                 AlphaFormat: AC_SRC_ALPHA as u8,
             };
-            if changed || self.drag.is_some() {
+            if changed || self.last_position != Some((dst.x, dst.y)) {
                 UpdateLayeredWindow(
                     self.pet,
                     None,
@@ -841,6 +1107,7 @@ impl App {
                     Some(&blend),
                     ULW_ALPHA,
                 )?;
+                self.last_position = Some((dst.x, dst.y));
             }
         }
         if self.debug_open && self.preview_dirty {
@@ -960,31 +1227,36 @@ impl App {
     }
     unsafe fn handle(&mut self, hwnd: HWND, msg: u32, wp: WPARAM, lp: LPARAM) -> Option<LRESULT> {
         let debug = hwnd == self.debug;
+        let pet = hwnd == self.pet;
+        let settings = hwnd == self.settings;
         match msg {
-            SHOW_DEBUG if !debug => {
+            SHOW_DEBUG if pet => {
                 self.show_debug();
                 Some(LRESULT(0))
             }
-            WM_TIMER if !debug => {
+            WM_TIMER if pet => {
                 if let Err(error) = self.update() {
                     show_error(&format!("绘制失败：{error}"));
                     self.exit();
                 }
                 Some(LRESULT(0))
             }
-            WM_CONTEXTMENU if !debug => {
+            WM_CONTEXTMENU if pet => {
                 self.menu();
                 Some(LRESULT(0))
             }
-            WM_MOUSEACTIVATE if !debug => Some(LRESULT(MA_NOACTIVATE as isize)),
-            WM_LBUTTONDOWN if !debug => {
+            WM_MOUSEACTIVATE if pet => Some(LRESULT(MA_NOACTIVATE as isize)),
+            WM_LBUTTONDOWN if pet => {
+                if !self.debug_open {
+                    self.reset_wander();
+                }
                 let mut p = POINT::default();
                 let _ = GetCursorPos(&mut p);
                 self.drag = Some((p, self.anchor));
                 SetCapture(self.pet);
                 Some(LRESULT(0))
             }
-            WM_MOUSEMOVE if !debug => {
+            WM_MOUSEMOVE if pet => {
                 if let Some((start, anchor)) = self.drag {
                     let mut p = POINT::default();
                     let _ = GetCursorPos(&mut p);
@@ -996,20 +1268,44 @@ impl App {
                 }
                 Some(LRESULT(0))
             }
-            WM_LBUTTONUP if !debug => {
+            WM_LBUTTONUP if pet => {
                 self.drag = None;
                 let _ = ReleaseCapture();
+                if !self.debug_open {
+                    self.reset_wander();
+                }
                 self.fit();
                 self.last_frame = None;
                 self.save_settings();
                 Some(LRESULT(0))
             }
-            WM_CAPTURECHANGED if !debug => {
-                self.drag = None;
+            WM_CAPTURECHANGED if pet => {
+                if self.drag.take().is_some() {
+                    if !self.debug_open {
+                        self.reset_wander();
+                    }
+                    self.fit();
+                    self.last_frame = None;
+                    self.save_settings();
+                }
                 Some(LRESULT(0))
             }
             WM_COMMAND if debug => {
                 self.command(wp);
+                Some(LRESULT(0))
+            }
+            WM_HSCROLL if settings && lp.0 == self.control(WALK_CHANCE).0 as isize => {
+                let probability =
+                    send(self.control(WALK_CHANCE), WM_USER, 0, 0).clamp(0, 100) as u8;
+                self.wander.set_probability(probability);
+                text(self.control(WALK_VALUE), &format!("{probability}%"));
+                if probability == 0 && !self.debug_open {
+                    self.select(self.catalog.idle_index());
+                }
+                // Apply while dragging; save on release, keyboard or page clicks.
+                if wp.0 & 0xffff != TB_THUMBTRACK as usize {
+                    self.save_settings();
+                }
                 Some(LRESULT(0))
             }
             WM_HSCROLL if debug && lp.0 == self.control(TIMELINE).0 as isize => {
@@ -1021,8 +1317,21 @@ impl App {
                 self.preview_dirty = true;
                 Some(LRESULT(0))
             }
+            WM_HSCROLL if settings && lp.0 == self.control(DISTANCE_BIAS).0 as isize => {
+                let bias = send(self.control(DISTANCE_BIAS), WM_USER, 0, 0).clamp(0, 100) as u8;
+                self.wander.set_distance_bias(bias);
+                self.update_distance_label();
+                if wp.0 & 0xffff != TB_THUMBTRACK as usize {
+                    self.save_settings();
+                }
+                Some(LRESULT(0))
+            }
             WM_SIZE if debug => {
                 self.layout();
+                Some(LRESULT(0))
+            }
+            WM_SIZE if settings => {
+                self.layout_settings();
                 Some(LRESULT(0))
             }
             WM_PAINT if debug => {
@@ -1032,6 +1341,9 @@ impl App {
             WM_CLOSE => {
                 if debug {
                     self.close_debug();
+                } else if settings {
+                    self.save_settings();
+                    let _ = ShowWindow(self.settings, SW_HIDE);
                 } else {
                     self.exit();
                 }
@@ -1043,7 +1355,7 @@ impl App {
                 Some(LRESULT(0))
             }
             WM_DPICHANGED => {
-                if debug {
+                if debug || settings {
                     let rect = &*(lp.0 as *const RECT);
                     let _ = SetWindowPos(
                         hwnd,
@@ -1054,8 +1366,13 @@ impl App {
                         rect.bottom - rect.top,
                         SWP_NOACTIVATE | SWP_NOZORDER,
                     );
-                    self.update_font();
-                    self.layout();
+                    if debug {
+                        self.update_font();
+                        self.layout();
+                    } else {
+                        self.update_settings_font();
+                        self.layout_settings();
+                    }
                 } else {
                     self.fit();
                     self.last_frame = None;
@@ -1077,9 +1394,11 @@ impl App {
 }
 impl Drop for App {
     fn drop(&mut self) {
-        if !self.font.is_invalid() {
-            unsafe {
-                let _ = DeleteObject(self.font.into());
+        for font in [self.font, self.settings_font] {
+            if !font.is_invalid() {
+                unsafe {
+                    let _ = DeleteObject(font.into());
+                }
             }
         }
     }
@@ -1137,6 +1456,10 @@ pub fn run(catalog: Catalog, debug: bool, smoke: bool) -> Result<(), String> {
                 w!("AquaPetDebug"),
                 HBRUSH((COLOR_WINDOW.0 + 1) as usize as *mut c_void),
             ),
+            (
+                w!("AquaPetSettings"),
+                HBRUSH((COLOR_WINDOW.0 + 1) as usize as *mut c_void),
+            ),
         ] {
             let wc = WNDCLASSW {
                 lpfnWndProc: Some(wndproc),
@@ -1180,6 +1503,21 @@ pub fn run(catalog: Catalog, debug: bool, smoke: bool) -> Result<(), String> {
             None,
         )
         .map_err(|e| e.to_string())?;
+        let settings = CreateWindowExW(
+            WS_EX_APPWINDOW,
+            w!("AquaPetSettings"),
+            w!("AQUA · 设置"),
+            WS_OVERLAPPED | WS_CAPTION | WS_SYSMENU | WS_MINIMIZEBOX | WS_CLIPCHILDREN,
+            CW_USEDEFAULT,
+            CW_USEDEFAULT,
+            480,
+            420,
+            None,
+            None,
+            Some(module.into()),
+            None,
+        )
+        .map_err(|e| e.to_string())?;
         let monitor = MonitorFromWindow(panel, MONITOR_DEFAULTTONEAREST);
         let mut monitor_info = MONITORINFO {
             cbSize: size_of::<MONITORINFO>() as u32,
@@ -1200,7 +1538,7 @@ pub fn run(catalog: Catalog, debug: bool, smoke: bool) -> Result<(), String> {
                 SWP_NOACTIVATE | SWP_NOZORDER,
             );
         }
-        APP.with(|slot| *slot.borrow_mut() = Some(App::new(catalog, pet, panel, smoke)));
+        APP.with(|slot| *slot.borrow_mut() = Some(App::new(catalog, pet, panel, settings, smoke)));
         let setup = APP.with(|slot| {
             let mut borrowed = slot.borrow_mut();
             let app = borrowed.as_mut().unwrap();
@@ -1226,7 +1564,10 @@ pub fn run(catalog: Catalog, debug: bool, smoke: bool) -> Result<(), String> {
             if result < 0 {
                 return Err(windows::core::Error::from_thread().to_string());
             }
-            if !IsDialogMessageW(panel, &message).as_bool() {
+            if !(IsWindowVisible(panel).as_bool() && IsDialogMessageW(panel, &message).as_bool()
+                || IsWindowVisible(settings).as_bool()
+                    && IsDialogMessageW(settings, &message).as_bool())
+            {
                 let _ = TranslateMessage(&message);
                 DispatchMessageW(&message);
             }
@@ -1235,5 +1576,63 @@ pub fn run(catalog: Catalog, debug: bool, smoke: bool) -> Result<(), String> {
             slot.borrow_mut().take();
         });
         Ok(())
+    }
+}
+
+#[cfg(test)]
+mod settings_tests {
+    use super::*;
+
+    #[test]
+    fn old_settings_keep_position_and_default_walk_probability() {
+        let settings: Settings =
+            serde_json::from_str(r#"{"anchor_x":-400,"anchor_y":240,"scale":2}"#).unwrap();
+        assert_eq!(
+            (settings.anchor_x, settings.anchor_y, settings.scale),
+            (-400, 240, 2)
+        );
+        assert_eq!(settings.walk_probability, DEFAULT_WALK_CHANCE);
+        assert_eq!(settings.walk_distance_bias, DEFAULT_DISTANCE_BIAS);
+    }
+
+    #[test]
+    fn saved_probability_restores_both_slider_endpoints() {
+        for probability in [0, 25, 100] {
+            let settings = Settings {
+                anchor_x: 100,
+                anchor_y: 200,
+                scale: 4,
+                walk_probability: probability,
+                walk_distance_bias: DEFAULT_DISTANCE_BIAS,
+            };
+            let bytes = serde_json::to_vec(&settings).unwrap();
+            let restored: Settings = serde_json::from_slice(&bytes).unwrap();
+            let mut wander = Wander::new(1);
+            wander.set_probability(restored.walk_probability);
+            assert_eq!(wander.probability(), probability);
+        }
+    }
+
+    #[test]
+    fn distance_preference_round_trips_and_upgrades_existing_settings() {
+        let old: Settings = serde_json::from_str(
+            r#"{"anchor_x":100,"anchor_y":200,"scale":4,"walk_probability":0}"#,
+        )
+        .unwrap();
+        assert_eq!(old.walk_probability, 0);
+        assert_eq!(old.walk_distance_bias, 50);
+        for bias in [0, 50, 100] {
+            let settings = Settings {
+                walk_distance_bias: bias,
+                ..old
+            };
+            let restored: Settings =
+                serde_json::from_slice(&serde_json::to_vec(&settings).unwrap()).unwrap();
+            let mut wander = Wander::new(1);
+            wander.set_probability(restored.walk_probability);
+            wander.set_distance_bias(restored.walk_distance_bias);
+            assert_eq!(wander.distance_bias(), bias);
+            assert_eq!(wander.probability(), 0);
+        }
     }
 }

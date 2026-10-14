@@ -13,26 +13,29 @@ pub fn fit(
         .clamp(1, 8)
         .min(((work.width() - 16.0) / motion.width()).floor().max(1.0) as u32)
         .min(((work.height() - 16.0) / motion.height()).floor().max(1.0) as u32);
+    let limits = anchor_limits(scale, motion, work);
+    (
+        (
+            anchor.0.clamp(limits.left as i32, limits.right as i32),
+            anchor.1.clamp(limits.top as i32, limits.bottom as i32),
+        ),
+        scale,
+    )
+}
+
+/// Allowed anchor positions, leaving the entire sprite inside the work area.
+pub fn anchor_limits(scale: u32, motion: Bounds, work: Bounds) -> Bounds {
     let s = scale as f64;
     let min_x = work.left as i32 + 8 - (motion.left * s).floor() as i32;
     let max_x = work.right as i32 - 8 - (motion.right * s).ceil() as i32;
     let min_y = work.top as i32 + 8 - (motion.top * s).floor() as i32;
     let max_y = work.bottom as i32 - 8 - (motion.bottom * s).ceil() as i32;
-    (
-        (
-            if min_x <= max_x {
-                anchor.0.clamp(min_x, max_x)
-            } else {
-                min_x
-            },
-            if min_y <= max_y {
-                anchor.1.clamp(min_y, max_y)
-            } else {
-                min_y
-            },
-        ),
-        scale,
-    )
+    Bounds {
+        left: min_x as f64,
+        top: min_y as f64,
+        right: max_x.max(min_x) as f64,
+        bottom: max_y.max(min_y) as f64,
+    }
 }
 
 #[cfg(test)]
