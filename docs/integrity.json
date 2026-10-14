@@ -1,0 +1,551 @@
+{
+  "resource_groups": 94,
+  "png_frames": 346,
+  "action_presets": 131,
+  "game_sha256": "370dfd141d2955d5a1960122919b16e4092b52ffbb85fda541bc4680c6b3b85c",
+  "archive_tree": "46727ff283dcad40bb6c316694f1ee0eef53cdca",
+  "action_source_hashes": {
+    "gml_Object_obj_aqua_enemy_Create_0.gml": "a0a72887aa433c8dfc87525aa7c3ff1e5fa6023d17bb425a28055b2fbd4e2a65",
+    "gml_Object_obj_ch5_DW19B_Step_0.gml": "4f2b18e9992f16a7543a75e4bbf653559a91e1bd6ed8ff266ab05d761e10abf2",
+    "gml_Object_obj_aqua_enemy_Step_0.gml": "7735bf596c02dcc2354cb7e069414e5fce2be8fd1adf5d96c8a0d6293d8faff2",
+    "gml_Object_obj_dw_fcastle_cafe_Other_13.gml": "b74b57fe94afd98a990da9861563709883a928f7a55d7c28821a19960fa72766",
+    "gml_GlobalScript_scr_enemy_drawidle_generic.gml": "616023f5c92a8d0af818c76a7b18c300b85fb0f3f41ac629afbb0db1c8e35846",
+    "gml_Object_obj_dw_garden_aqua_Step_0.gml": "8c87017291b92b1ca5f500eb2d021ddfe00a888cd1330b63efa82a65f97cd5dc",
+    "gml_Object_obj_trial_perp_Step_0.gml": "20d8f82f8d59093bff570453fed5a016a6e0050ca2bef6cc4bc52ee25ab1979b",
+    "gml_Object_obj_dw_cliff_sethaqua_battle_Step_0.gml": "4c7e86fb247e80c376ed1cc5382219bbdd19189142ffaee0d40f99182a15c9ac",
+    "gml_Object_obj_netskie_enemy_Step_0.gml": "8610fd46160474ec790367a3e85001a87ae74c5798fae22f3d15220bcfea9cbb",
+    "gml_Object_obj_netskie_enemy_Draw_0.gml": "1e3a9d13f577ec45c9d0fcf049892adcaf151e243b5f8e8e2cb43d01dec05d24",
+    "gml_Object_obj_ch5_DWCR03_Create_0.gml": "2c8309470cf24d174bc21681e7daa33742cd8d1f1004a6cada8009a17de152c6",
+    "gml_Object_obj_dw_fcastle_obscured_bullets_Create_0.gml": "d786d00f411a3b4f1761a07aaa8776d715733c2b03b5278ab7e45adbc41159df",
+    "gml_Object_obj_dw_cliff_finaldash_Step_0.gml": "5fcae68959eb3823245693ba29ed715817d3e2d67c31fb45ba9ae021996cc49c",
+    "gml_Object_obj_plat_npc_Create_0.gml": "32072b3e71a3fe614d211278e76a6844ddd1bb1bf5745df709481e2294dd6535",
+    "gml_Object_obj_plat_npc_Draw_0.gml": "2759f487ffa4bc33506590bd0b00454504eb07bef719c22cf45e77b0c866eb93",
+    "gml_Object_obj_dw_fcastle_yellow_combat_Step_0.gml": "a995ca02b5cbda74a73f343864fef4ba4809d8eea651dd40d1dafa732cc7f3bb",
+    "gml_Object_obj_dw_fcastle_dangerous_platforming_Create_0.gml": "838cb6dec06830545354ebcb164228f018b92dd1415fb070041ea1b5f92c7572",
+    "gml_Object_obj_dw_fcastle_sandtrap_greenaqua_Step_0.gml": "032158cea9f4ea03aa64b90f926d3d74da99d53c4451e43d76d43950baed5c08",
+    "gml_Object_obj_yellow_trial_manager_Create_0.gml": "77406a885e2d5ffe2913a55618c7f84e093e4075931a0e63312f3720e1a0c37b",
+    "gml_Object_obj_purple_enemy_Step_0.gml": "f8d33240ccc47d56d1022fb0b86b572e829f62e5c2af5b418422ffca07e070c4",
+    "gml_Object_obj_overworld_foxbullet_Step_0.gml": "e38ee4a098d3b2d8a3c7d5520b6b21e8c497fe4e03d69a6e26181017e24fa4db",
+    "gml_Object_obj_dw_fcastle_foxhunt_Step_0.gml": "d9b2f0a3fd17c66f0dd5df2b63da7b19f9c912e8e43d2faa7be3046997e40278",
+    "gml_GlobalScript_scr_makecaterpillar.gml": "a9f749c975e1d71205b0b18cdcce7d87f8246f6a21f35396529e5c1cf7a4e940",
+    "gml_Object_obj_actor_Step_0.gml": "38c3a31f67ec064b5da54c32408c72de6263c0a32e04d870174d6a8fdf7c1559",
+    "gml_Object_obj_actor_Create_0.gml": "c11ba712b34fdf461588424d2545ead00824a7ea22e2e9a13d2fef1e7a0d5fca",
+    "gml_Object_obj_ch5_DWCR_documents_Step_0.gml": "3133b1ffc3acfdea43193136ff3b38466fcce177c17b014f2475a3e32e0669b8",
+    "gml_Object_obj_aqua_enemy_Draw_0.gml": "79445c5d73cbad21038e9f444f5c6069f90fe8189c64ecdb61effbef316c9fa8",
+    "gml_Object_obj_dw_cliff_cutdown_tutorial_Step_0.gml": "3bbdea0977625b92a9dc97fa640de57703b86203bb24cbd4a543ce179c6b2a05",
+    "gml_GlobalScript_scr_returnwait_gravity.gml": "1c632e1e379b2961b0293a7d89270bb8cfecabc237b373f6e0e4ab7b4575fd2c",
+    "gml_GlobalScript_scr_script_repeat.gml": "726086e6ba5e3bebb3859418338d8bbafcfde0f9cdd9e2d0c028ef4cd8bef782",
+    "gml_GlobalScript_scr_jump_in_place.gml": "0e2c3235fa004f9e12257a2950a4f5d7bde43a0be04b8c828a845f4548670ba6",
+    "gml_Object_obj_jump_to_point_Other_10.gml": "ce8a6a1116fb3248564c383eb84e5112b790047f64af416e5c62d5f04aa6db48",
+    "gml_GlobalScript_scr_ease_out.gml": "9214fdc131662aa85c9c95477b4d3bc6a1296b6ea7e47fe6efb96cd66528fbe1",
+    "gml_Object_obj_dw_fcastle_sandtrap_aquasplash_Draw_0.gml": "fc5b5fecfbbef3372c709ba278d094191b6bdf404ace79f57861cf4164a1aafc",
+    "gml_Object_obj_plat_dash_aqua_Step_0.gml": "2cad33499946ba2ccee98da52f6094daf86a4a541370d95ad30e20ab1864b08c",
+    "gml_Object_obj_attack_knifechain_manager2_Create_0.gml": "5ad9fd3c40a8c766a8c311241254830538a7fe3a29c05e20735523973b25da1f",
+    "gml_Object_obj_attack_knifechain_manager2_Draw_0.gml": "a2cb735dfc567dbfc1f48d447e9f9774cf078ec4f6593f03ed1dfbd0615c0f41",
+    "gml_Object_obj_attack_knifechain_manager2_Step_2.gml": "5763c5327ba00d343ac9bb8d01de09d0a6fc897272257886fed4e5a02be61801",
+    "gml_Object_obj_attack_knifechain_manager2_Alarm_0.gml": "eae579bb811b507e6e9ec12c71fc6740d357e003861bd49ad498aa2ad2901252",
+    "gml_Object_obj_dbulletcontroller_Step_0.gml": "ed39eae6c942a8eeaa9fede7b6e0ec00ce9aa0ac9c5c6695df682f779cc58d56",
+    "gml_Object_obj_enemy_aqua_example_Draw_0.gml": "c3e9b7fa1b14d8517a69393ae66aa5ae96e14c8f042ecdfbcca7107221eb550c",
+    "gml_Object_obj_attack_knifechain_manager_Step_0.gml": "1ab717645f6f269010132f5d8534d01cb99792031f91563ce0413727be1b03df",
+    "gml_Object_obj_attack_knifefan_manager_Draw_0.gml": "595193f75ca7b85c7d7cc50b929923e9d19a6220c91349af5c32cafb81e4a58a",
+    "gml_Object_obj_attack_knifefan_manager_Step_0.gml": "de25015e28eac3ec8267c3feb44494e7d617359902aad616d2521c8f485b9a3b",
+    "gml_Object_obj_attack_knifefan_manager_Create_0.gml": "67d5a420d2da608361006452afd75ed1b58439d575146b14a984a0d661248fda",
+    "gml_Object_obj_bullet_knife_Alarm_0.gml": "f19e503b485161c75250486de42ed1c77d8e28e99b91b0422146476259d7c8c0",
+    "gml_Object_obj_attack_knife_leafling_Create_0.gml": "180a2af80f09f0ca47efe8be1d3150f2490da7e189f6a99b3d7f1f0610ccf62d",
+    "gml_Object_obj_attack_knife_leafling_Draw_0.gml": "7351b34162a465b4defbbdfa7235896de224244f65aaa0f8fb42c0c4cf120beb",
+    "gml_Object_obj_aquabullet_Step_0.gml": "77cf55df9cd0776e160eac815dff21c0661eaec50434e32cf1dc299fbe091d63",
+    "gml_Object_obj_plat_enm_aqua_miniboss_Create_0.gml": "6a62bcbc84a8278eb83b57842cdb83375c793c093a15dec4b7f172486941feda",
+    "gml_Object_obj_plat_enm_aqua_small_Create_0.gml": "7e3244fe957aeca4da1c56ced10862587cf24ba2cbe5e85e53d02017c9dda399",
+    "gml_Object_obj_plat_enm_aqua_small_Step_0.gml": "d7a6aa5e677f4a827f4b52111b6e1c68706f608fc0156103620ee44fa8a2c4c0",
+    "gml_Object_obj_plat_enm_aqua_miniboss_Step_0.gml": "5d47e5d5043c6e2bffc4fe6a9c4475c1c47b93fdc287676e7fd1f2d60fe99867",
+    "gml_Object_obj_plat_enm_aqua_bouncer_Draw_76.gml": "9fc986e762f06264ef92a20559dd8a97ef552a98276915ae942d96e517ff8fde",
+    "gml_Object_obj_plat_enm_aqua_bouncer_Draw_77.gml": "d00f4cc22e2c450b1eb1df5f20f0f3dd4446efac38f86fe37eafb71ad2029b4c",
+    "gml_Object_obj_plat_enm_aqua_bouncer_Create_0.gml": "3c8adf0baef9ea84b91b570002047bf58d1335172a1772c7b99b2c01ce7b4e6d",
+    "gml_Object_obj_plat_enm_aqua_gold_Create_0.gml": "bdecbc351e5687b4e0bb1f7006a806cb445fb204731a2fadf77ae651f7c7ea6a",
+    "gml_Object_obj_plat_enm_aqua_gold_Step_0.gml": "e8bd7f9439b383f1b98d828e9dd94169a4b7eb3e44e5ee622acd45aee5f1a2bb",
+    "gml_Object_obj_dw_cliff_seth_miniboss_Step_0.gml": "160d20b23da5574fa484fd9e7fb474cb956fd8f96569dd1b56ebf73546ce00c5",
+    "gml_Object_obj_dw_cliff_sethaqua_battle_Create_0.gml": "14d6635e3622b1f5858d3dcddb3a4f70bb81b3defc503c1c5a85df07d9c439ee",
+    "gml_GlobalScript_ease_out_back.gml": "8ff0e5d8f6749abe763ba41eaafa13c1fcfd07babfde86bcef41dcb36ee3309c",
+    "gml_Object_obj_plat_finalflowery_Draw_0.gml": "c408e04bc51f90b4c1949b7a1e3edd207e4059a74aec88be0ec24d74f043c378",
+    "gml_Object_obj_plat_finalflowery_Create_0.gml": "9ed0eb88bb7497591dc7654144829d65971031643f9dd058e99698720e5813c0",
+    "gml_Object_obj_plat_enm_aqua_sword_Step_0.gml": "c6233229a1ebf3372a914288bfe9be1d19246dd5e3738e8724bdd7e0d33623bf",
+    "gml_Object_obj_plat_enm_aqua_sword_Draw_0.gml": "3cd144080c53cdf41b264be23c85917052f891e0bc968fff0b956b17669d03ea",
+    "gml_Object_obj_plat_enm_aqua_sword_Create_0.gml": "4899d43eca99f694a04382b2697c59df4ca4468b4cb29880842ae889c867b6c9",
+    "gml_Object_obj_afterimage_onecolor_Step_0.gml": "f18797a74c8a6cb75c98f2b2972ad4d8a46690404778b0713afa1c2cf23ba010",
+    "gml_Object_obj_plat_aquaknife_3d_Create_0.gml": "86eee7bbe4d177949b3420eb9ae2bfbc9951bd8d9313d01f5abbe84577817b48",
+    "gml_Object_obj_plat_aquaknife_3d_Step_0.gml": "3eb1a65b8b893b9843e9296295003dd90f2b85e1d6abf7243a4dbf9f68d58b79",
+    "gml_Object_obj_omega_knife_Step_0.gml": "2aba7bb95a94762c417a48d29f13decb51db3c574329781b93869308273d3314"
+  },
+  "assets": {
+    "spr_aqua_centered": {
+      "frames": 4,
+      "category": "Overworld/Animations/Wave",
+      "used_in_action": false
+    },
+    "spr_aqua_check1": {
+      "frames": 1,
+      "category": "Battle/UI",
+      "used_in_action": true
+    },
+    "spr_aqua_check2": {
+      "frames": 1,
+      "category": "Battle/UI",
+      "used_in_action": true
+    },
+    "spr_aqua_clapping": {
+      "frames": 4,
+      "category": "Overworld/Animations/Clap",
+      "used_in_action": true
+    },
+    "spr_aqua_clapping_green": {
+      "frames": 4,
+      "category": "Overworld/Animations/Clap",
+      "used_in_action": true
+    },
+    "spr_aqua_collapsed": {
+      "frames": 1,
+      "category": "Overworld",
+      "used_in_action": true
+    },
+    "spr_aqua_collapsed_centered": {
+      "frames": 1,
+      "category": "Overworld",
+      "used_in_action": true
+    },
+    "spr_aqua_collapsed_reflect": {
+      "frames": 1,
+      "category": "Overworld",
+      "used_in_action": true
+    },
+    "spr_aqua_confused": {
+      "frames": 2,
+      "category": "Overworld",
+      "used_in_action": true
+    },
+    "spr_aqua_eating": {
+      "frames": 2,
+      "category": "Overworld",
+      "used_in_action": true
+    },
+    "spr_aqua_eye_reveal": {
+      "frames": 2,
+      "category": "Overworld/Eyes",
+      "used_in_action": true
+    },
+    "spr_aqua_eye_reveal_three": {
+      "frames": 2,
+      "category": "Overworld/Eyes",
+      "used_in_action": true
+    },
+    "spr_aqua_grab": {
+      "frames": 1,
+      "category": "Overworld/Grab",
+      "used_in_action": false
+    },
+    "spr_aqua_grab_hold": {
+      "frames": 1,
+      "category": "Overworld/Grab",
+      "used_in_action": true
+    },
+    "spr_aqua_grab_hold2": {
+      "frames": 1,
+      "category": "Overworld/Grab",
+      "used_in_action": false
+    },
+    "spr_aqua_grab_jump": {
+      "frames": 2,
+      "category": "Overworld/Grab",
+      "used_in_action": true
+    },
+    "spr_aqua_green_hold": {
+      "frames": 1,
+      "category": "Overworld",
+      "used_in_action": true
+    },
+    "spr_aqua_green_spin": {
+      "frames": 5,
+      "category": "Overworld/Animations/Spin",
+      "used_in_action": true
+    },
+    "spr_aqua_lasso": {
+      "frames": 1,
+      "category": "Overworld",
+      "used_in_action": true
+    },
+    "spr_aqua_laugh": {
+      "frames": 2,
+      "category": "Overworld/Animations/Laugh",
+      "used_in_action": true
+    },
+    "spr_aqua_laugh_green": {
+      "frames": 2,
+      "category": "Overworld/Animations/Laugh",
+      "used_in_action": true
+    },
+    "spr_aqua_shakehead": {
+      "frames": 4,
+      "category": "Overworld/Animations/Shake Head",
+      "used_in_action": true
+    },
+    "spr_aqua_shell_listen": {
+      "frames": 1,
+      "category": "Overworld",
+      "used_in_action": true
+    },
+    "spr_aqua_sit_smile": {
+      "frames": 6,
+      "category": "Overworld/Sit",
+      "used_in_action": true
+    },
+    "spr_aqua_sit_wave": {
+      "frames": 4,
+      "category": "Overworld/Sit",
+      "used_in_action": true
+    },
+    "spr_aqua_sleevewave": {
+      "frames": 6,
+      "category": "Overworld/Animations/Sleeve Wave",
+      "used_in_action": true
+    },
+    "spr_aqua_spin": {
+      "frames": 4,
+      "category": "Overworld",
+      "used_in_action": true
+    },
+    "spr_aqua_surprise": {
+      "frames": 1,
+      "category": "Overworld",
+      "used_in_action": true
+    },
+    "spr_aqua_surprise_green": {
+      "frames": 1,
+      "category": "Overworld",
+      "used_in_action": true
+    },
+    "spr_aqua_toothy_grin": {
+      "frames": 1,
+      "category": "Overworld",
+      "used_in_action": true
+    },
+    "spr_aqua_walk_down": {
+      "frames": 4,
+      "category": "Overworld/Walk",
+      "used_in_action": true
+    },
+    "spr_aqua_walk_left": {
+      "frames": 4,
+      "category": "Overworld/Walk",
+      "used_in_action": true
+    },
+    "spr_aqua_walk_right": {
+      "frames": 4,
+      "category": "Overworld/Walk",
+      "used_in_action": true
+    },
+    "spr_aqua_walk_up": {
+      "frames": 4,
+      "category": "Overworld/Walk",
+      "used_in_action": true
+    },
+    "spr_aqua_wave": {
+      "frames": 4,
+      "category": "Overworld/Animations/Wave",
+      "used_in_action": true
+    },
+    "spr_attack_knife_parted": {
+      "frames": 2,
+      "category": "Battle/Attacks",
+      "used_in_action": true
+    },
+    "spr_attack_knifechain": {
+      "frames": 1,
+      "category": "Battle/Attacks",
+      "used_in_action": true
+    },
+    "spr_attack_knifechain_spin": {
+      "frames": 4,
+      "category": "Battle/Attacks",
+      "used_in_action": true
+    },
+    "spr_attack_knifefan": {
+      "frames": 1,
+      "category": "Battle/Attacks",
+      "used_in_action": true
+    },
+    "spr_bullet_knife_break": {
+      "frames": 4,
+      "category": "Battle/Bullet Pattern/Knife",
+      "used_in_action": false
+    },
+    "spr_enemy_aqua_act": {
+      "frames": 12,
+      "category": "Overworld/Animations/Act",
+      "used_in_action": true
+    },
+    "spr_enemy_aqua_arm": {
+      "frames": 5,
+      "category": "Overworld/Parts/Arms",
+      "used_in_action": true
+    },
+    "spr_enemy_aqua_blur": {
+      "frames": 3,
+      "category": "Overworld/Animations/Blur",
+      "used_in_action": true
+    },
+    "spr_enemy_aqua_bored": {
+      "frames": 8,
+      "category": "Overworld/Animations/Idle/Bored",
+      "used_in_action": true
+    },
+    "spr_enemy_aqua_bored_green": {
+      "frames": 8,
+      "category": "Overworld/Animations/Idle/Bored",
+      "used_in_action": true
+    },
+    "spr_enemy_aqua_chainswing_back": {
+      "frames": 10,
+      "category": "Overworld/Parts/Arms",
+      "used_in_action": true
+    },
+    "spr_enemy_aqua_chainswing_back_old": {
+      "frames": 9,
+      "category": "Overworld/Parts/Arms/Unused",
+      "used_in_action": false
+    },
+    "spr_enemy_aqua_chainswing_body": {
+      "frames": 1,
+      "category": "Overworld/Parts",
+      "used_in_action": true
+    },
+    "spr_enemy_aqua_chainswing_front": {
+      "frames": 10,
+      "category": "Overworld/Parts/Arms",
+      "used_in_action": true
+    },
+    "spr_enemy_aqua_cool_pose": {
+      "frames": 1,
+      "category": "Overworld",
+      "used_in_action": true
+    },
+    "spr_enemy_aqua_cool_pose_r": {
+      "frames": 1,
+      "category": "Overworld",
+      "used_in_action": true
+    },
+    "spr_enemy_aqua_dance": {
+      "frames": 4,
+      "category": "Overworld/Animations/Dance",
+      "used_in_action": true
+    },
+    "spr_enemy_aqua_headtilt": {
+      "frames": 1,
+      "category": "Overworld",
+      "used_in_action": true
+    },
+    "spr_enemy_aqua_hurt": {
+      "frames": 1,
+      "category": "Overworld",
+      "used_in_action": true
+    },
+    "spr_enemy_aqua_hype": {
+      "frames": 8,
+      "category": "Overworld/Animations/Idle/Hype",
+      "used_in_action": true
+    },
+    "spr_enemy_aqua_hype_green": {
+      "frames": 8,
+      "category": "Overworld/Animations/Idle/Hype",
+      "used_in_action": true
+    },
+    "spr_enemy_aqua_hype_reverse": {
+      "frames": 8,
+      "category": "Overworld/Animations/Idle/Hype - Reverse",
+      "used_in_action": true
+    },
+    "spr_enemy_aqua_hype_reverse_green": {
+      "frames": 8,
+      "category": "Overworld/Animations/Idle/Hype - Reverse",
+      "used_in_action": true
+    },
+    "spr_enemy_aqua_idle": {
+      "frames": 8,
+      "category": "Overworld/Animations/Idle",
+      "used_in_action": true
+    },
+    "spr_enemy_aqua_idle_fox": {
+      "frames": 8,
+      "category": "Overworld/Animations/Idle/Netskie",
+      "used_in_action": true
+    },
+    "spr_enemy_aqua_idle_foxleftorigin": {
+      "frames": 8,
+      "category": "Overworld/Animations/Idle/Netskie",
+      "used_in_action": true
+    },
+    "spr_enemy_aqua_idle_green": {
+      "frames": 8,
+      "category": "Overworld/Animations/Idle",
+      "used_in_action": true
+    },
+    "spr_enemy_aqua_idle_leftorigin": {
+      "frames": 8,
+      "category": "Overworld/Animations/Idle/Unused",
+      "used_in_action": false
+    },
+    "spr_enemy_aqua_idle_r": {
+      "frames": 8,
+      "category": "Overworld/Animations/Idle/Right",
+      "used_in_action": true
+    },
+    "spr_enemy_aqua_idle_r_green": {
+      "frames": 8,
+      "category": "Overworld/Animations/Idle/Right",
+      "used_in_action": true
+    },
+    "spr_enemy_aqua_knife_ready": {
+      "frames": 3,
+      "category": "Misc",
+      "used_in_action": true
+    },
+    "spr_enemy_aqua_knifespin_temp": {
+      "frames": 2,
+      "category": "Overworld/Animations/Blur/Unused",
+      "used_in_action": false
+    },
+    "spr_enemy_aqua_laugh": {
+      "frames": 2,
+      "category": "Overworld/Animations/Laugh",
+      "used_in_action": true
+    },
+    "spr_enemy_aqua_pose": {
+      "frames": 1,
+      "category": "Overworld/Animations/Laugh",
+      "used_in_action": true
+    },
+    "spr_enemy_aqua_pose_r": {
+      "frames": 1,
+      "category": "Overworld/Animations/Laugh",
+      "used_in_action": true
+    },
+    "spr_enemy_aqua_pose_r_green": {
+      "frames": 1,
+      "category": "Overworld",
+      "used_in_action": true
+    },
+    "spr_enemy_aqua_redsplash": {
+      "frames": 8,
+      "category": "Overworld/Animations/Idle/Red Splash",
+      "used_in_action": true
+    },
+    "spr_enemy_aqua_spin": {
+      "frames": 5,
+      "category": "Overworld/Animations/Spin",
+      "used_in_action": true
+    },
+    "spr_enemy_aqua_unamused": {
+      "frames": 1,
+      "category": "Overworld",
+      "used_in_action": true
+    },
+    "spr_enemy_aqua_unamused_r": {
+      "frames": 1,
+      "category": "Overworld",
+      "used_in_action": true
+    },
+    "spr_faqua": {
+      "frames": 5,
+      "category": "Battle/Bullet Pattern/Enemy",
+      "used_in_action": true
+    },
+    "spr_faqua_blur": {
+      "frames": 3,
+      "category": "Battle/Bullet Pattern/Enemy",
+      "used_in_action": true
+    },
+    "spr_faqua_gold": {
+      "frames": 5,
+      "category": "Battle/Bullet Pattern/Gold!",
+      "used_in_action": true
+    },
+    "spr_faqua_knife": {
+      "frames": 2,
+      "category": "Battle/Bullet Pattern/Knife",
+      "used_in_action": false
+    },
+    "spr_faqua_knife_cracked": {
+      "frames": 3,
+      "category": "Battle/Bullet Pattern/Knife",
+      "used_in_action": true
+    },
+    "spr_faqua_knife_spinning": {
+      "frames": 4,
+      "category": "Battle/Bullet Pattern/Knife",
+      "used_in_action": false
+    },
+    "spr_faqua_knife_spliteffect": {
+      "frames": 4,
+      "category": "Battle/Bullet Pattern/Knife",
+      "used_in_action": false
+    },
+    "spr_faqua_knife_turning": {
+      "frames": 7,
+      "category": "Battle/Bullet Pattern/Knife",
+      "used_in_action": true
+    },
+    "spr_faqua_small": {
+      "frames": 5,
+      "category": "Battle/Bullet Pattern/Enemy",
+      "used_in_action": true
+    },
+    "spr_faqua_spin": {
+      "frames": 5,
+      "category": "Battle/Bullet Pattern/Enemy",
+      "used_in_action": true
+    },
+    "spr_faqua_yellowknife": {
+      "frames": 1,
+      "category": "Battle/Bullet Pattern/Gold!",
+      "used_in_action": true
+    },
+    "spr_faqua_yellowknife_center": {
+      "frames": 3,
+      "category": "Battle/Bullet Pattern/Gold!",
+      "used_in_action": true
+    },
+    "spr_faqua_yellowknife_swing": {
+      "frames": 1,
+      "category": "Battle/Bullet Pattern/Gold!",
+      "used_in_action": true
+    },
+    "spr_miniface_aqua": {
+      "frames": 1,
+      "category": "Portraits",
+      "used_in_action": false
+    },
+    "spr_omegaf_aqua": {
+      "frames": 3,
+      "category": "Battle/Omega Flowery",
+      "used_in_action": true
+    },
+    "spr_omegaf_aqua_o": {
+      "frames": 3,
+      "category": "Battle/Omega Flowery",
+      "used_in_action": true
+    },
+    "spr_plat_bullet_yellow": {
+      "frames": 1,
+      "category": "Battle/Bullet Pattern/Gold!",
+      "used_in_action": false
+    },
+    "spr_stolen_knife": {
+      "frames": 1,
+      "category": "Battle/Attacks",
+      "used_in_action": true
+    },
+    "spr_stolen_knife_mask": {
+      "frames": 1,
+      "category": "Battle/Attacks",
+      "used_in_action": false
+    }
+  }
+}

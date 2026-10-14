@@ -1,0 +1,2016 @@
+{
+  "source_sha256": "370dfd141d2955d5a1960122919b16e4092b52ffbb85fda541bc4680c6b3b85c",
+  "game_fps": 30,
+  "source_tree": "46727ff283dcad40bb6c316694f1ee0eef53cdca",
+  "source_url": "https://github.com/jasonvorheez1/deltaruneorganizedspritearchive",
+  "sprites": [
+    {
+      "id": "spr_aqua_centered",
+      "category": "Overworld/Animations/Wave",
+      "width": 26,
+      "height": 34,
+      "origin_x": 13,
+      "origin_y": 34,
+      "playback_speed": 1,
+      "playback_speed_type": "FramesPerGameFrame",
+      "frames": [
+        "sprites/spr_aqua_centered_0.png",
+        "sprites/spr_aqua_centered_1.png",
+        "sprites/spr_aqua_centered_2.png",
+        "sprites/spr_aqua_centered_3.png"
+      ],
+      "frame_sha256": [
+        "1949643709d6db375b5c43a0242dca411ff50490de4b7ee9b81068bfa7f6320e",
+        "c0bc5edf9f3258aad8dea23ebb2255eb31713cfd74cc4891cabf943a6a5a6df5",
+        "b9ad28df6b5775c25732e37fb077f6706089bbb91433a36ee43c4e7de79431f4",
+        "04ab29f37ef13465024d4b26b205daf1499ca9b472b16beedb85286eeddc3aa1"
+      ]
+    },
+    {
+      "id": "spr_aqua_check1",
+      "category": "Battle/UI",
+      "width": 20,
+      "height": 20,
+      "origin_x": 10,
+      "origin_y": 0,
+      "playback_speed": 3,
+      "playback_speed_type": "FramesPerSecond",
+      "frames": [
+        "sprites/spr_aqua_check1_0.png"
+      ],
+      "frame_sha256": [
+        "06b5c9d774f0b4450bb998a16a4108d05708c1cc39b9f7776d53d85c279361e5"
+      ]
+    },
+    {
+      "id": "spr_aqua_check2",
+      "category": "Battle/UI",
+      "width": 20,
+      "height": 20,
+      "origin_x": 10,
+      "origin_y": 0,
+      "playback_speed": 3,
+      "playback_speed_type": "FramesPerSecond",
+      "frames": [
+        "sprites/spr_aqua_check2_0.png"
+      ],
+      "frame_sha256": [
+        "7013b8ad8629d349a03b2fce7f3bb6c65e2ad2bdf0ce902eafe86531f989a921"
+      ]
+    },
+    {
+      "id": "spr_aqua_clapping",
+      "category": "Overworld/Animations/Clap",
+      "width": 20,
+      "height": 35,
+      "origin_x": 1,
+      "origin_y": 0,
+      "playback_speed": 1,
+      "playback_speed_type": "FramesPerGameFrame",
+      "frames": [
+        "sprites/spr_aqua_clapping_0.png",
+        "sprites/spr_aqua_clapping_1.png",
+        "sprites/spr_aqua_clapping_2.png",
+        "sprites/spr_aqua_clapping_3.png"
+      ],
+      "frame_sha256": [
+        "996756b3511b9449002787f78d763f7ca82423ceaee3af69e117868b1cd8544a",
+        "334c34d227a9005f24a0abdb9558d1341fd993cb73d96eb26571021d2a919747",
+        "06fb4d28b6f8cd2be98134a3bc05e6b5617d25acf7e4cf062eb43ad2c66c71b3",
+        "69f81847a072c15ca0666bb61de1f7683d9cf4b8f01db4a245610c4f9369fe54"
+      ]
+    },
+    {
+      "id": "spr_aqua_clapping_green",
+      "category": "Overworld/Animations/Clap",
+      "width": 20,
+      "height": 35,
+      "origin_x": 1,
+      "origin_y": 0,
+      "playback_speed": 1,
+      "playback_speed_type": "FramesPerGameFrame",
+      "frames": [
+        "sprites/spr_aqua_clapping_green_0.png",
+        "sprites/spr_aqua_clapping_green_1.png",
+        "sprites/spr_aqua_clapping_green_2.png",
+        "sprites/spr_aqua_clapping_green_3.png"
+      ],
+      "frame_sha256": [
+        "71fb4c8d799034cbafaeb19b35294ebc81d029200aa0de1db26e310ea5620edb",
+        "b98c321e46ceb6ea382a8211a1158e6794f8bfa10fdc1bc7936d5b00ab4fdd79",
+        "fbc5bece8636bdcbc99f21875f9d515e87d275e8836954607c969b1f0ea9ff35",
+        "bf3468eeaf2efad65c68c2d06ce383350ee33ad7407ab6ef5d574863e2cc246e"
+      ]
+    },
+    {
+      "id": "spr_aqua_collapsed",
+      "category": "Overworld",
+      "width": 35,
+      "height": 25,
+      "origin_x": -7,
+      "origin_y": -18,
+      "playback_speed": 1,
+      "playback_speed_type": "FramesPerGameFrame",
+      "frames": [
+        "sprites/spr_aqua_collapsed_0.png"
+      ],
+      "frame_sha256": [
+        "597f4c20ab59fdb8b44c8ff787682a4b01f55bdf360e9dee6727fe5774caf276"
+      ]
+    },
+    {
+      "id": "spr_aqua_collapsed_centered",
+      "category": "Overworld",
+      "width": 35,
+      "height": 25,
+      "origin_x": 17,
+      "origin_y": 18,
+      "playback_speed": 1,
+      "playback_speed_type": "FramesPerGameFrame",
+      "frames": [
+        "sprites/spr_aqua_collapsed_centered_0.png"
+      ],
+      "frame_sha256": [
+        "597f4c20ab59fdb8b44c8ff787682a4b01f55bdf360e9dee6727fe5774caf276"
+      ]
+    },
+    {
+      "id": "spr_aqua_collapsed_reflect",
+      "category": "Overworld",
+      "width": 35,
+      "height": 25,
+      "origin_x": 17,
+      "origin_y": 18,
+      "playback_speed": 1,
+      "playback_speed_type": "FramesPerGameFrame",
+      "frames": [
+        "sprites/spr_aqua_collapsed_reflect_0.png"
+      ],
+      "frame_sha256": [
+        "c260eb3c1e010731a324982d511cc15086144da4b316531d9703c78d0e4885cb"
+      ]
+    },
+    {
+      "id": "spr_aqua_confused",
+      "category": "Overworld",
+      "width": 18,
+      "height": 34,
+      "origin_x": 0,
+      "origin_y": 0,
+      "playback_speed": 1,
+      "playback_speed_type": "FramesPerGameFrame",
+      "frames": [
+        "sprites/spr_aqua_confused_0.png",
+        "sprites/spr_aqua_confused_1.png"
+      ],
+      "frame_sha256": [
+        "eda51e9816111a4f0bd341441c17748f1f42901dba1633f2a9b92514a658e6a9",
+        "ec399e996bff5b54c6eab7a574f5d7aa4e4a7377a30b0c48cbd7c14307b398e0"
+      ]
+    },
+    {
+      "id": "spr_aqua_eating",
+      "category": "Overworld",
+      "width": 20,
+      "height": 32,
+      "origin_x": 0,
+      "origin_y": -2,
+      "playback_speed": 1,
+      "playback_speed_type": "FramesPerGameFrame",
+      "frames": [
+        "sprites/spr_aqua_eating_0.png",
+        "sprites/spr_aqua_eating_1.png"
+      ],
+      "frame_sha256": [
+        "3630a3b3beca001e409a2b05e19b8601847825fadd8923851b967a5bc8bf8375",
+        "a1f7908633442779e145d277320d6a92d65739c6a58674563fe6718b904b4b1a"
+      ]
+    },
+    {
+      "id": "spr_aqua_eye_reveal",
+      "category": "Overworld/Eyes",
+      "width": 20,
+      "height": 34,
+      "origin_x": 0,
+      "origin_y": 0,
+      "playback_speed": 1,
+      "playback_speed_type": "FramesPerGameFrame",
+      "frames": [
+        "sprites/spr_aqua_eye_reveal_0.png",
+        "sprites/spr_aqua_eye_reveal_1.png"
+      ],
+      "frame_sha256": [
+        "71040a86e20b858b7b966555c8af98939fa7f169a939e0fd15e83c1dbd0138eb",
+        "a9c0ce276decc42d0b2ace3d84736b0fb58b5e662c67ba1f8aa0563e92da2c8c"
+      ]
+    },
+    {
+      "id": "spr_aqua_eye_reveal_three",
+      "category": "Overworld/Eyes",
+      "width": 20,
+      "height": 34,
+      "origin_x": 0,
+      "origin_y": 0,
+      "playback_speed": 1,
+      "playback_speed_type": "FramesPerGameFrame",
+      "frames": [
+        "sprites/spr_aqua_eye_reveal_three_0.png",
+        "sprites/spr_aqua_eye_reveal_three_1.png"
+      ],
+      "frame_sha256": [
+        "07c075c06c00e8043d20fcf57ca428f5e63a9f91a3d6554b3727c9f0d72752a6",
+        "221e788785624180703e300e792bd26683ffaa0d036b2a99cc761ba2d1cd2f7f"
+      ]
+    },
+    {
+      "id": "spr_aqua_grab",
+      "category": "Overworld/Grab",
+      "width": 21,
+      "height": 31,
+      "origin_x": 4,
+      "origin_y": -4,
+      "playback_speed": 1,
+      "playback_speed_type": "FramesPerGameFrame",
+      "frames": [
+        "sprites/spr_aqua_grab_0.png"
+      ],
+      "frame_sha256": [
+        "43a4f3eaf561049b506545245931195c422015c2029b37bc70bd3e6878520ea6"
+      ]
+    },
+    {
+      "id": "spr_aqua_grab_hold",
+      "category": "Overworld/Grab",
+      "width": 21,
+      "height": 35,
+      "origin_x": -1,
+      "origin_y": 0,
+      "playback_speed": 1,
+      "playback_speed_type": "FramesPerGameFrame",
+      "frames": [
+        "sprites/spr_aqua_grab_hold_0.png"
+      ],
+      "frame_sha256": [
+        "39204ec22894f2b7374cffc44dd3412ef09061a27b5b25ebb6b6e24b55481299"
+      ]
+    },
+    {
+      "id": "spr_aqua_grab_hold2",
+      "category": "Overworld/Grab",
+      "width": 21,
+      "height": 33,
+      "origin_x": 2,
+      "origin_y": -2,
+      "playback_speed": 1,
+      "playback_speed_type": "FramesPerGameFrame",
+      "frames": [
+        "sprites/spr_aqua_grab_hold2_0.png"
+      ],
+      "frame_sha256": [
+        "42a98d83d20d8c1f3754ce0cf1cbe3642e5bb1b29e2780af6e6357f9c03bdf2e"
+      ]
+    },
+    {
+      "id": "spr_aqua_grab_jump",
+      "category": "Overworld/Grab",
+      "width": 21,
+      "height": 35,
+      "origin_x": 1,
+      "origin_y": 0,
+      "playback_speed": 1,
+      "playback_speed_type": "FramesPerGameFrame",
+      "frames": [
+        "sprites/spr_aqua_grab_jump_0.png",
+        "sprites/spr_aqua_grab_jump_1.png"
+      ],
+      "frame_sha256": [
+        "4f7d4b68fc7b19df3bc238be216113bf42f9bf0ff2754894217354dd387453d7",
+        "72dc629ae44b644ef703ba18d257aa500ded216fb1dea0e39c7e92fdbe4b5daf"
+      ]
+    },
+    {
+      "id": "spr_aqua_green_hold",
+      "category": "Overworld",
+      "width": 21,
+      "height": 35,
+      "origin_x": -1,
+      "origin_y": 0,
+      "playback_speed": 1,
+      "playback_speed_type": "FramesPerGameFrame",
+      "frames": [
+        "sprites/spr_aqua_green_hold_0.png"
+      ],
+      "frame_sha256": [
+        "a76cc1c06f594e12dcff7078ed15ff9112700f7e77f87679024546f2b19bb040"
+      ]
+    },
+    {
+      "id": "spr_aqua_green_spin",
+      "category": "Overworld/Animations/Spin",
+      "width": 31,
+      "height": 35,
+      "origin_x": 6,
+      "origin_y": 0,
+      "playback_speed": 1,
+      "playback_speed_type": "FramesPerGameFrame",
+      "frames": [
+        "sprites/spr_aqua_green_spin_0.png",
+        "sprites/spr_aqua_green_spin_1.png",
+        "sprites/spr_aqua_green_spin_2.png",
+        "sprites/spr_aqua_green_spin_3.png",
+        "sprites/spr_aqua_green_spin_4.png"
+      ],
+      "frame_sha256": [
+        "2739abac3aa744e005e3ed5bbba93f0ba9a4ce854f466ba1efa0c7d68dac13ea",
+        "5088f276b6f0079c38121afc9fe98925634a8878739cc78b0d4373d5970f1e50",
+        "472083f570127f0f6c494013f3d1b91ecb85a9e2a72a7708e2d380e1d818d2a8",
+        "dee3ce0d197b8adea31163e30b3f8fd324aa523e7f787935b55fb35afad8e59d",
+        "0569412a316423cd314c28a2de11eea8b43e9f6ba9d2db3ded4dd880bd5ec9ae"
+      ]
+    },
+    {
+      "id": "spr_aqua_lasso",
+      "category": "Overworld",
+      "width": 20,
+      "height": 33,
+      "origin_x": 0,
+      "origin_y": -1,
+      "playback_speed": 1,
+      "playback_speed_type": "FramesPerGameFrame",
+      "frames": [
+        "sprites/spr_aqua_lasso_0.png"
+      ],
+      "frame_sha256": [
+        "8d89ca2faf800d1f7292ad612b1c862cd046b86d5c27822d66a61d5973d07798"
+      ]
+    },
+    {
+      "id": "spr_aqua_laugh",
+      "category": "Overworld/Animations/Laugh",
+      "width": 20,
+      "height": 33,
+      "origin_x": 0,
+      "origin_y": -1,
+      "playback_speed": 1,
+      "playback_speed_type": "FramesPerGameFrame",
+      "frames": [
+        "sprites/spr_aqua_laugh_0.png",
+        "sprites/spr_aqua_laugh_1.png"
+      ],
+      "frame_sha256": [
+        "135cdc4dcfc0ca01e7e8812ae38dfd927801864b6ee5123d69a4bee6072d84b8",
+        "088b073fb63de894c88fbfe5bdc0e327eb0cf7cb1f574540b3996970c356e69d"
+      ]
+    },
+    {
+      "id": "spr_aqua_laugh_green",
+      "category": "Overworld/Animations/Laugh",
+      "width": 20,
+      "height": 33,
+      "origin_x": 0,
+      "origin_y": -1,
+      "playback_speed": 1,
+      "playback_speed_type": "FramesPerGameFrame",
+      "frames": [
+        "sprites/spr_aqua_laugh_green_0.png",
+        "sprites/spr_aqua_laugh_green_1.png"
+      ],
+      "frame_sha256": [
+        "9232c8519a7141054230e5bd6fef41ff59d2dd82ebfa061c9d6d741283f5ddf0",
+        "0705845c33873e06ca79d2517a3919d67dfa75c93e617c8658a73b7003316022"
+      ]
+    },
+    {
+      "id": "spr_aqua_shakehead",
+      "category": "Overworld/Animations/Shake Head",
+      "width": 20,
+      "height": 32,
+      "origin_x": 0,
+      "origin_y": -2,
+      "playback_speed": 1,
+      "playback_speed_type": "FramesPerGameFrame",
+      "frames": [
+        "sprites/spr_aqua_shakehead_0.png",
+        "sprites/spr_aqua_shakehead_1.png",
+        "sprites/spr_aqua_shakehead_2.png",
+        "sprites/spr_aqua_shakehead_3.png"
+      ],
+      "frame_sha256": [
+        "f9255e9f353eaa9ea81576cd09d8fc4507afac17efa26dfe3b666acdb6a05139",
+        "029e8c8bfa18e5be8b96ac3a254c1b1154be2621c2bad2af9880ba901f6d851d",
+        "e4685404549ea4fc1750371114deb3dd7a71d0dc7b0d0ad4ba1cca8d383637cf",
+        "f75a8000153f6379a128d2111e6ca89d62d22df63632c62beffdc4a0175a1c6c"
+      ]
+    },
+    {
+      "id": "spr_aqua_shell_listen",
+      "category": "Overworld",
+      "width": 28,
+      "height": 35,
+      "origin_x": 0,
+      "origin_y": 0,
+      "playback_speed": 1,
+      "playback_speed_type": "FramesPerGameFrame",
+      "frames": [
+        "sprites/spr_aqua_shell_listen_0.png"
+      ],
+      "frame_sha256": [
+        "127d08110141ba6d5a8a7956127a0a3e5e1887187a616e4d60a9ee2f2d9b7568"
+      ]
+    },
+    {
+      "id": "spr_aqua_sit_smile",
+      "category": "Overworld/Sit",
+      "width": 22,
+      "height": 35,
+      "origin_x": 11,
+      "origin_y": 17,
+      "playback_speed": 1,
+      "playback_speed_type": "FramesPerGameFrame",
+      "frames": [
+        "sprites/spr_aqua_sit_smile_0.png",
+        "sprites/spr_aqua_sit_smile_1.png",
+        "sprites/spr_aqua_sit_smile_2.png",
+        "sprites/spr_aqua_sit_smile_3.png",
+        "sprites/spr_aqua_sit_smile_4.png",
+        "sprites/spr_aqua_sit_smile_5.png"
+      ],
+      "frame_sha256": [
+        "5013ba4ddc1b380a598ea64570689de7ce406968a7a38b45a4ae389f89764b05",
+        "2954a20f8d6896eeb5f5e1f23f44396c996092fce8d26f4f1529bd325fa64f9e",
+        "02176b6ee81e39443096421514ebddcbb30f001aa8594875a2a324e478e55d01",
+        "ace3a2dd42dcb9cf27183df4931528a95c941a393d4f219493f3a52f9a8a4bad",
+        "fbf0d6c91c37dd7e3eab138be127711f31e39e8654ab64e96d46acd5eade9fef",
+        "22c6438cfbcf4c87be4770cd4a71e42952b7e38aae8dbe2f044c752c8a759d31"
+      ]
+    },
+    {
+      "id": "spr_aqua_sit_wave",
+      "category": "Overworld/Sit",
+      "width": 25,
+      "height": 33,
+      "origin_x": 12,
+      "origin_y": 16,
+      "playback_speed": 1,
+      "playback_speed_type": "FramesPerGameFrame",
+      "frames": [
+        "sprites/spr_aqua_sit_wave_0.png",
+        "sprites/spr_aqua_sit_wave_1.png",
+        "sprites/spr_aqua_sit_wave_2.png",
+        "sprites/spr_aqua_sit_wave_3.png"
+      ],
+      "frame_sha256": [
+        "4178db509bb8bad7e0efff0a9c43f4ee46c4f268c1efc2b548029bbabceb58c9",
+        "88ca10efb417c646ca1cb592112d739dfd8939e29ffb12f756e5ba0a734f837f",
+        "258a6fadc793c9a83f7ee11221f57e6e912f17a9ab6f9469b85f7d6de84b3f0c",
+        "b450b27b5b001585b81b01a91606203ff715cba6a45a791bf66f9aaacb893aa0"
+      ]
+    },
+    {
+      "id": "spr_aqua_sleevewave",
+      "category": "Overworld/Animations/Sleeve Wave",
+      "width": 26,
+      "height": 32,
+      "origin_x": 6,
+      "origin_y": -2,
+      "playback_speed": 1,
+      "playback_speed_type": "FramesPerGameFrame",
+      "frames": [
+        "sprites/spr_aqua_sleevewave_0.png",
+        "sprites/spr_aqua_sleevewave_1.png",
+        "sprites/spr_aqua_sleevewave_2.png",
+        "sprites/spr_aqua_sleevewave_3.png",
+        "sprites/spr_aqua_sleevewave_4.png",
+        "sprites/spr_aqua_sleevewave_5.png"
+      ],
+      "frame_sha256": [
+        "ab77cabc6427abc07c553492cc7c41794e852cd1ab60ab9bbb41cd431b1cd57b",
+        "1d7adf8cf63f2c1e21a0a86f3d39a4b6b2c50ae67850fcc9b5808fe745aeea37",
+        "8dd7e30d6153f057863a421f98818228c8095d659629c7ad87eccb31ff776aff",
+        "283d6604b37f61d9d12b2b5a703d9f4849db5e6190aea795f7298c0a66f84c88",
+        "139af411f9633edf51f084d37d64520406176a1aa2059b1ecdb32b924b0075d7",
+        "497f80438d64323fe6826e4d94d37996af332e18733f184bd45d24238ca922e2"
+      ]
+    },
+    {
+      "id": "spr_aqua_spin",
+      "category": "Overworld",
+      "width": 20,
+      "height": 34,
+      "origin_x": 0,
+      "origin_y": 0,
+      "playback_speed": 1,
+      "playback_speed_type": "FramesPerGameFrame",
+      "frames": [
+        "sprites/spr_aqua_spin_0.png",
+        "sprites/spr_aqua_spin_1.png",
+        "sprites/spr_aqua_spin_2.png",
+        "sprites/spr_aqua_spin_3.png"
+      ],
+      "frame_sha256": [
+        "373fd469605ad67216ff4cb86c55cf1364dd3546844165ee25e6e7d796932e77",
+        "2447f1052fe0f976a6217d087f01db912ae49091a8b542d5a92d3ab67519c709",
+        "fee1b61aa671afe00c900c94137f96bdc3bbb8a583c9791adfce405b7fa2db85",
+        "1cd219574710cf40fe0d8d6803f5a03b689f9f84358bd94f1d3cef16002e878b"
+      ]
+    },
+    {
+      "id": "spr_aqua_surprise",
+      "category": "Overworld",
+      "width": 20,
+      "height": 34,
+      "origin_x": 0,
+      "origin_y": 0,
+      "playback_speed": 1,
+      "playback_speed_type": "FramesPerGameFrame",
+      "frames": [
+        "sprites/spr_aqua_surprise_0.png"
+      ],
+      "frame_sha256": [
+        "60af68f1520431078ba451c472a9d935cc23743fa228800d78ab40d7c1848043"
+      ]
+    },
+    {
+      "id": "spr_aqua_surprise_green",
+      "category": "Overworld",
+      "width": 20,
+      "height": 34,
+      "origin_x": 0,
+      "origin_y": 0,
+      "playback_speed": 1,
+      "playback_speed_type": "FramesPerGameFrame",
+      "frames": [
+        "sprites/spr_aqua_surprise_green_0.png"
+      ],
+      "frame_sha256": [
+        "cf5f3e7cb59ec929fa0bb3f92a9dfdec15723a6d49698969251eb6cb683118ce"
+      ]
+    },
+    {
+      "id": "spr_aqua_toothy_grin",
+      "category": "Overworld",
+      "width": 28,
+      "height": 35,
+      "origin_x": 3,
+      "origin_y": 0,
+      "playback_speed": 1,
+      "playback_speed_type": "FramesPerGameFrame",
+      "frames": [
+        "sprites/spr_aqua_toothy_grin_0.png"
+      ],
+      "frame_sha256": [
+        "0958ec0f171bf0d4b0352b9bb017dba3804ff9ddab07e26b736acf1da55a1858"
+      ]
+    },
+    {
+      "id": "spr_aqua_walk_down",
+      "category": "Overworld/Walk",
+      "width": 20,
+      "height": 36,
+      "origin_x": 0,
+      "origin_y": 0,
+      "playback_speed": 1,
+      "playback_speed_type": "FramesPerGameFrame",
+      "frames": [
+        "sprites/spr_aqua_walk_down_0.png",
+        "sprites/spr_aqua_walk_down_1.png",
+        "sprites/spr_aqua_walk_down_2.png",
+        "sprites/spr_aqua_walk_down_3.png"
+      ],
+      "frame_sha256": [
+        "bb9a046e81d2c3171eb6e7948be1b1b1c3ea1638b1cbfb1e282a6c1d15acb9f1",
+        "c7ab7b405e7ea775591027539f59f48a265bc7196d21a2aa295830f9d3f6084d",
+        "bb9a046e81d2c3171eb6e7948be1b1b1c3ea1638b1cbfb1e282a6c1d15acb9f1",
+        "b5b870b20a9805e995c97a3500f6cb1ba99645a45a4896651ba0305baf38e98b"
+      ]
+    },
+    {
+      "id": "spr_aqua_walk_left",
+      "category": "Overworld/Walk",
+      "width": 17,
+      "height": 35,
+      "origin_x": -3,
+      "origin_y": 0,
+      "playback_speed": 1,
+      "playback_speed_type": "FramesPerGameFrame",
+      "frames": [
+        "sprites/spr_aqua_walk_left_0.png",
+        "sprites/spr_aqua_walk_left_1.png",
+        "sprites/spr_aqua_walk_left_2.png",
+        "sprites/spr_aqua_walk_left_3.png"
+      ],
+      "frame_sha256": [
+        "049d255f9b3f1f61fd692c1795854134aa2dd94d3c3b00c073c35b6cefca1939",
+        "c5d1687384ddf5aa68199ba26ed34e01426ad396f755d9e6b4d55a084d1b4e74",
+        "57a711230e70f1c0c641250fd16c2324993937bb5487933e42d7951a0c96fab0",
+        "1da6e1b6c6be54b9a34c365a8a6b5d636afb0674a3b26520f7563dff900d0eec"
+      ]
+    },
+    {
+      "id": "spr_aqua_walk_right",
+      "category": "Overworld/Walk",
+      "width": 17,
+      "height": 35,
+      "origin_x": 0,
+      "origin_y": 0,
+      "playback_speed": 1,
+      "playback_speed_type": "FramesPerGameFrame",
+      "frames": [
+        "sprites/spr_aqua_walk_right_0.png",
+        "sprites/spr_aqua_walk_right_1.png",
+        "sprites/spr_aqua_walk_right_2.png",
+        "sprites/spr_aqua_walk_right_3.png"
+      ],
+      "frame_sha256": [
+        "780395fa6b6423863a9a28288e3d7360d5c33387518a267a3fd350af48a07587",
+        "7ab8ed464e3cc084eff4a2768e48e1c6fe1876efbfa27b363ba305db570fb896",
+        "780395fa6b6423863a9a28288e3d7360d5c33387518a267a3fd350af48a07587",
+        "baef7d3d3b96b0092fd05dfae56c327023a124c827d16903fe2a8b9c2e33eac1"
+      ]
+    },
+    {
+      "id": "spr_aqua_walk_up",
+      "category": "Overworld/Walk",
+      "width": 20,
+      "height": 36,
+      "origin_x": 0,
+      "origin_y": 0,
+      "playback_speed": 1,
+      "playback_speed_type": "FramesPerGameFrame",
+      "frames": [
+        "sprites/spr_aqua_walk_up_0.png",
+        "sprites/spr_aqua_walk_up_1.png",
+        "sprites/spr_aqua_walk_up_2.png",
+        "sprites/spr_aqua_walk_up_3.png"
+      ],
+      "frame_sha256": [
+        "ed92af0f970ee07f323347b0c7feacdb845dc55c289ad7012117cda2fafc03a8",
+        "84f52adafa84e24103a43db11a93ea51931c9f32f4c3b647ecd4d7f2939dd61c",
+        "ed92af0f970ee07f323347b0c7feacdb845dc55c289ad7012117cda2fafc03a8",
+        "d339f028c1cbc3121963298153417073b79859236b59e7c1a7649cd3e50952a9"
+      ]
+    },
+    {
+      "id": "spr_aqua_wave",
+      "category": "Overworld/Animations/Wave",
+      "width": 26,
+      "height": 34,
+      "origin_x": 0,
+      "origin_y": 0,
+      "playback_speed": 1,
+      "playback_speed_type": "FramesPerGameFrame",
+      "frames": [
+        "sprites/spr_aqua_wave_0.png",
+        "sprites/spr_aqua_wave_1.png",
+        "sprites/spr_aqua_wave_2.png",
+        "sprites/spr_aqua_wave_3.png"
+      ],
+      "frame_sha256": [
+        "1949643709d6db375b5c43a0242dca411ff50490de4b7ee9b81068bfa7f6320e",
+        "c0bc5edf9f3258aad8dea23ebb2255eb31713cfd74cc4891cabf943a6a5a6df5",
+        "b9ad28df6b5775c25732e37fb077f6706089bbb91433a36ee43c4e7de79431f4",
+        "04ab29f37ef13465024d4b26b205daf1499ca9b472b16beedb85286eeddc3aa1"
+      ]
+    },
+    {
+      "id": "spr_attack_knife_parted",
+      "category": "Battle/Attacks",
+      "width": 22,
+      "height": 9,
+      "origin_x": 11,
+      "origin_y": 4,
+      "playback_speed": 1,
+      "playback_speed_type": "FramesPerGameFrame",
+      "frames": [
+        "sprites/spr_attack_knife_parted_0.png",
+        "sprites/spr_attack_knife_parted_1.png"
+      ],
+      "frame_sha256": [
+        "37e466d1bfc93dd231fad6c67c64ca85dde546573e4b5a3d56dacc479da7c762",
+        "17f3ff4dfeffd1caf1602d4a8aefe5bf9db8cf0565e68b05d4b7fe0899d71e1e"
+      ]
+    },
+    {
+      "id": "spr_attack_knifechain",
+      "category": "Battle/Attacks",
+      "width": 22,
+      "height": 9,
+      "origin_x": 11,
+      "origin_y": 4,
+      "playback_speed": 1,
+      "playback_speed_type": "FramesPerGameFrame",
+      "frames": [
+        "sprites/spr_attack_knifechain_0.png"
+      ],
+      "frame_sha256": [
+        "5276f31bdebf0f21845310613c470b37bd67ae2917d1d79159e2cca948cecc3b"
+      ]
+    },
+    {
+      "id": "spr_attack_knifechain_spin",
+      "category": "Battle/Attacks",
+      "width": 22,
+      "height": 22,
+      "origin_x": 11,
+      "origin_y": 11,
+      "playback_speed": 1,
+      "playback_speed_type": "FramesPerGameFrame",
+      "frames": [
+        "sprites/spr_attack_knifechain_spin_0.png",
+        "sprites/spr_attack_knifechain_spin_1.png",
+        "sprites/spr_attack_knifechain_spin_2.png",
+        "sprites/spr_attack_knifechain_spin_3.png"
+      ],
+      "frame_sha256": [
+        "49b7c2607ba2b8a19d27f18bc8adcd6d8fb0b74da485b9da7a0c2426ab21fbef",
+        "6afb13f85e0f47fac602c5e8cae3c4a04855bcd39502c7515ece7a0248e7381b",
+        "a63c6fd05115afbbe026c3f70421c5e6605808bbb5db172856dc730f030f797b",
+        "a08fed045b4cdcc1f99eeeed7db15a20dd51d4344a63004e25b9bbbfd473c261"
+      ]
+    },
+    {
+      "id": "spr_attack_knifefan",
+      "category": "Battle/Attacks",
+      "width": 44,
+      "height": 18,
+      "origin_x": 22,
+      "origin_y": 9,
+      "playback_speed": 1,
+      "playback_speed_type": "FramesPerGameFrame",
+      "frames": [
+        "sprites/spr_attack_knifefan_0.png"
+      ],
+      "frame_sha256": [
+        "a374c634aa4e461715a48f1de1537bdca0c42691ac3ca4307d3878dc1310f272"
+      ]
+    },
+    {
+      "id": "spr_bullet_knife_break",
+      "category": "Battle/Bullet Pattern/Knife",
+      "width": 50,
+      "height": 50,
+      "origin_x": 25,
+      "origin_y": 25,
+      "playback_speed": 0.5,
+      "playback_speed_type": "FramesPerGameFrame",
+      "frames": [
+        "sprites/spr_bullet_knife_break_0.png",
+        "sprites/spr_bullet_knife_break_1.png",
+        "sprites/spr_bullet_knife_break_2.png",
+        "sprites/spr_bullet_knife_break_3.png"
+      ],
+      "frame_sha256": [
+        "031a164058054227febe6b56ec890563a487825951e0989b60448efb14fce3f5",
+        "6d280b4f5849e3b17dce770bbdcde4dbba435c0741761be82127c028ae58f6b7",
+        "8d797a586e3b2d3046599d82a2b50c0c29fb62e3a1d1dd0eb312f6e003f2b38f",
+        "73c99a6072a72c20d793d2be02e880e8fcfdd8d49e24d550f4c11b618bc7cb7e"
+      ]
+    },
+    {
+      "id": "spr_enemy_aqua_act",
+      "category": "Overworld/Animations/Act",
+      "width": 50,
+      "height": 35,
+      "origin_x": 27,
+      "origin_y": 0,
+      "playback_speed": 1,
+      "playback_speed_type": "FramesPerGameFrame",
+      "frames": [
+        "sprites/spr_enemy_aqua_act_0.png",
+        "sprites/spr_enemy_aqua_act_1.png",
+        "sprites/spr_enemy_aqua_act_2.png",
+        "sprites/spr_enemy_aqua_act_3.png",
+        "sprites/spr_enemy_aqua_act_4.png",
+        "sprites/spr_enemy_aqua_act_5.png",
+        "sprites/spr_enemy_aqua_act_6.png",
+        "sprites/spr_enemy_aqua_act_7.png",
+        "sprites/spr_enemy_aqua_act_8.png",
+        "sprites/spr_enemy_aqua_act_9.png",
+        "sprites/spr_enemy_aqua_act_10.png",
+        "sprites/spr_enemy_aqua_act_11.png"
+      ],
+      "frame_sha256": [
+        "46fefaba27244ca705ea6759e692fae281dd9a1eaa360617c048830a28cd6589",
+        "2bf4a1ee9979bead539a0fc67d8f975bb8784ec055d49d7f929965f598873f04",
+        "74f3a6c01cab3e459412e208610ecb8be935f93501516ef6518ca07caa1dd8ab",
+        "2bf4a1ee9979bead539a0fc67d8f975bb8784ec055d49d7f929965f598873f04",
+        "74f3a6c01cab3e459412e208610ecb8be935f93501516ef6518ca07caa1dd8ab",
+        "e49b6ca33b74ec49c05800d9953413eb7b2a17ae5fc60fc34dda0371a2556320",
+        "2aa459516196e5db90b03353ae58eb88d37bda0b9d6c66c0a71707530ab8afbb",
+        "926e2b5bf00e9080776d1f9b0ace17bf86c2374f9447296f7b4eb23140dc12da",
+        "088b340341566654ad93893a8437d83e8c4b2013441558e217a4652f4427b53e",
+        "04f6bbd0524bfa99ac11662780651a63bc837e622f4878794a8f39c3e70f9207",
+        "ce4f3ffe0f1caccd2d16359b2c689d64bd289a5636536a8a74de692e1b63f6f9",
+        "4599f2e7c351924573e7058f2ed6e4f53ed1a2595fe5682c8180b76bd0d466c1"
+      ]
+    },
+    {
+      "id": "spr_enemy_aqua_arm",
+      "category": "Overworld/Parts/Arms",
+      "width": 19,
+      "height": 20,
+      "origin_x": 16,
+      "origin_y": 10,
+      "playback_speed": 1,
+      "playback_speed_type": "FramesPerGameFrame",
+      "frames": [
+        "sprites/spr_enemy_aqua_arm_0.png",
+        "sprites/spr_enemy_aqua_arm_1.png",
+        "sprites/spr_enemy_aqua_arm_2.png",
+        "sprites/spr_enemy_aqua_arm_3.png",
+        "sprites/spr_enemy_aqua_arm_4.png"
+      ],
+      "frame_sha256": [
+        "611b6117a94540b21d0dea74fbbe9fbd4ead648c1ea6ab1e2d02dece9f107cce",
+        "b9ebe6755e9a65309a66ec6aa52bbdfff3c0ab6730ec5bbabb8d3797d217eedc",
+        "d417aa55ad00a84adb071f379148ffb601223dd7c94fb24b3ab3febcef7a9600",
+        "98adcfc72e4ca572e9c77b4462845fb1f7d60cb6577e2a258ddc007903e7e29d",
+        "5844b6ae02e125be72f3526bf46f4eed24d13d919467ccb4cbf1df0968ad8dba"
+      ]
+    },
+    {
+      "id": "spr_enemy_aqua_blur",
+      "category": "Overworld/Animations/Blur",
+      "width": 38,
+      "height": 32,
+      "origin_x": 9,
+      "origin_y": -4,
+      "playback_speed": 1,
+      "playback_speed_type": "FramesPerGameFrame",
+      "frames": [
+        "sprites/spr_enemy_aqua_blur_0.png",
+        "sprites/spr_enemy_aqua_blur_1.png",
+        "sprites/spr_enemy_aqua_blur_2.png"
+      ],
+      "frame_sha256": [
+        "63adb96a48d31c97a30e310dae4750bf98d075c647cbd96486791b74847f4093",
+        "cf358f7162075a9f748c1c8a2cc893c0a4f8dc0ef86a5591f0d3ec6313f285f0",
+        "c3265fe54cbb1d1373d02933a04544e24429e32aa8ab53aaff80353dba7bcf9e"
+      ]
+    },
+    {
+      "id": "spr_enemy_aqua_bored",
+      "category": "Overworld/Animations/Idle/Bored",
+      "width": 38,
+      "height": 32,
+      "origin_x": 8,
+      "origin_y": -4,
+      "playback_speed": 1,
+      "playback_speed_type": "FramesPerGameFrame",
+      "frames": [
+        "sprites/spr_enemy_aqua_bored_0.png",
+        "sprites/spr_enemy_aqua_bored_1.png",
+        "sprites/spr_enemy_aqua_bored_2.png",
+        "sprites/spr_enemy_aqua_bored_3.png",
+        "sprites/spr_enemy_aqua_bored_4.png",
+        "sprites/spr_enemy_aqua_bored_5.png",
+        "sprites/spr_enemy_aqua_bored_6.png",
+        "sprites/spr_enemy_aqua_bored_7.png"
+      ],
+      "frame_sha256": [
+        "1081ea5b00979918ff1b284e4fa7d9a06836d6067de4eaff0f9a9e52ee0f6be5",
+        "7567c1487e89b031ea67a1c558f31a93e3896377c0709f9a9506922bc05644ea",
+        "d043170232652f4a179f3762563eb601e0e5817c8d0f71bbfc4509099442840f",
+        "acbad106a9a99c8eb0a791d275c81f1839b452f6ac8d8a061e89fa362d067d2c",
+        "1c298c3d5e2a5866eedd01a1bb42febad90e3b76f4a7c884ea1e5a643366afeb",
+        "482ee2e5c02182f0de2fb9970be28bddae06122e5910f0f91f893aa78710dbc7",
+        "5ad66cae87fa69d55a91bb1e66a7195e5f18920d209d8c7dafdf8f0dbeb76f01",
+        "c58a46004c5224abae1a26f862343900f588242ecd797f702884def3d90ba522"
+      ]
+    },
+    {
+      "id": "spr_enemy_aqua_bored_green",
+      "category": "Overworld/Animations/Idle/Bored",
+      "width": 38,
+      "height": 32,
+      "origin_x": 8,
+      "origin_y": -4,
+      "playback_speed": 1,
+      "playback_speed_type": "FramesPerGameFrame",
+      "frames": [
+        "sprites/spr_enemy_aqua_bored_green_0.png",
+        "sprites/spr_enemy_aqua_bored_green_1.png",
+        "sprites/spr_enemy_aqua_bored_green_2.png",
+        "sprites/spr_enemy_aqua_bored_green_3.png",
+        "sprites/spr_enemy_aqua_bored_green_4.png",
+        "sprites/spr_enemy_aqua_bored_green_5.png",
+        "sprites/spr_enemy_aqua_bored_green_6.png",
+        "sprites/spr_enemy_aqua_bored_green_7.png"
+      ],
+      "frame_sha256": [
+        "ea20ef655f092cd3eb952efbf5d002dcd99ac763e0f6776a9d90ba7b0dd9acc3",
+        "308790d7d6011c9e9beaa449b442e66e81f78b7b980e40a7ec7b5740e45a5034",
+        "b5e8f92c2667fdd7543379fc449e60c4ea725e2b1a140659db275c0ccb7de13f",
+        "de86e2619d5745f60db77949d764b61bd09128ad7aec793d809a9b25e4cd71e6",
+        "e8c1019bb41c5a1b8481341751dae7c356a0b0cd70bdf09435fc0bf6099c2642",
+        "30e1faad91ff7a00a6bab6b8896b094f0633f306ea2fac7c2c91dcd9dbd97744",
+        "efa33cd9ee211e49151032b936bcf7a7dd271c24a619983b018dfafc55f5a2ad",
+        "4c2aab9ca6340213070f78401610c160362cec45a0763aa505adc8272e9e8334"
+      ]
+    },
+    {
+      "id": "spr_enemy_aqua_chainswing_back",
+      "category": "Overworld/Parts/Arms",
+      "width": 50,
+      "height": 50,
+      "origin_x": 22,
+      "origin_y": 20,
+      "playback_speed": 16,
+      "playback_speed_type": "FramesPerSecond",
+      "frames": [
+        "sprites/spr_enemy_aqua_chainswing_back_0.png",
+        "sprites/spr_enemy_aqua_chainswing_back_1.png",
+        "sprites/spr_enemy_aqua_chainswing_back_2.png",
+        "sprites/spr_enemy_aqua_chainswing_back_3.png",
+        "sprites/spr_enemy_aqua_chainswing_back_4.png",
+        "sprites/spr_enemy_aqua_chainswing_back_5.png",
+        "sprites/spr_enemy_aqua_chainswing_back_6.png",
+        "sprites/spr_enemy_aqua_chainswing_back_7.png",
+        "sprites/spr_enemy_aqua_chainswing_back_8.png",
+        "sprites/spr_enemy_aqua_chainswing_back_9.png"
+      ],
+      "frame_sha256": [
+        "e04d6e753befc5c392a825be64684f00ccc19fc58623e7e1844aea635e4dd0ae",
+        "0b75a3b3d223cffeef42df50927aa86ebdcace793de21d856aade22903ae4577",
+        "b2d71604b7eb2d390b4836eb09bda1808eccd1b353af82b0febd6e4b8bf24ef7",
+        "66c9709cbcdb433e9c9208e0168d03343037232453b568e5f5151db38dafadbb",
+        "407003cad04737bad02462ef8f4c697ea32f40190b972846bf3bf7ada0c9ad9c",
+        "f359f2dffb6684cdc274435d21b765cb105c21dd32cd61761e0269b28dedca9c",
+        "bf7a812cebb8a7835756a54371ee6e5f1d0e338f5ac88de564633986151e0e47",
+        "7ca27c0b43bb935ed03ceeb690b77599f416c988b651ca39cf83906a89ff9ed8",
+        "a1f3d1a89e37454e7b1ab5cf7875bdc280bc34a26172b5a9aed2ff6ea1414f77",
+        "e7ba809b5ca1364517e5e1c33e1e4382bbe5b144c4e26fc992fccd78c53718d1"
+      ]
+    },
+    {
+      "id": "spr_enemy_aqua_chainswing_back_old",
+      "category": "Overworld/Parts/Arms/Unused",
+      "width": 20,
+      "height": 30,
+      "origin_x": -5,
+      "origin_y": 0,
+      "playback_speed": 1,
+      "playback_speed_type": "FramesPerGameFrame",
+      "frames": [
+        "sprites/spr_enemy_aqua_chainswing_back_old_0.png",
+        "sprites/spr_enemy_aqua_chainswing_back_old_1.png",
+        "sprites/spr_enemy_aqua_chainswing_back_old_2.png",
+        "sprites/spr_enemy_aqua_chainswing_back_old_3.png",
+        "sprites/spr_enemy_aqua_chainswing_back_old_4.png",
+        "sprites/spr_enemy_aqua_chainswing_back_old_5.png",
+        "sprites/spr_enemy_aqua_chainswing_back_old_6.png",
+        "sprites/spr_enemy_aqua_chainswing_back_old_7.png",
+        "sprites/spr_enemy_aqua_chainswing_back_old_8.png"
+      ],
+      "frame_sha256": [
+        "342101ca3c3a93fbb5247329d9c39df65188dd5956ba0d8c771230a56c1ec3a8",
+        "3f5c8f790247717e67b50e26f36d31eb97c1c6dd4a0c9c3e47dbccfcb6fda4d9",
+        "650adee9448a30b189b2ff756f714dc2fb087d5f6a1a4d9ea2d987d2b3ee5407",
+        "825a58458d7a01d0051fbaf70845641490ebea21cda78c108e84766c51b6f908",
+        "a617ec274977bae85017d2d4b1873f9ce7437ca97da914ff4b0aa54de1c93dc2",
+        "d663b680299fbcf31e17ca5a50fe1b3448d6ba70113212a9d1a5d512a664ddf6",
+        "a92b676400e7c9691fb487bd943ed250dae317c0b2b1f6530502a53b758ff73a",
+        "3127612019eed595d41499d92b2879864a71db85a674eda09593f9ac03df4326",
+        "dabe88fe8bf5333ccce673ccd8e866fe160ec6f634d83a5af3b9c2aa00d0c53e"
+      ]
+    },
+    {
+      "id": "spr_enemy_aqua_chainswing_body",
+      "category": "Overworld/Parts",
+      "width": 27,
+      "height": 34,
+      "origin_x": 18,
+      "origin_y": 19,
+      "playback_speed": 1,
+      "playback_speed_type": "FramesPerGameFrame",
+      "frames": [
+        "sprites/spr_enemy_aqua_chainswing_body_0.png"
+      ],
+      "frame_sha256": [
+        "d6196506a211e46fcd3d5cb0660845d6fe3cafadb681257bd56837fab21efd73"
+      ]
+    },
+    {
+      "id": "spr_enemy_aqua_chainswing_front",
+      "category": "Overworld/Parts/Arms",
+      "width": 50,
+      "height": 50,
+      "origin_x": 22,
+      "origin_y": 20,
+      "playback_speed": 16,
+      "playback_speed_type": "FramesPerSecond",
+      "frames": [
+        "sprites/spr_enemy_aqua_chainswing_front_0.png",
+        "sprites/spr_enemy_aqua_chainswing_front_1.png",
+        "sprites/spr_enemy_aqua_chainswing_front_2.png",
+        "sprites/spr_enemy_aqua_chainswing_front_3.png",
+        "sprites/spr_enemy_aqua_chainswing_front_4.png",
+        "sprites/spr_enemy_aqua_chainswing_front_5.png",
+        "sprites/spr_enemy_aqua_chainswing_front_6.png",
+        "sprites/spr_enemy_aqua_chainswing_front_7.png",
+        "sprites/spr_enemy_aqua_chainswing_front_8.png",
+        "sprites/spr_enemy_aqua_chainswing_front_9.png"
+      ],
+      "frame_sha256": [
+        "69029bf5de87419c1a4793dddebf7b49faa31b42dae746229d0202d677f69549",
+        "536429eff000a2a2fbbb998f71bcaa708aa05342d4aa61aff734119363753d16",
+        "d2853ddf2264b574dbcd16bd17f790efd58d060e10bf6b826eae3d7176f22666",
+        "b32f6a1222062fc402c65617d720879c04f009cea80e6bda56aaef969cd02fe6",
+        "ef81dab18e329be2eb0dcd3d8f55b32cd1d0f7e45f552f2df970b52ec873b8ea",
+        "f3b935b5346c03c4778526f24a3106ef6f54c3cf723bdef7cd1f3c9e5d7d104c",
+        "b7f6dd4afb72c2d71a2fbfe769f2ef70c0466ed7ae01fa85361b3745d6f40a6c",
+        "1cffa318edaf5338d86bfedf0ac903e5fcc45e9451cc74cfa92a94b1c98de766",
+        "0641da3ea8158b1036d47ebbe8e16a31073899d6c68720446fc9a54a706b54ae",
+        "66d68bd78a6460b22e3f18a03c644b049832f40c934cce6ca93862363c90eb54"
+      ]
+    },
+    {
+      "id": "spr_enemy_aqua_cool_pose",
+      "category": "Overworld",
+      "width": 25,
+      "height": 35,
+      "origin_x": 6,
+      "origin_y": 0,
+      "playback_speed": 1,
+      "playback_speed_type": "FramesPerGameFrame",
+      "frames": [
+        "sprites/spr_enemy_aqua_cool_pose_0.png"
+      ],
+      "frame_sha256": [
+        "3831bb8fe0a24753a599f4b5aeab0766eda5f2f22c8266ac02846e06c305b189"
+      ]
+    },
+    {
+      "id": "spr_enemy_aqua_cool_pose_r",
+      "category": "Overworld",
+      "width": 25,
+      "height": 35,
+      "origin_x": 6,
+      "origin_y": 0,
+      "playback_speed": 1,
+      "playback_speed_type": "FramesPerGameFrame",
+      "frames": [
+        "sprites/spr_enemy_aqua_cool_pose_r_0.png"
+      ],
+      "frame_sha256": [
+        "2056473d4b650c67852adec7980ffdd621468afe2cfadfacadc437c1ec7921d2"
+      ]
+    },
+    {
+      "id": "spr_enemy_aqua_dance",
+      "category": "Overworld/Animations/Dance",
+      "width": 20,
+      "height": 35,
+      "origin_x": 0,
+      "origin_y": 0,
+      "playback_speed": 1,
+      "playback_speed_type": "FramesPerGameFrame",
+      "frames": [
+        "sprites/spr_enemy_aqua_dance_0.png",
+        "sprites/spr_enemy_aqua_dance_1.png",
+        "sprites/spr_enemy_aqua_dance_2.png",
+        "sprites/spr_enemy_aqua_dance_3.png"
+      ],
+      "frame_sha256": [
+        "abf648b8896d10bade9d47284a9de01df58f423f22ba18263cec62a5f779fe12",
+        "b074efa4ab39a780c8e916fa92ead656898f4e10d1b7b01b48a5999ae119bfc9",
+        "c048575734cbe2ab0829ada25722f934748a6e47aab23a10ebd390ac28c1c91b",
+        "657cdbcc0ebf25a622ea495d22e16d63b96adc0b0f8e9d73aac0a9fc431538a9"
+      ]
+    },
+    {
+      "id": "spr_enemy_aqua_headtilt",
+      "category": "Overworld",
+      "width": 25,
+      "height": 35,
+      "origin_x": 3,
+      "origin_y": 0,
+      "playback_speed": 1,
+      "playback_speed_type": "FramesPerGameFrame",
+      "frames": [
+        "sprites/spr_enemy_aqua_headtilt_0.png"
+      ],
+      "frame_sha256": [
+        "7802f4c4e33e60bfeb42b5a5e4950bf5fe2333a7c0f63ee5dea75dca11500401"
+      ]
+    },
+    {
+      "id": "spr_enemy_aqua_hurt",
+      "category": "Overworld",
+      "width": 29,
+      "height": 32,
+      "origin_x": 0,
+      "origin_y": -4,
+      "playback_speed": 1,
+      "playback_speed_type": "FramesPerSecond",
+      "frames": [
+        "sprites/spr_enemy_aqua_hurt_0.png"
+      ],
+      "frame_sha256": [
+        "9d5245f2c0439d55917a6a2f7e5e318384e064685a079e614ce73bed70698eeb"
+      ]
+    },
+    {
+      "id": "spr_enemy_aqua_hype",
+      "category": "Overworld/Animations/Idle/Hype",
+      "width": 38,
+      "height": 32,
+      "origin_x": 8,
+      "origin_y": -4,
+      "playback_speed": 1,
+      "playback_speed_type": "FramesPerGameFrame",
+      "frames": [
+        "sprites/spr_enemy_aqua_hype_0.png",
+        "sprites/spr_enemy_aqua_hype_1.png",
+        "sprites/spr_enemy_aqua_hype_2.png",
+        "sprites/spr_enemy_aqua_hype_3.png",
+        "sprites/spr_enemy_aqua_hype_4.png",
+        "sprites/spr_enemy_aqua_hype_5.png",
+        "sprites/spr_enemy_aqua_hype_6.png",
+        "sprites/spr_enemy_aqua_hype_7.png"
+      ],
+      "frame_sha256": [
+        "2cfd0ec7991a971b6340edbc5e2bb71cb37aafc5a536db02ebbb66fc96bc5e4a",
+        "441062fae236ce4f29edcf390393198d75da32c67e1797a78ace82af618c1566",
+        "738d7c2448f8768279d643256322dc85b1558a62e9afc32f68c8b8e5ef9f0674",
+        "78ab6a69f01bcd6ae46aeb061eb383726d0644922ab002f7e7914ee13c4f7d88",
+        "f2b30ed0c25146d355789c8b5f552c58123ece5ff73fddb4ac7aedb9eff8e616",
+        "4254e98725bf639b61055ae88484e6a71cdb1fa558c55b4d7ac45930c5f64cee",
+        "e9aba42deecdd21a164195aed226f3ad239cc7cedc09e8004a4cb4ea1dd3d6be",
+        "c1afd6f307a7c55cb5f9abbf956373aa12da7f403ad7ae046efcc0020636f8c5"
+      ]
+    },
+    {
+      "id": "spr_enemy_aqua_hype_green",
+      "category": "Overworld/Animations/Idle/Hype",
+      "width": 38,
+      "height": 32,
+      "origin_x": 8,
+      "origin_y": -4,
+      "playback_speed": 1,
+      "playback_speed_type": "FramesPerGameFrame",
+      "frames": [
+        "sprites/spr_enemy_aqua_hype_green_0.png",
+        "sprites/spr_enemy_aqua_hype_green_1.png",
+        "sprites/spr_enemy_aqua_hype_green_2.png",
+        "sprites/spr_enemy_aqua_hype_green_3.png",
+        "sprites/spr_enemy_aqua_hype_green_4.png",
+        "sprites/spr_enemy_aqua_hype_green_5.png",
+        "sprites/spr_enemy_aqua_hype_green_6.png",
+        "sprites/spr_enemy_aqua_hype_green_7.png"
+      ],
+      "frame_sha256": [
+        "8712f6ae73d50f90789d6c983342409feb01dd1e2ac688d38b7296ff12f48a5d",
+        "5a1378a00c577572ea2d49a0f96bc811ee8081377d36153ecba973a0b6ca544b",
+        "3be0c216e0e43a92be6f9598730e4ef0c0935f863a6edcd21e1162b5f9f44f39",
+        "8b9e9385c560aa14aa196b5616e466e8695ce78dd9097b9c4252381795df0e9e",
+        "98a7a2ddbc51b9ff216b6d49da6132cd9c261ad04ba9c658bc50684eb5984783",
+        "cb0496b9e24337c72ce6efb9617eb2bd2932f7c052d1c524d5e60f2eec5a829d",
+        "ac2919613abe9d523a6144db4559a6e20f3113c5ad16c7889c5180932424bff9",
+        "84df1004843e56c33870f47418d76a6d83b58106219047ae6103f1afa7110942"
+      ]
+    },
+    {
+      "id": "spr_enemy_aqua_hype_reverse",
+      "category": "Overworld/Animations/Idle/Hype - Reverse",
+      "width": 38,
+      "height": 32,
+      "origin_x": 8,
+      "origin_y": -4,
+      "playback_speed": 1,
+      "playback_speed_type": "FramesPerGameFrame",
+      "frames": [
+        "sprites/spr_enemy_aqua_hype_reverse_0.png",
+        "sprites/spr_enemy_aqua_hype_reverse_1.png",
+        "sprites/spr_enemy_aqua_hype_reverse_2.png",
+        "sprites/spr_enemy_aqua_hype_reverse_3.png",
+        "sprites/spr_enemy_aqua_hype_reverse_4.png",
+        "sprites/spr_enemy_aqua_hype_reverse_5.png",
+        "sprites/spr_enemy_aqua_hype_reverse_6.png",
+        "sprites/spr_enemy_aqua_hype_reverse_7.png"
+      ],
+      "frame_sha256": [
+        "c1afd6f307a7c55cb5f9abbf956373aa12da7f403ad7ae046efcc0020636f8c5",
+        "e9aba42deecdd21a164195aed226f3ad239cc7cedc09e8004a4cb4ea1dd3d6be",
+        "4254e98725bf639b61055ae88484e6a71cdb1fa558c55b4d7ac45930c5f64cee",
+        "f2b30ed0c25146d355789c8b5f552c58123ece5ff73fddb4ac7aedb9eff8e616",
+        "78ab6a69f01bcd6ae46aeb061eb383726d0644922ab002f7e7914ee13c4f7d88",
+        "738d7c2448f8768279d643256322dc85b1558a62e9afc32f68c8b8e5ef9f0674",
+        "441062fae236ce4f29edcf390393198d75da32c67e1797a78ace82af618c1566",
+        "2cfd0ec7991a971b6340edbc5e2bb71cb37aafc5a536db02ebbb66fc96bc5e4a"
+      ]
+    },
+    {
+      "id": "spr_enemy_aqua_hype_reverse_green",
+      "category": "Overworld/Animations/Idle/Hype - Reverse",
+      "width": 38,
+      "height": 32,
+      "origin_x": 8,
+      "origin_y": -4,
+      "playback_speed": 1,
+      "playback_speed_type": "FramesPerGameFrame",
+      "frames": [
+        "sprites/spr_enemy_aqua_hype_reverse_green_0.png",
+        "sprites/spr_enemy_aqua_hype_reverse_green_1.png",
+        "sprites/spr_enemy_aqua_hype_reverse_green_2.png",
+        "sprites/spr_enemy_aqua_hype_reverse_green_3.png",
+        "sprites/spr_enemy_aqua_hype_reverse_green_4.png",
+        "sprites/spr_enemy_aqua_hype_reverse_green_5.png",
+        "sprites/spr_enemy_aqua_hype_reverse_green_6.png",
+        "sprites/spr_enemy_aqua_hype_reverse_green_7.png"
+      ],
+      "frame_sha256": [
+        "84df1004843e56c33870f47418d76a6d83b58106219047ae6103f1afa7110942",
+        "ac2919613abe9d523a6144db4559a6e20f3113c5ad16c7889c5180932424bff9",
+        "cb0496b9e24337c72ce6efb9617eb2bd2932f7c052d1c524d5e60f2eec5a829d",
+        "98a7a2ddbc51b9ff216b6d49da6132cd9c261ad04ba9c658bc50684eb5984783",
+        "8b9e9385c560aa14aa196b5616e466e8695ce78dd9097b9c4252381795df0e9e",
+        "3be0c216e0e43a92be6f9598730e4ef0c0935f863a6edcd21e1162b5f9f44f39",
+        "5a1378a00c577572ea2d49a0f96bc811ee8081377d36153ecba973a0b6ca544b",
+        "8712f6ae73d50f90789d6c983342409feb01dd1e2ac688d38b7296ff12f48a5d"
+      ]
+    },
+    {
+      "id": "spr_enemy_aqua_idle",
+      "category": "Overworld/Animations/Idle",
+      "width": 38,
+      "height": 32,
+      "origin_x": 8,
+      "origin_y": -4,
+      "playback_speed": 1,
+      "playback_speed_type": "FramesPerGameFrame",
+      "frames": [
+        "sprites/spr_enemy_aqua_idle_0.png",
+        "sprites/spr_enemy_aqua_idle_1.png",
+        "sprites/spr_enemy_aqua_idle_2.png",
+        "sprites/spr_enemy_aqua_idle_3.png",
+        "sprites/spr_enemy_aqua_idle_4.png",
+        "sprites/spr_enemy_aqua_idle_5.png",
+        "sprites/spr_enemy_aqua_idle_6.png",
+        "sprites/spr_enemy_aqua_idle_7.png"
+      ],
+      "frame_sha256": [
+        "7c4db77f9446ba177348409ca53394091d4d9d13fc0fcb94e20152af4a3ffdc3",
+        "6700a0d535a9f0aebf2a1be83a65e85377e7a265ada0290f9fcc2e73d68b005b",
+        "1fbd3965fec7b2c0c0cd7ddd6892b723b9c40a9127f43a0ee4c4ff37a8abcf4c",
+        "3cf7c114f8c2728512864471c8141d3562cbe783fa9c20297ec6ccadcf2dc255",
+        "4cc38b417306b97639ff44242d3b89c96c96c389822e0f30536f6b778a211737",
+        "cdaa48f265867c6165bc1e4264bda47995b33fd500879967c4e87343c1f9a115",
+        "37bc7d8417b86a908058839eb21b378b8cf47e743d0c1785d6492de14d3f47bf",
+        "e274ec66eed26b4684572d961303e56f229f7ba710d2b31e33ea79b384cae6ae"
+      ]
+    },
+    {
+      "id": "spr_enemy_aqua_idle_fox",
+      "category": "Overworld/Animations/Idle/Netskie",
+      "width": 50,
+      "height": 32,
+      "origin_x": 10,
+      "origin_y": -4,
+      "playback_speed": 1,
+      "playback_speed_type": "FramesPerGameFrame",
+      "frames": [
+        "sprites/spr_enemy_aqua_idle_fox_0.png",
+        "sprites/spr_enemy_aqua_idle_fox_1.png",
+        "sprites/spr_enemy_aqua_idle_fox_2.png",
+        "sprites/spr_enemy_aqua_idle_fox_3.png",
+        "sprites/spr_enemy_aqua_idle_fox_4.png",
+        "sprites/spr_enemy_aqua_idle_fox_5.png",
+        "sprites/spr_enemy_aqua_idle_fox_6.png",
+        "sprites/spr_enemy_aqua_idle_fox_7.png"
+      ],
+      "frame_sha256": [
+        "245a63373cd6ce7cf20e694c369e8636435c6396af502ab57b633de56d2e21c6",
+        "7586ad0ba60155b107f2c07cac7c5e2766c032480b6f5fb1cf4b6e63fed41a11",
+        "780799db22c54bf04d30b2094cb3e944c23f97abce3ea0c8b718d6fae785b809",
+        "2a080e560973cdf958e35d45cfcadf85c2cebbbe97d73ebf8e9fbdce429436a6",
+        "1313eabc13bf56fdcd6783f0dfa1ac221aec30dff3893a5d77357948ef8acb49",
+        "9751645108a84a48c350504c6f9be09c3658f4f5fc30f8f9fd275f2d0fffb12c",
+        "a1d579607e21b917f22a939e4378d0490c60f8e2278b3a8f51f84dbee70c920b",
+        "1afb6297ba94089aed2f1bc00023db359f999da21d9ec855c24f2c4659263dec"
+      ]
+    },
+    {
+      "id": "spr_enemy_aqua_idle_foxleftorigin",
+      "category": "Overworld/Animations/Idle/Netskie",
+      "width": 50,
+      "height": 32,
+      "origin_x": 19,
+      "origin_y": 31,
+      "playback_speed": 1,
+      "playback_speed_type": "FramesPerGameFrame",
+      "frames": [
+        "sprites/spr_enemy_aqua_idle_foxleftorigin_0.png",
+        "sprites/spr_enemy_aqua_idle_foxleftorigin_1.png",
+        "sprites/spr_enemy_aqua_idle_foxleftorigin_2.png",
+        "sprites/spr_enemy_aqua_idle_foxleftorigin_3.png",
+        "sprites/spr_enemy_aqua_idle_foxleftorigin_4.png",
+        "sprites/spr_enemy_aqua_idle_foxleftorigin_5.png",
+        "sprites/spr_enemy_aqua_idle_foxleftorigin_6.png",
+        "sprites/spr_enemy_aqua_idle_foxleftorigin_7.png"
+      ],
+      "frame_sha256": [
+        "245a63373cd6ce7cf20e694c369e8636435c6396af502ab57b633de56d2e21c6",
+        "7586ad0ba60155b107f2c07cac7c5e2766c032480b6f5fb1cf4b6e63fed41a11",
+        "780799db22c54bf04d30b2094cb3e944c23f97abce3ea0c8b718d6fae785b809",
+        "2a080e560973cdf958e35d45cfcadf85c2cebbbe97d73ebf8e9fbdce429436a6",
+        "1313eabc13bf56fdcd6783f0dfa1ac221aec30dff3893a5d77357948ef8acb49",
+        "9751645108a84a48c350504c6f9be09c3658f4f5fc30f8f9fd275f2d0fffb12c",
+        "a1d579607e21b917f22a939e4378d0490c60f8e2278b3a8f51f84dbee70c920b",
+        "1afb6297ba94089aed2f1bc00023db359f999da21d9ec855c24f2c4659263dec"
+      ]
+    },
+    {
+      "id": "spr_enemy_aqua_idle_green",
+      "category": "Overworld/Animations/Idle",
+      "width": 38,
+      "height": 32,
+      "origin_x": 8,
+      "origin_y": -4,
+      "playback_speed": 1,
+      "playback_speed_type": "FramesPerGameFrame",
+      "frames": [
+        "sprites/spr_enemy_aqua_idle_green_0.png",
+        "sprites/spr_enemy_aqua_idle_green_1.png",
+        "sprites/spr_enemy_aqua_idle_green_2.png",
+        "sprites/spr_enemy_aqua_idle_green_3.png",
+        "sprites/spr_enemy_aqua_idle_green_4.png",
+        "sprites/spr_enemy_aqua_idle_green_5.png",
+        "sprites/spr_enemy_aqua_idle_green_6.png",
+        "sprites/spr_enemy_aqua_idle_green_7.png"
+      ],
+      "frame_sha256": [
+        "b63b7e706bf590adc6a9029f038b2b64a9ab09eaa49a3ab4855e2afd31ac32e9",
+        "17ed9dffebf610f6401bde70fd3b233be5791c95dc2432fead9dc33dfddf0e9f",
+        "92e87591df617af8acf7e7c73ed7a281886b1a5dd42da4f86f3204545cc0d61d",
+        "2384e2672fc0987c8aac03beae10d90d30656a9d07e9d8b772c6aedbb5717c4e",
+        "0e3c6617bc564052796b5e8405e85a32251f0901ded0b6ac3afbf4c8aace5e3a",
+        "e1d844bf44b473fe62e332efef1fb6ab9780b597dc665dc74fab639a24a248b3",
+        "01762040cdc0e39965615166f5cbadf46eb7a6c783ccc0d7fcf3b2f217285413",
+        "9234007e0146f8ca88f3251a63ffc8be1ccff50c8e062d9afa2013cfbfc71742"
+      ]
+    },
+    {
+      "id": "spr_enemy_aqua_idle_leftorigin",
+      "category": "Overworld/Animations/Idle/Unused",
+      "width": 38,
+      "height": 32,
+      "origin_x": 19,
+      "origin_y": 31,
+      "playback_speed": 1,
+      "playback_speed_type": "FramesPerGameFrame",
+      "frames": [
+        "sprites/spr_enemy_aqua_idle_leftorigin_0.png",
+        "sprites/spr_enemy_aqua_idle_leftorigin_1.png",
+        "sprites/spr_enemy_aqua_idle_leftorigin_2.png",
+        "sprites/spr_enemy_aqua_idle_leftorigin_3.png",
+        "sprites/spr_enemy_aqua_idle_leftorigin_4.png",
+        "sprites/spr_enemy_aqua_idle_leftorigin_5.png",
+        "sprites/spr_enemy_aqua_idle_leftorigin_6.png",
+        "sprites/spr_enemy_aqua_idle_leftorigin_7.png"
+      ],
+      "frame_sha256": [
+        "cf4e6fbe75142cb99dd5b920b5f974f624575fbab189e66190fb307307b3c559",
+        "6700a0d535a9f0aebf2a1be83a65e85377e7a265ada0290f9fcc2e73d68b005b",
+        "1fbd3965fec7b2c0c0cd7ddd6892b723b9c40a9127f43a0ee4c4ff37a8abcf4c",
+        "3cf7c114f8c2728512864471c8141d3562cbe783fa9c20297ec6ccadcf2dc255",
+        "4cc38b417306b97639ff44242d3b89c96c96c389822e0f30536f6b778a211737",
+        "cdaa48f265867c6165bc1e4264bda47995b33fd500879967c4e87343c1f9a115",
+        "37bc7d8417b86a908058839eb21b378b8cf47e743d0c1785d6492de14d3f47bf",
+        "e274ec66eed26b4684572d961303e56f229f7ba710d2b31e33ea79b384cae6ae"
+      ]
+    },
+    {
+      "id": "spr_enemy_aqua_idle_r",
+      "category": "Overworld/Animations/Idle/Right",
+      "width": 38,
+      "height": 32,
+      "origin_x": 8,
+      "origin_y": -4,
+      "playback_speed": 1,
+      "playback_speed_type": "FramesPerGameFrame",
+      "frames": [
+        "sprites/spr_enemy_aqua_idle_r_0.png",
+        "sprites/spr_enemy_aqua_idle_r_1.png",
+        "sprites/spr_enemy_aqua_idle_r_2.png",
+        "sprites/spr_enemy_aqua_idle_r_3.png",
+        "sprites/spr_enemy_aqua_idle_r_4.png",
+        "sprites/spr_enemy_aqua_idle_r_5.png",
+        "sprites/spr_enemy_aqua_idle_r_6.png",
+        "sprites/spr_enemy_aqua_idle_r_7.png"
+      ],
+      "frame_sha256": [
+        "eeb4c9a28fd65bcc60f5ea30af94238e951f0fc2c8a8c42566fa3330ff4a06f9",
+        "ce068230ada5b74e122741e23b0b5e62f7ef50abe02e160b6e2e4ac03657a244",
+        "861580a45609f16562f4f704aefa16d69139724a4335023783f48d9b702d0f8c",
+        "7194bce00c04db8ea5798b102dceb7154e90bc25ebbd6014060c5c4bd28ba6a6",
+        "1e3d31d0be982ed48d909091d2efbab970040a454d668efb1dda1aa1e74e049c",
+        "229b29090880920c6fc4c86fa66323f670cefd7a18d10c08bf0f5e4190bd3fdd",
+        "deec13ae3d975e2b3c47934e4fd83e1e4adb9a049ca0c2b0609bc69b00b89dcb",
+        "60c953bf1792dcccd5e129ef051483f2fa587764701f133711979fe2ce0c5070"
+      ]
+    },
+    {
+      "id": "spr_enemy_aqua_idle_r_green",
+      "category": "Overworld/Animations/Idle/Right",
+      "width": 38,
+      "height": 32,
+      "origin_x": 8,
+      "origin_y": -4,
+      "playback_speed": 1,
+      "playback_speed_type": "FramesPerGameFrame",
+      "frames": [
+        "sprites/spr_enemy_aqua_idle_r_green_0.png",
+        "sprites/spr_enemy_aqua_idle_r_green_1.png",
+        "sprites/spr_enemy_aqua_idle_r_green_2.png",
+        "sprites/spr_enemy_aqua_idle_r_green_3.png",
+        "sprites/spr_enemy_aqua_idle_r_green_4.png",
+        "sprites/spr_enemy_aqua_idle_r_green_5.png",
+        "sprites/spr_enemy_aqua_idle_r_green_6.png",
+        "sprites/spr_enemy_aqua_idle_r_green_7.png"
+      ],
+      "frame_sha256": [
+        "a37f2855c2752b25067034299b2f27c1395347f018da2e2f0d97c7e8c7567ea7",
+        "3b302e054f94a92de4b73590bab76702014ce601565eba11735eec53ae9e281f",
+        "d4d0d6846a0cf438992e67e9a8d788d61558b7312a3c920ad4ff6e56470a1068",
+        "5401d7912fc2cc3d66414d99611c9c8e472134ff41c6912fa143d82be004a62e",
+        "f64d5e7829985a08da6691129e4228db59c9a5299f5ee38e25db8c3440e395cb",
+        "0ab1fde9d7500721312350b0f0c5662fa69f4f954e258a2592726e9df0f51f74",
+        "09ef0a4fd373696f9e6afe38c8e8b55de6ce392728c205df19974776dcaa670b",
+        "e57391461b360bb654454b1c735d58a43ae4b9e2a70b5e95505e085b60354e12"
+      ]
+    },
+    {
+      "id": "spr_enemy_aqua_knife_ready",
+      "category": "Misc",
+      "width": 38,
+      "height": 48,
+      "origin_x": 8,
+      "origin_y": 12,
+      "playback_speed": 1,
+      "playback_speed_type": "FramesPerGameFrame",
+      "frames": [
+        "sprites/spr_enemy_aqua_knife_ready_0.png",
+        "sprites/spr_enemy_aqua_knife_ready_1.png",
+        "sprites/spr_enemy_aqua_knife_ready_2.png"
+      ],
+      "frame_sha256": [
+        "6ec4ac3e359d83bc03c2b79e36bb05c01c214186725806f7642a0cef61e2f18d",
+        "7d5748c42449f1f7157cfc20463e390d555e6a40ede1bc2547728327ca2648ba",
+        "66fde4261779f4a515f3bdb9ffaa8074cf93a00bafc8930cde03713f748acbea"
+      ]
+    },
+    {
+      "id": "spr_enemy_aqua_knifespin_temp",
+      "category": "Overworld/Animations/Blur/Unused",
+      "width": 25,
+      "height": 31,
+      "origin_x": 8,
+      "origin_y": -4,
+      "playback_speed": 1,
+      "playback_speed_type": "FramesPerGameFrame",
+      "frames": [
+        "sprites/spr_enemy_aqua_knifespin_temp_0.png",
+        "sprites/spr_enemy_aqua_knifespin_temp_1.png"
+      ],
+      "frame_sha256": [
+        "df26ebd015699d86874424a10dca6ae62dc2c6a2007f8394038b9fff95143066",
+        "b673944de2c415efc3e3c70803e2ed0a8c6d86a7558224bc081fc9a58717b5e0"
+      ]
+    },
+    {
+      "id": "spr_enemy_aqua_laugh",
+      "category": "Overworld/Animations/Laugh",
+      "width": 28,
+      "height": 35,
+      "origin_x": 3,
+      "origin_y": 0,
+      "playback_speed": 1,
+      "playback_speed_type": "FramesPerGameFrame",
+      "frames": [
+        "sprites/spr_enemy_aqua_laugh_0.png",
+        "sprites/spr_enemy_aqua_laugh_1.png"
+      ],
+      "frame_sha256": [
+        "4761eb3ed680254ad762fa294b7faef440f8971fb2cd9a01f603e3f387dca6ca",
+        "9069235e38af5fe7d79fa617e480e13362fc67687ea96914153a0e26408fc879"
+      ]
+    },
+    {
+      "id": "spr_enemy_aqua_pose",
+      "category": "Overworld/Animations/Laugh",
+      "width": 25,
+      "height": 35,
+      "origin_x": 3,
+      "origin_y": 0,
+      "playback_speed": 1,
+      "playback_speed_type": "FramesPerGameFrame",
+      "frames": [
+        "sprites/spr_enemy_aqua_pose_0.png"
+      ],
+      "frame_sha256": [
+        "8d6148a724a52ae88fcd9557d6f03f8b156d736280c51b5ad4c43f09ec6e0878"
+      ]
+    },
+    {
+      "id": "spr_enemy_aqua_pose_r",
+      "category": "Overworld/Animations/Laugh",
+      "width": 25,
+      "height": 35,
+      "origin_x": 3,
+      "origin_y": 0,
+      "playback_speed": 1,
+      "playback_speed_type": "FramesPerGameFrame",
+      "frames": [
+        "sprites/spr_enemy_aqua_pose_r_0.png"
+      ],
+      "frame_sha256": [
+        "5d0b6054713a6148c1a6404c2684f384fe68372990b449eb0714c388a5bbea84"
+      ]
+    },
+    {
+      "id": "spr_enemy_aqua_pose_r_green",
+      "category": "Overworld",
+      "width": 25,
+      "height": 35,
+      "origin_x": 3,
+      "origin_y": 0,
+      "playback_speed": 1,
+      "playback_speed_type": "FramesPerGameFrame",
+      "frames": [
+        "sprites/spr_enemy_aqua_pose_r_green_0.png"
+      ],
+      "frame_sha256": [
+        "7f0b96bc9043b0166e8df5d9be57b5dea128935a0748a7f899208d59952d2a01"
+      ]
+    },
+    {
+      "id": "spr_enemy_aqua_redsplash",
+      "category": "Overworld/Animations/Idle/Red Splash",
+      "width": 38,
+      "height": 32,
+      "origin_x": 0,
+      "origin_y": 0,
+      "playback_speed": 1,
+      "playback_speed_type": "FramesPerGameFrame",
+      "frames": [
+        "sprites/spr_enemy_aqua_redsplash_0.png",
+        "sprites/spr_enemy_aqua_redsplash_1.png",
+        "sprites/spr_enemy_aqua_redsplash_2.png",
+        "sprites/spr_enemy_aqua_redsplash_3.png",
+        "sprites/spr_enemy_aqua_redsplash_4.png",
+        "sprites/spr_enemy_aqua_redsplash_5.png",
+        "sprites/spr_enemy_aqua_redsplash_6.png",
+        "sprites/spr_enemy_aqua_redsplash_7.png"
+      ],
+      "frame_sha256": [
+        "75d59e960b5f0b83e7123630e7002e0823a4917c4341f8e2d806d8e2ca99ad0f",
+        "2f1323262e2e82952473d5f565fab7a7eeca7eb52b682385ee3de94f4e3ca360",
+        "40a847a0aace93ff00bef67af1b6edc3b93d225be1fb06b250ff3c52925f272b",
+        "9a77c2369b07c07b1ce2c5c7addd1255eb01bf417bc65fb1149e775156715f32",
+        "ade7b61d48f5e3ac2b28e5db42be3ecdc999e764262924a3deb13ffaf5e27bf4",
+        "c3724bbd6a2f33077297a82774c83411b7cb58e3e638baf48422b96558a8f88f",
+        "79649ab8082366ad2564bc08454321b2a6110070df6eb72d57be3321a9f06ca4",
+        "3eb2b27ba7ed4f0a30ab9aedd036fd25eee6de952dee347b2b976f41492d50a0"
+      ]
+    },
+    {
+      "id": "spr_enemy_aqua_spin",
+      "category": "Overworld/Animations/Spin",
+      "width": 31,
+      "height": 35,
+      "origin_x": 6,
+      "origin_y": 0,
+      "playback_speed": 1,
+      "playback_speed_type": "FramesPerGameFrame",
+      "frames": [
+        "sprites/spr_enemy_aqua_spin_0.png",
+        "sprites/spr_enemy_aqua_spin_1.png",
+        "sprites/spr_enemy_aqua_spin_2.png",
+        "sprites/spr_enemy_aqua_spin_3.png",
+        "sprites/spr_enemy_aqua_spin_4.png"
+      ],
+      "frame_sha256": [
+        "a3802f24096f42f7f14a9a9666a8a2d226eeed33fb26c91cf62420aa3dfe4ac3",
+        "8ae4b64f0242391836d68e0bd26e37241af9a29c1d0e342bc0248f99372ba0af",
+        "23fed394b8b1e2ddc268ecc1d70149c24760e41b74969793b01c87800608213e",
+        "69367d7c8027ea9d7567b1ac2c11eed62ad520c7cce928faa52c9ba8e769ba06",
+        "89b61fcfeb272c1d4ae28d6532ebce8fe965d6572633a511be29c29bef4002fd"
+      ]
+    },
+    {
+      "id": "spr_enemy_aqua_unamused",
+      "category": "Overworld",
+      "width": 25,
+      "height": 35,
+      "origin_x": 3,
+      "origin_y": 0,
+      "playback_speed": 1,
+      "playback_speed_type": "FramesPerGameFrame",
+      "frames": [
+        "sprites/spr_enemy_aqua_unamused_0.png"
+      ],
+      "frame_sha256": [
+        "d5e1fdd63acd47e3ef49792134de51b56191faa45cb3f55b85dd0fd7a82ed1ec"
+      ]
+    },
+    {
+      "id": "spr_enemy_aqua_unamused_r",
+      "category": "Overworld",
+      "width": 25,
+      "height": 35,
+      "origin_x": 3,
+      "origin_y": 0,
+      "playback_speed": 1,
+      "playback_speed_type": "FramesPerGameFrame",
+      "frames": [
+        "sprites/spr_enemy_aqua_unamused_r_0.png"
+      ],
+      "frame_sha256": [
+        "898cf725a5af03a7be01ad56c76357567fdc98c42a14e71e287277dd445e0d83"
+      ]
+    },
+    {
+      "id": "spr_faqua",
+      "category": "Battle/Bullet Pattern/Enemy",
+      "width": 37,
+      "height": 40,
+      "origin_x": 18,
+      "origin_y": 20,
+      "playback_speed": 1,
+      "playback_speed_type": "FramesPerGameFrame",
+      "frames": [
+        "sprites/spr_faqua_0.png",
+        "sprites/spr_faqua_1.png",
+        "sprites/spr_faqua_2.png",
+        "sprites/spr_faqua_3.png",
+        "sprites/spr_faqua_4.png"
+      ],
+      "frame_sha256": [
+        "4fa25a9ebc2b01ddf34ac7ad681ac459ceee8d3ae7617ae8eb014167b459a3c7",
+        "a541bf90c1e322cc1951dd67065aa83e4f5875d4b8039d709dd0de57741f4527",
+        "0dcba758f998224c4262e22277b398ebc1cd598c8dce30199b84e535779cf62d",
+        "b0b752ff335c87381fcf05d28f73d872cae3be2af401d7bb905c7b270175878d",
+        "7c3f446da9af246334ce1dc1823b0896a7fa1e932fdfb8bc32adebd2182f923a"
+      ]
+    },
+    {
+      "id": "spr_faqua_blur",
+      "category": "Battle/Bullet Pattern/Enemy",
+      "width": 38,
+      "height": 32,
+      "origin_x": 19,
+      "origin_y": 16,
+      "playback_speed": 1,
+      "playback_speed_type": "FramesPerGameFrame",
+      "frames": [
+        "sprites/spr_faqua_blur_0.png",
+        "sprites/spr_faqua_blur_1.png",
+        "sprites/spr_faqua_blur_2.png"
+      ],
+      "frame_sha256": [
+        "b3ffd8d288451064d0b818078fd05ab65eef502900f899ba5dd6b7d0c552a578",
+        "267f7c4dab24999dec4c2c69cb5ef22f40222cc27eaf587f55f79976a79243e2",
+        "c0d44e1e2bd0da3021a69f36cf10048ec4be675b8bf01999891dad555ef34431"
+      ]
+    },
+    {
+      "id": "spr_faqua_gold",
+      "category": "Battle/Bullet Pattern/Gold!",
+      "width": 37,
+      "height": 40,
+      "origin_x": 18,
+      "origin_y": 20,
+      "playback_speed": 1,
+      "playback_speed_type": "FramesPerGameFrame",
+      "frames": [
+        "sprites/spr_faqua_gold_0.png",
+        "sprites/spr_faqua_gold_1.png",
+        "sprites/spr_faqua_gold_2.png",
+        "sprites/spr_faqua_gold_3.png",
+        "sprites/spr_faqua_gold_4.png"
+      ],
+      "frame_sha256": [
+        "74e41db4d10c88532d1d534da109b7e6a70ead42915eb9b8bf6f923bc15fd6be",
+        "1e1c512cf75567f4fac6d6f56a0ea70b0ef745e54ae31b7e475b04c6b381b17a",
+        "95ead1d08cab74a1575a47ebbd357a930954f70482cec06f35c537c322978cd3",
+        "3dffb498a330a9a09cb0564fa787b826141d424a933e7982787de2f972e4e1df",
+        "899e716c9edec0a3e474f2f3ef8c6afe85885d216264294a9500b5fbcc9b2083"
+      ]
+    },
+    {
+      "id": "spr_faqua_knife",
+      "category": "Battle/Bullet Pattern/Knife",
+      "width": 40,
+      "height": 40,
+      "origin_x": 20,
+      "origin_y": 20,
+      "playback_speed": 0.5,
+      "playback_speed_type": "FramesPerGameFrame",
+      "frames": [
+        "sprites/spr_faqua_knife_0.png",
+        "sprites/spr_faqua_knife_1.png"
+      ],
+      "frame_sha256": [
+        "4d9805e57812a2f991cca95a4fe33a2619f4dd1e0fbfbb23ca0ac82835c9ef94",
+        "1db82a37d7f2170b1960592f2b5d0a0599178292731c017ff0d1e3b934f89b60"
+      ]
+    },
+    {
+      "id": "spr_faqua_knife_cracked",
+      "category": "Battle/Bullet Pattern/Knife",
+      "width": 40,
+      "height": 40,
+      "origin_x": 20,
+      "origin_y": 20,
+      "playback_speed": 1,
+      "playback_speed_type": "FramesPerGameFrame",
+      "frames": [
+        "sprites/spr_faqua_knife_cracked_0.png",
+        "sprites/spr_faqua_knife_cracked_1.png",
+        "sprites/spr_faqua_knife_cracked_2.png"
+      ],
+      "frame_sha256": [
+        "e2a40de208dc92191c45ed8ddff4e7d19df00344fd4d71cad20590656a677c26",
+        "5814bc0015be1f8e86eff46208405c07aee1464dbb09a9f9e804bc95004bf710",
+        "b3a9d3db8c5f0fd14a5a2087a1bf881995f3af2b5eb0e785731aa729c0c9d1d8"
+      ]
+    },
+    {
+      "id": "spr_faqua_knife_spinning",
+      "category": "Battle/Bullet Pattern/Knife",
+      "width": 40,
+      "height": 40,
+      "origin_x": 20,
+      "origin_y": 20,
+      "playback_speed": 1,
+      "playback_speed_type": "FramesPerGameFrame",
+      "frames": [
+        "sprites/spr_faqua_knife_spinning_0.png",
+        "sprites/spr_faqua_knife_spinning_1.png",
+        "sprites/spr_faqua_knife_spinning_2.png",
+        "sprites/spr_faqua_knife_spinning_3.png"
+      ],
+      "frame_sha256": [
+        "43fa754877b98863c1d5777ae1a5906f499b8d61dc63636af62b9362e486f4ab",
+        "e2469f2fad4db6e029b4414bd8aef812409d45e22b536b3dff3cbab7a9316426",
+        "54e86745e4b94f4c70aa61384a3f2438e966198f2eec97bb725fa2aea564a6a2",
+        "e2469f2fad4db6e029b4414bd8aef812409d45e22b536b3dff3cbab7a9316426"
+      ]
+    },
+    {
+      "id": "spr_faqua_knife_spliteffect",
+      "category": "Battle/Bullet Pattern/Knife",
+      "width": 60,
+      "height": 2,
+      "origin_x": 30,
+      "origin_y": 1,
+      "playback_speed": 1,
+      "playback_speed_type": "FramesPerGameFrame",
+      "frames": [
+        "sprites/spr_faqua_knife_spliteffect_0.png",
+        "sprites/spr_faqua_knife_spliteffect_1.png",
+        "sprites/spr_faqua_knife_spliteffect_2.png",
+        "sprites/spr_faqua_knife_spliteffect_3.png"
+      ],
+      "frame_sha256": [
+        "a4cfc0e49fb6a370ac74294181aa9c5de542cfeace3e61cfcf403567954f8a5f",
+        "3f44ff124ba91f1fec681ed571577b8c8e3188f81d8b2af72d5b829fc0c2ddf4",
+        "a0b71cc6fe2db5273f9baabaa3dc6d6b758a754d80faddcc896b263e87dc7169",
+        "750365452a9e1ae6095059103957fa1485138d0790913db4ead9beb7e47da282"
+      ]
+    },
+    {
+      "id": "spr_faqua_knife_turning",
+      "category": "Battle/Bullet Pattern/Knife",
+      "width": 40,
+      "height": 12,
+      "origin_x": 20,
+      "origin_y": 6,
+      "playback_speed": 1,
+      "playback_speed_type": "FramesPerGameFrame",
+      "frames": [
+        "sprites/spr_faqua_knife_turning_0.png",
+        "sprites/spr_faqua_knife_turning_1.png",
+        "sprites/spr_faqua_knife_turning_2.png",
+        "sprites/spr_faqua_knife_turning_3.png",
+        "sprites/spr_faqua_knife_turning_4.png",
+        "sprites/spr_faqua_knife_turning_5.png",
+        "sprites/spr_faqua_knife_turning_6.png"
+      ],
+      "frame_sha256": [
+        "91e884d2c137d6e83ed817618282a03a49d5c50384bd662e838f334e9b3c8144",
+        "7be0c8e0b3b5cd9619a7a075969928fcc3ee24b9c3a5b1a3197f3e182f5bf4f7",
+        "559b47d0063d34440e50c1cc9d844a207008c96d667947f9d680dfa1228f7248",
+        "d387185629d83a305d44178026e93fc9eba199d377606b7de810fe01ae1e3f9e",
+        "fb580244cbb9238e795fb8884ac1c3cc3d07b40091b1031bce96308e514ac327",
+        "79962a57944ef3c93b85d34b38a25b56e4458e3072391112d5257dfba61c96ac",
+        "8c2ac6841b339d68c855a15158215c6c72b3e320ccf4b08c0a8618ffe8a9b466"
+      ]
+    },
+    {
+      "id": "spr_faqua_small",
+      "category": "Battle/Bullet Pattern/Enemy",
+      "width": 19,
+      "height": 20,
+      "origin_x": 9,
+      "origin_y": 10,
+      "playback_speed": 1,
+      "playback_speed_type": "FramesPerGameFrame",
+      "frames": [
+        "sprites/spr_faqua_small_0.png",
+        "sprites/spr_faqua_small_1.png",
+        "sprites/spr_faqua_small_2.png",
+        "sprites/spr_faqua_small_3.png",
+        "sprites/spr_faqua_small_4.png"
+      ],
+      "frame_sha256": [
+        "d2a017d9e9db0eed41cd25665cd34450de45154add070ea04ad0b2507368cf51",
+        "803b1b1db1867fd001f5fac548f819373c1164f91ea668410402679839167b02",
+        "15e4d2b4a0369c4ab081fe3b9e4b8b325619d146742e5e5093dc668b1def1b82",
+        "d7943360ebc026bda15f7193b3542d5c0464cd786a92f217d0793236fe01e8df",
+        "6c975e1abe08308a60c1369245742ca0b8bc52fd1b3e145130f27a89095be1bd"
+      ]
+    },
+    {
+      "id": "spr_faqua_spin",
+      "category": "Battle/Bullet Pattern/Enemy",
+      "width": 33,
+      "height": 39,
+      "origin_x": 16,
+      "origin_y": 19,
+      "playback_speed": 1,
+      "playback_speed_type": "FramesPerGameFrame",
+      "frames": [
+        "sprites/spr_faqua_spin_0.png",
+        "sprites/spr_faqua_spin_1.png",
+        "sprites/spr_faqua_spin_2.png",
+        "sprites/spr_faqua_spin_3.png",
+        "sprites/spr_faqua_spin_4.png"
+      ],
+      "frame_sha256": [
+        "278fc1a4363e1f5d4a0e57ee9650d88ac903a414b416b80e5e475dfd5dbfc294",
+        "3f7a9edaea718163fed619cf4afb9408cf78890cdc8b9d0c462ce518584f0059",
+        "2e1958e468b92870f8fc6d1e6ee01a97d3564f512878c0c66c798c776874c754",
+        "a2b51848b9761aba1debfb520611f2a8e746434cc4715b6f7ff7267adde35798",
+        "d5480569f2955c935237d1062d13444f37ce20b1ff80a0ae2d1415eb074e1621"
+      ]
+    },
+    {
+      "id": "spr_faqua_yellowknife",
+      "category": "Battle/Bullet Pattern/Gold!",
+      "width": 30,
+      "height": 20,
+      "origin_x": 0,
+      "origin_y": 10,
+      "playback_speed": 1,
+      "playback_speed_type": "FramesPerGameFrame",
+      "frames": [
+        "sprites/spr_faqua_yellowknife_0.png"
+      ],
+      "frame_sha256": [
+        "3c6ffd2c61ae17f27e535ff365c03dd2d8a8c31e7f2db3aeb6eca47d9bed4945"
+      ]
+    },
+    {
+      "id": "spr_faqua_yellowknife_center",
+      "category": "Battle/Bullet Pattern/Gold!",
+      "width": 30,
+      "height": 30,
+      "origin_x": 15,
+      "origin_y": 15,
+      "playback_speed": 1,
+      "playback_speed_type": "FramesPerGameFrame",
+      "frames": [
+        "sprites/spr_faqua_yellowknife_center_0.png",
+        "sprites/spr_faqua_yellowknife_center_1.png",
+        "sprites/spr_faqua_yellowknife_center_2.png"
+      ],
+      "frame_sha256": [
+        "5a6cb4b62437e2f24e7b0656616538e1a9a168d25f208d0d820ac2cb9c9af7e5",
+        "5d381a0fce8319efaf2d1239a1ee846959325ee8bde0f37c2b3a782c2db6e080",
+        "a37489b93a126849f541b258539050e86242892edbaa6ac40365ce8875d18b73"
+      ]
+    },
+    {
+      "id": "spr_faqua_yellowknife_swing",
+      "category": "Battle/Bullet Pattern/Gold!",
+      "width": 30,
+      "height": 60,
+      "origin_x": 0,
+      "origin_y": 30,
+      "playback_speed": 1,
+      "playback_speed_type": "FramesPerGameFrame",
+      "frames": [
+        "sprites/spr_faqua_yellowknife_swing_0.png"
+      ],
+      "frame_sha256": [
+        "c405f8938c37be896e64b02754733504675c9c177761cfa67465331499fa7860"
+      ]
+    },
+    {
+      "id": "spr_miniface_aqua",
+      "category": "Portraits",
+      "width": 20,
+      "height": 20,
+      "origin_x": 0,
+      "origin_y": 0,
+      "playback_speed": 1,
+      "playback_speed_type": "FramesPerGameFrame",
+      "frames": [
+        "sprites/spr_miniface_aqua_0.png"
+      ],
+      "frame_sha256": [
+        "6bb14fdb62928e89e1cf3bedcc4f0447e8a07cac7729ee810a36eb1cd5c03f6c"
+      ]
+    },
+    {
+      "id": "spr_omegaf_aqua",
+      "category": "Battle/Omega Flowery",
+      "width": 42,
+      "height": 28,
+      "origin_x": 21,
+      "origin_y": 14,
+      "playback_speed": 1,
+      "playback_speed_type": "FramesPerGameFrame",
+      "frames": [
+        "sprites/spr_omegaf_aqua_0.png",
+        "sprites/spr_omegaf_aqua_1.png",
+        "sprites/spr_omegaf_aqua_2.png"
+      ],
+      "frame_sha256": [
+        "1d55e45fc5706a8c5bf7e4d8cb6e83566040416be9945bab8bf861883f5be9b2",
+        "ff27d7c06171bba2ce28d05fa372844c8b9df6fd91500b4404e3b21682b4a76c",
+        "ef8e31b6e8feaf1cf8510547a15918d851a26784bb06958a449e38e7b8a93482"
+      ]
+    },
+    {
+      "id": "spr_omegaf_aqua_o",
+      "category": "Battle/Omega Flowery",
+      "width": 42,
+      "height": 28,
+      "origin_x": 21,
+      "origin_y": 14,
+      "playback_speed": 1,
+      "playback_speed_type": "FramesPerGameFrame",
+      "frames": [
+        "sprites/spr_omegaf_aqua_o_0.png",
+        "sprites/spr_omegaf_aqua_o_1.png",
+        "sprites/spr_omegaf_aqua_o_2.png"
+      ],
+      "frame_sha256": [
+        "de4f040a02da41cb10f07ff58e7aa35e9e4fd3aeb88b51a1d1a80932c6f6d6d0",
+        "7d5da43714a04db9c24fc28a839782fff38dacefa027b98b715f8dbfda996a6a",
+        "e392c90ff3fa7ff6a186515fa31e4cfc9909b30b2d0819064ca2a092a6d1b272"
+      ]
+    },
+    {
+      "id": "spr_plat_bullet_yellow",
+      "category": "Battle/Bullet Pattern/Gold!",
+      "width": 22,
+      "height": 22,
+      "origin_x": 12,
+      "origin_y": 11,
+      "playback_speed": 10,
+      "playback_speed_type": "FramesPerGameFrame",
+      "frames": [
+        "sprites/spr_plat_bullet_yellow_0.png"
+      ],
+      "frame_sha256": [
+        "4fc3128625da05669d399a937c0b9a6276ff8dafb19cb1beae9149a905a35849"
+      ]
+    },
+    {
+      "id": "spr_stolen_knife",
+      "category": "Battle/Attacks",
+      "width": 55,
+      "height": 21,
+      "origin_x": 27,
+      "origin_y": 10,
+      "playback_speed": 30,
+      "playback_speed_type": "FramesPerSecond",
+      "frames": [
+        "sprites/spr_stolen_knife_0.png"
+      ],
+      "frame_sha256": [
+        "cd176f456718d7cb443173271cb26685e31a229acf63ba55a5e1bf80d17a3dbd"
+      ]
+    },
+    {
+      "id": "spr_stolen_knife_mask",
+      "category": "Battle/Attacks",
+      "width": 55,
+      "height": 21,
+      "origin_x": 27,
+      "origin_y": 10,
+      "playback_speed": 1,
+      "playback_speed_type": "FramesPerGameFrame",
+      "frames": [
+        "sprites/spr_stolen_knife_mask_0.png"
+      ],
+      "frame_sha256": [
+        "5913c297df2326c7c1f4499af91653ad54946fe6fbfdee600a51312cbf96963a"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,1006 @@
+[
+  {
+    "id": "spr_aqua_centered",
+    "category": "Overworld/Animations/Wave",
+    "frames": 4,
+    "source_paths": [
+      "Characters/Bosses/Ch5/Aqua/Overworld/Animations/Wave/spr_aqua_centered_0.png",
+      "Characters/Bosses/Ch5/Aqua/Overworld/Animations/Wave/spr_aqua_centered_1.png",
+      "Characters/Bosses/Ch5/Aqua/Overworld/Animations/Wave/spr_aqua_centered_2.png",
+      "Characters/Bosses/Ch5/Aqua/Overworld/Animations/Wave/spr_aqua_centered_3.png"
+    ]
+  },
+  {
+    "id": "spr_aqua_check1",
+    "category": "Battle/UI",
+    "frames": 1,
+    "source_paths": [
+      "Characters/Bosses/Ch5/Aqua/Battle/UI/spr_aqua_check1_0.png"
+    ]
+  },
+  {
+    "id": "spr_aqua_check2",
+    "category": "Battle/UI",
+    "frames": 1,
+    "source_paths": [
+      "Characters/Bosses/Ch5/Aqua/Battle/UI/spr_aqua_check2_0.png"
+    ]
+  },
+  {
+    "id": "spr_aqua_clapping",
+    "category": "Overworld/Animations/Clap",
+    "frames": 4,
+    "source_paths": [
+      "Characters/Bosses/Ch5/Aqua/Overworld/Animations/Clap/spr_aqua_clapping_0.png",
+      "Characters/Bosses/Ch5/Aqua/Overworld/Animations/Clap/spr_aqua_clapping_1.png",
+      "Characters/Bosses/Ch5/Aqua/Overworld/Animations/Clap/spr_aqua_clapping_2.png",
+      "Characters/Bosses/Ch5/Aqua/Overworld/Animations/Clap/spr_aqua_clapping_3.png"
+    ]
+  },
+  {
+    "id": "spr_aqua_clapping_green",
+    "category": "Overworld/Animations/Clap",
+    "frames": 4,
+    "source_paths": [
+      "Characters/Bosses/Ch5/Aqua/Overworld/Animations/Clap/spr_aqua_clapping_green_0.png",
+      "Characters/Bosses/Ch5/Aqua/Overworld/Animations/Clap/spr_aqua_clapping_green_1.png",
+      "Characters/Bosses/Ch5/Aqua/Overworld/Animations/Clap/spr_aqua_clapping_green_2.png",
+      "Characters/Bosses/Ch5/Aqua/Overworld/Animations/Clap/spr_aqua_clapping_green_3.png"
+    ]
+  },
+  {
+    "id": "spr_aqua_collapsed",
+    "category": "Overworld",
+    "frames": 1,
+    "source_paths": [
+      "Characters/Bosses/Ch5/Aqua/Overworld/spr_aqua_collapsed_0.png"
+    ]
+  },
+  {
+    "id": "spr_aqua_collapsed_centered",
+    "category": "Overworld",
+    "frames": 1,
+    "source_paths": [
+      "Characters/Bosses/Ch5/Aqua/Overworld/spr_aqua_collapsed_centered_0.png"
+    ]
+  },
+  {
+    "id": "spr_aqua_collapsed_reflect",
+    "category": "Overworld",
+    "frames": 1,
+    "source_paths": [
+      "Characters/Bosses/Ch5/Aqua/Overworld/spr_aqua_collapsed_reflect_0.png"
+    ]
+  },
+  {
+    "id": "spr_aqua_confused",
+    "category": "Overworld",
+    "frames": 2,
+    "source_paths": [
+      "Characters/Bosses/Ch5/Aqua/Overworld/spr_aqua_confused_0.png",
+      "Characters/Bosses/Ch5/Aqua/Overworld/spr_aqua_confused_1.png"
+    ]
+  },
+  {
+    "id": "spr_aqua_eating",
+    "category": "Overworld",
+    "frames": 2,
+    "source_paths": [
+      "Characters/Bosses/Ch5/Aqua/Overworld/spr_aqua_eating_0.png",
+      "Characters/Bosses/Ch5/Aqua/Overworld/spr_aqua_eating_1.png"
+    ]
+  },
+  {
+    "id": "spr_aqua_eye_reveal",
+    "category": "Overworld/Eyes",
+    "frames": 2,
+    "source_paths": [
+      "Characters/Bosses/Ch5/Aqua/Overworld/Eyes/spr_aqua_eye_reveal_0.png",
+      "Characters/Bosses/Ch5/Aqua/Overworld/Eyes/spr_aqua_eye_reveal_1.png"
+    ]
+  },
+  {
+    "id": "spr_aqua_eye_reveal_three",
+    "category": "Overworld/Eyes",
+    "frames": 2,
+    "source_paths": [
+      "Characters/Bosses/Ch5/Aqua/Overworld/Eyes/spr_aqua_eye_reveal_three_0.png",
+      "Characters/Bosses/Ch5/Aqua/Overworld/Eyes/spr_aqua_eye_reveal_three_1.png"
+    ]
+  },
+  {
+    "id": "spr_aqua_grab",
+    "category": "Overworld/Grab",
+    "frames": 1,
+    "source_paths": [
+      "Characters/Bosses/Ch5/Aqua/Overworld/Grab/spr_aqua_grab_0.png"
+    ]
+  },
+  {
+    "id": "spr_aqua_grab_hold",
+    "category": "Overworld/Grab",
+    "frames": 1,
+    "source_paths": [
+      "Characters/Bosses/Ch5/Aqua/Overworld/Grab/spr_aqua_grab_hold_0.png"
+    ]
+  },
+  {
+    "id": "spr_aqua_grab_hold2",
+    "category": "Overworld/Grab",
+    "frames": 1,
+    "source_paths": [
+      "Characters/Bosses/Ch5/Aqua/Overworld/Grab/spr_aqua_grab_hold2_0.png"
+    ]
+  },
+  {
+    "id": "spr_aqua_grab_jump",
+    "category": "Overworld/Grab",
+    "frames": 2,
+    "source_paths": [
+      "Characters/Bosses/Ch5/Aqua/Overworld/Grab/spr_aqua_grab_jump_0.png",
+      "Characters/Bosses/Ch5/Aqua/Overworld/Grab/spr_aqua_grab_jump_1.png"
+    ]
+  },
+  {
+    "id": "spr_aqua_green_hold",
+    "category": "Overworld",
+    "frames": 1,
+    "source_paths": [
+      "Characters/Bosses/Ch5/Aqua/Overworld/spr_aqua_green_hold_0.png"
+    ]
+  },
+  {
+    "id": "spr_aqua_green_spin",
+    "category": "Overworld/Animations/Spin",
+    "frames": 5,
+    "source_paths": [
+      "Characters/Bosses/Ch5/Aqua/Overworld/Animations/Spin/spr_aqua_green_spin_0.png",
+      "Characters/Bosses/Ch5/Aqua/Overworld/Animations/Spin/spr_aqua_green_spin_1.png",
+      "Characters/Bosses/Ch5/Aqua/Overworld/Animations/Spin/spr_aqua_green_spin_2.png",
+      "Characters/Bosses/Ch5/Aqua/Overworld/Animations/Spin/spr_aqua_green_spin_3.png",
+      "Characters/Bosses/Ch5/Aqua/Overworld/Animations/Spin/spr_aqua_green_spin_4.png"
+    ]
+  },
+  {
+    "id": "spr_aqua_lasso",
+    "category": "Overworld",
+    "frames": 1,
+    "source_paths": [
+      "Characters/Bosses/Ch5/Aqua/Overworld/spr_aqua_lasso_0.png"
+    ]
+  },
+  {
+    "id": "spr_aqua_laugh",
+    "category": "Overworld/Animations/Laugh",
+    "frames": 2,
+    "source_paths": [
+      "Characters/Bosses/Ch5/Aqua/Overworld/Animations/Laugh/spr_aqua_laugh_0.png",
+      "Characters/Bosses/Ch5/Aqua/Overworld/Animations/Laugh/spr_aqua_laugh_1.png"
+    ]
+  },
+  {
+    "id": "spr_aqua_laugh_green",
+    "category": "Overworld/Animations/Laugh",
+    "frames": 2,
+    "source_paths": [
+      "Characters/Bosses/Ch5/Aqua/Overworld/Animations/Laugh/spr_aqua_laugh_green_0.png",
+      "Characters/Bosses/Ch5/Aqua/Overworld/Animations/Laugh/spr_aqua_laugh_green_1.png"
+    ]
+  },
+  {
+    "id": "spr_aqua_shakehead",
+    "category": "Overworld/Animations/Shake Head",
+    "frames": 4,
+    "source_paths": [
+      "Characters/Bosses/Ch5/Aqua/Overworld/Animations/Shake Head/spr_aqua_shakehead_0.png",
+      "Characters/Bosses/Ch5/Aqua/Overworld/Animations/Shake Head/spr_aqua_shakehead_1.png",
+      "Characters/Bosses/Ch5/Aqua/Overworld/Animations/Shake Head/spr_aqua_shakehead_2.png",
+      "Characters/Bosses/Ch5/Aqua/Overworld/Animations/Shake Head/spr_aqua_shakehead_3.png"
+    ]
+  },
+  {
+    "id": "spr_aqua_shell_listen",
+    "category": "Overworld",
+    "frames": 1,
+    "source_paths": [
+      "Characters/Bosses/Ch5/Aqua/Overworld/spr_aqua_shell_listen_0.png"
+    ]
+  },
+  {
+    "id": "spr_aqua_sit_smile",
+    "category": "Overworld/Sit",
+    "frames": 6,
+    "source_paths": [
+      "Characters/Bosses/Ch5/Aqua/Overworld/Sit/spr_aqua_sit_smile_0.png",
+      "Characters/Bosses/Ch5/Aqua/Overworld/Sit/spr_aqua_sit_smile_1.png",
+      "Characters/Bosses/Ch5/Aqua/Overworld/Sit/spr_aqua_sit_smile_2.png",
+      "Characters/Bosses/Ch5/Aqua/Overworld/Sit/spr_aqua_sit_smile_3.png",
+      "Characters/Bosses/Ch5/Aqua/Overworld/Sit/spr_aqua_sit_smile_4.png",
+      "Characters/Bosses/Ch5/Aqua/Overworld/Sit/spr_aqua_sit_smile_5.png"
+    ]
+  },
+  {
+    "id": "spr_aqua_sit_wave",
+    "category": "Overworld/Sit",
+    "frames": 4,
+    "source_paths": [
+      "Characters/Bosses/Ch5/Aqua/Overworld/Sit/spr_aqua_sit_wave_0.png",
+      "Characters/Bosses/Ch5/Aqua/Overworld/Sit/spr_aqua_sit_wave_1.png",
+      "Characters/Bosses/Ch5/Aqua/Overworld/Sit/spr_aqua_sit_wave_2.png",
+      "Characters/Bosses/Ch5/Aqua/Overworld/Sit/spr_aqua_sit_wave_3.png"
+    ]
+  },
+  {
+    "id": "spr_aqua_sleevewave",
+    "category": "Overworld/Animations/Sleeve Wave",
+    "frames": 6,
+    "source_paths": [
+      "Characters/Bosses/Ch5/Aqua/Overworld/Animations/Sleeve Wave/spr_aqua_sleevewave_0.png",
+      "Characters/Bosses/Ch5/Aqua/Overworld/Animations/Sleeve Wave/spr_aqua_sleevewave_1.png",
+      "Characters/Bosses/Ch5/Aqua/Overworld/Animations/Sleeve Wave/spr_aqua_sleevewave_2.png",
+      "Characters/Bosses/Ch5/Aqua/Overworld/Animations/Sleeve Wave/spr_aqua_sleevewave_3.png",
+      "Characters/Bosses/Ch5/Aqua/Overworld/Animations/Sleeve Wave/spr_aqua_sleevewave_4.png",
+      "Characters/Bosses/Ch5/Aqua/Overworld/Animations/Sleeve Wave/spr_aqua_sleevewave_5.png"
+    ]
+  },
+  {
+    "id": "spr_aqua_spin",
+    "category": "Overworld",
+    "frames": 4,
+    "source_paths": [
+      "Characters/Bosses/Ch5/Aqua/Overworld/spr_aqua_spin_0.png",
+      "Characters/Bosses/Ch5/Aqua/Overworld/spr_aqua_spin_1.png",
+      "Characters/Bosses/Ch5/Aqua/Overworld/spr_aqua_spin_2.png",
+      "Characters/Bosses/Ch5/Aqua/Overworld/spr_aqua_spin_3.png"
+    ]
+  },
+  {
+    "id": "spr_aqua_surprise",
+    "category": "Overworld",
+    "frames": 1,
+    "source_paths": [
+      "Characters/Bosses/Ch5/Aqua/Overworld/spr_aqua_surprise_0.png"
+    ]
+  },
+  {
+    "id": "spr_aqua_surprise_green",
+    "category": "Overworld",
+    "frames": 1,
+    "source_paths": [
+      "Characters/Bosses/Ch5/Aqua/Overworld/spr_aqua_surprise_green_0.png"
+    ]
+  },
+  {
+    "id": "spr_aqua_toothy_grin",
+    "category": "Overworld",
+    "frames": 1,
+    "source_paths": [
+      "Characters/Bosses/Ch5/Aqua/Overworld/spr_aqua_toothy_grin_0.png"
+    ]
+  },
+  {
+    "id": "spr_aqua_walk_down",
+    "category": "Overworld/Walk",
+    "frames": 4,
+    "source_paths": [
+      "Characters/Bosses/Ch5/Aqua/Overworld/Walk/spr_aqua_walk_down_0.png",
+      "Characters/Bosses/Ch5/Aqua/Overworld/Walk/spr_aqua_walk_down_1.png",
+      "Characters/Bosses/Ch5/Aqua/Overworld/Walk/spr_aqua_walk_down_2.png",
+      "Characters/Bosses/Ch5/Aqua/Overworld/Walk/spr_aqua_walk_down_3.png"
+    ]
+  },
+  {
+    "id": "spr_aqua_walk_left",
+    "category": "Overworld/Walk",
+    "frames": 4,
+    "source_paths": [
+      "Characters/Bosses/Ch5/Aqua/Overworld/Walk/spr_aqua_walk_left_0.png",
+      "Characters/Bosses/Ch5/Aqua/Overworld/Walk/spr_aqua_walk_left_1.png",
+      "Characters/Bosses/Ch5/Aqua/Overworld/Walk/spr_aqua_walk_left_2.png",
+      "Characters/Bosses/Ch5/Aqua/Overworld/Walk/spr_aqua_walk_left_3.png"
+    ]
+  },
+  {
+    "id": "spr_aqua_walk_right",
+    "category": "Overworld/Walk",
+    "frames": 4,
+    "source_paths": [
+      "Characters/Bosses/Ch5/Aqua/Overworld/Walk/spr_aqua_walk_right_0.png",
+      "Characters/Bosses/Ch5/Aqua/Overworld/Walk/spr_aqua_walk_right_1.png",
+      "Characters/Bosses/Ch5/Aqua/Overworld/Walk/spr_aqua_walk_right_2.png",
+      "Characters/Bosses/Ch5/Aqua/Overworld/Walk/spr_aqua_walk_right_3.png"
+    ]
+  },
+  {
+    "id": "spr_aqua_walk_up",
+    "category": "Overworld/Walk",
+    "frames": 4,
+    "source_paths": [
+      "Characters/Bosses/Ch5/Aqua/Overworld/Walk/spr_aqua_walk_up_0.png",
+      "Characters/Bosses/Ch5/Aqua/Overworld/Walk/spr_aqua_walk_up_1.png",
+      "Characters/Bosses/Ch5/Aqua/Overworld/Walk/spr_aqua_walk_up_2.png",
+      "Characters/Bosses/Ch5/Aqua/Overworld/Walk/spr_aqua_walk_up_3.png"
+    ]
+  },
+  {
+    "id": "spr_aqua_wave",
+    "category": "Overworld/Animations/Wave",
+    "frames": 4,
+    "source_paths": [
+      "Characters/Bosses/Ch5/Aqua/Overworld/Animations/Wave/spr_aqua_wave_0.png",
+      "Characters/Bosses/Ch5/Aqua/Overworld/Animations/Wave/spr_aqua_wave_1.png",
+      "Characters/Bosses/Ch5/Aqua/Overworld/Animations/Wave/spr_aqua_wave_2.png",
+      "Characters/Bosses/Ch5/Aqua/Overworld/Animations/Wave/spr_aqua_wave_3.png"
+    ]
+  },
+  {
+    "id": "spr_attack_knife_parted",
+    "category": "Battle/Attacks",
+    "frames": 2,
+    "source_paths": [
+      "Characters/Bosses/Ch5/Aqua/Battle/Attacks/spr_attack_knife_parted_0.png",
+      "Characters/Bosses/Ch5/Aqua/Battle/Attacks/spr_attack_knife_parted_1.png"
+    ]
+  },
+  {
+    "id": "spr_attack_knifechain",
+    "category": "Battle/Attacks",
+    "frames": 1,
+    "source_paths": [
+      "Characters/Bosses/Ch5/Aqua/Battle/Attacks/spr_attack_knifechain_0.png"
+    ]
+  },
+  {
+    "id": "spr_attack_knifechain_spin",
+    "category": "Battle/Attacks",
+    "frames": 4,
+    "source_paths": [
+      "Characters/Bosses/Ch5/Aqua/Battle/Attacks/spr_attack_knifechain_spin_0.png",
+      "Characters/Bosses/Ch5/Aqua/Battle/Attacks/spr_attack_knifechain_spin_1.png",
+      "Characters/Bosses/Ch5/Aqua/Battle/Attacks/spr_attack_knifechain_spin_2.png",
+      "Characters/Bosses/Ch5/Aqua/Battle/Attacks/spr_attack_knifechain_spin_3.png"
+    ]
+  },
+  {
+    "id": "spr_attack_knifefan",
+    "category": "Battle/Attacks",
+    "frames": 1,
+    "source_paths": [
+      "Characters/Bosses/Ch5/Aqua/Battle/Attacks/spr_attack_knifefan_0.png"
+    ]
+  },
+  {
+    "id": "spr_bullet_knife_break",
+    "category": "Battle/Bullet Pattern/Knife",
+    "frames": 4,
+    "source_paths": [
+      "Characters/Bosses/Ch5/Aqua/Battle/Bullet Pattern/Knife/spr_bullet_knife_break_0.png",
+      "Characters/Bosses/Ch5/Aqua/Battle/Bullet Pattern/Knife/spr_bullet_knife_break_1.png",
+      "Characters/Bosses/Ch5/Aqua/Battle/Bullet Pattern/Knife/spr_bullet_knife_break_2.png",
+      "Characters/Bosses/Ch5/Aqua/Battle/Bullet Pattern/Knife/spr_bullet_knife_break_3.png"
+    ]
+  },
+  {
+    "id": "spr_enemy_aqua_act",
+    "category": "Overworld/Animations/Act",
+    "frames": 12,
+    "source_paths": [
+      "Characters/Bosses/Ch5/Aqua/Overworld/Animations/Act/spr_enemy_aqua_act_0.png",
+      "Characters/Bosses/Ch5/Aqua/Overworld/Animations/Act/spr_enemy_aqua_act_1.png",
+      "Characters/Bosses/Ch5/Aqua/Overworld/Animations/Act/spr_enemy_aqua_act_10.png",
+      "Characters/Bosses/Ch5/Aqua/Overworld/Animations/Act/spr_enemy_aqua_act_11.png",
+      "Characters/Bosses/Ch5/Aqua/Overworld/Animations/Act/spr_enemy_aqua_act_2.png",
+      "Characters/Bosses/Ch5/Aqua/Overworld/Animations/Act/spr_enemy_aqua_act_3.png",
+      "Characters/Bosses/Ch5/Aqua/Overworld/Animations/Act/spr_enemy_aqua_act_4.png",
+      "Characters/Bosses/Ch5/Aqua/Overworld/Animations/Act/spr_enemy_aqua_act_5.png",
+      "Characters/Bosses/Ch5/Aqua/Overworld/Animations/Act/spr_enemy_aqua_act_6.png",
+      "Characters/Bosses/Ch5/Aqua/Overworld/Animations/Act/spr_enemy_aqua_act_7.png",
+      "Characters/Bosses/Ch5/Aqua/Overworld/Animations/Act/spr_enemy_aqua_act_8.png",
+      "Characters/Bosses/Ch5/Aqua/Overworld/Animations/Act/spr_enemy_aqua_act_9.png"
+    ]
+  },
+  {
+    "id": "spr_enemy_aqua_arm",
+    "category": "Overworld/Parts/Arms",
+    "frames": 5,
+    "source_paths": [
+      "Characters/Bosses/Ch5/Aqua/Overworld/Parts/Arms/spr_enemy_aqua_arm_0.png",
+      "Characters/Bosses/Ch5/Aqua/Overworld/Parts/Arms/spr_enemy_aqua_arm_1.png",
+      "Characters/Bosses/Ch5/Aqua/Overworld/Parts/Arms/spr_enemy_aqua_arm_2.png",
+      "Characters/Bosses/Ch5/Aqua/Overworld/Parts/Arms/spr_enemy_aqua_arm_3.png",
+      "Characters/Bosses/Ch5/Aqua/Overworld/Parts/Arms/spr_enemy_aqua_arm_4.png"
+    ]
+  },
+  {
+    "id": "spr_enemy_aqua_blur",
+    "category": "Overworld/Animations/Blur",
+    "frames": 3,
+    "source_paths": [
+      "Characters/Bosses/Ch5/Aqua/Overworld/Animations/Blur/spr_enemy_aqua_blur_0.png",
+      "Characters/Bosses/Ch5/Aqua/Overworld/Animations/Blur/spr_enemy_aqua_blur_1.png",
+      "Characters/Bosses/Ch5/Aqua/Overworld/Animations/Blur/spr_enemy_aqua_blur_2.png"
+    ]
+  },
+  {
+    "id": "spr_enemy_aqua_bored",
+    "category": "Overworld/Animations/Idle/Bored",
+    "frames": 8,
+    "source_paths": [
+      "Characters/Bosses/Ch5/Aqua/Overworld/Animations/Idle/Bored/spr_enemy_aqua_bored_0.png",
+      "Characters/Bosses/Ch5/Aqua/Overworld/Animations/Idle/Bored/spr_enemy_aqua_bored_1.png",
+      "Characters/Bosses/Ch5/Aqua/Overworld/Animations/Idle/Bored/spr_enemy_aqua_bored_2.png",
+      "Characters/Bosses/Ch5/Aqua/Overworld/Animations/Idle/Bored/spr_enemy_aqua_bored_3.png",
+      "Characters/Bosses/Ch5/Aqua/Overworld/Animations/Idle/Bored/spr_enemy_aqua_bored_4.png",
+      "Characters/Bosses/Ch5/Aqua/Overworld/Animations/Idle/Bored/spr_enemy_aqua_bored_5.png",
+      "Characters/Bosses/Ch5/Aqua/Overworld/Animations/Idle/Bored/spr_enemy_aqua_bored_6.png",
+      "Characters/Bosses/Ch5/Aqua/Overworld/Animations/Idle/Bored/spr_enemy_aqua_bored_7.png"
+    ]
+  },
+  {
+    "id": "spr_enemy_aqua_bored_green",
+    "category": "Overworld/Animations/Idle/Bored",
+    "frames": 8,
+    "source_paths": [
+      "Characters/Bosses/Ch5/Aqua/Overworld/Animations/Idle/Bored/spr_enemy_aqua_bored_green_0.png",
+      "Characters/Bosses/Ch5/Aqua/Overworld/Animations/Idle/Bored/spr_enemy_aqua_bored_green_1.png",
+      "Characters/Bosses/Ch5/Aqua/Overworld/Animations/Idle/Bored/spr_enemy_aqua_bored_green_2.png",
+      "Characters/Bosses/Ch5/Aqua/Overworld/Animations/Idle/Bored/spr_enemy_aqua_bored_green_3.png",
+      "Characters/Bosses/Ch5/Aqua/Overworld/Animations/Idle/Bored/spr_enemy_aqua_bored_green_4.png",
+      "Characters/Bosses/Ch5/Aqua/Overworld/Animations/Idle/Bored/spr_enemy_aqua_bored_green_5.png",
+      "Characters/Bosses/Ch5/Aqua/Overworld/Animations/Idle/Bored/spr_enemy_aqua_bored_green_6.png",
+      "Characters/Bosses/Ch5/Aqua/Overworld/Animations/Idle/Bored/spr_enemy_aqua_bored_green_7.png"
+    ]
+  },
+  {
+    "id": "spr_enemy_aqua_chainswing_back",
+    "category": "Overworld/Parts/Arms",
+    "frames": 10,
+    "source_paths": [
+      "Characters/Bosses/Ch5/Aqua/Overworld/Parts/Arms/spr_enemy_aqua_chainswing_back_0.png",
+      "Characters/Bosses/Ch5/Aqua/Overworld/Parts/Arms/spr_enemy_aqua_chainswing_back_1.png",
+      "Characters/Bosses/Ch5/Aqua/Overworld/Parts/Arms/spr_enemy_aqua_chainswing_back_2.png",
+      "Characters/Bosses/Ch5/Aqua/Overworld/Parts/Arms/spr_enemy_aqua_chainswing_back_3.png",
+      "Characters/Bosses/Ch5/Aqua/Overworld/Parts/Arms/spr_enemy_aqua_chainswing_back_4.png",
+      "Characters/Bosses/Ch5/Aqua/Overworld/Parts/Arms/spr_enemy_aqua_chainswing_back_5.png",
+      "Characters/Bosses/Ch5/Aqua/Overworld/Parts/Arms/spr_enemy_aqua_chainswing_back_6.png",
+      "Characters/Bosses/Ch5/Aqua/Overworld/Parts/Arms/spr_enemy_aqua_chainswing_back_7.png",
+      "Characters/Bosses/Ch5/Aqua/Overworld/Parts/Arms/spr_enemy_aqua_chainswing_back_8.png",
+      "Characters/Bosses/Ch5/Aqua/Overworld/Parts/Arms/spr_enemy_aqua_chainswing_back_9.png"
+    ]
+  },
+  {
+    "id": "spr_enemy_aqua_chainswing_back_old",
+    "category": "Overworld/Parts/Arms/Unused",
+    "frames": 9,
+    "source_paths": [
+      "Characters/Bosses/Ch5/Aqua/Overworld/Parts/Arms/Unused/spr_enemy_aqua_chainswing_back_old_0.png",
+      "Characters/Bosses/Ch5/Aqua/Overworld/Parts/Arms/Unused/spr_enemy_aqua_chainswing_back_old_1.png",
+      "Characters/Bosses/Ch5/Aqua/Overworld/Parts/Arms/Unused/spr_enemy_aqua_chainswing_back_old_2.png",
+      "Characters/Bosses/Ch5/Aqua/Overworld/Parts/Arms/Unused/spr_enemy_aqua_chainswing_back_old_3.png",
+      "Characters/Bosses/Ch5/Aqua/Overworld/Parts/Arms/Unused/spr_enemy_aqua_chainswing_back_old_4.png",
+      "Characters/Bosses/Ch5/Aqua/Overworld/Parts/Arms/Unused/spr_enemy_aqua_chainswing_back_old_5.png",
+      "Characters/Bosses/Ch5/Aqua/Overworld/Parts/Arms/Unused/spr_enemy_aqua_chainswing_back_old_6.png",
+      "Characters/Bosses/Ch5/Aqua/Overworld/Parts/Arms/Unused/spr_enemy_aqua_chainswing_back_old_7.png",
+      "Characters/Bosses/Ch5/Aqua/Overworld/Parts/Arms/Unused/spr_enemy_aqua_chainswing_back_old_8.png"
+    ]
+  },
+  {
+    "id": "spr_enemy_aqua_chainswing_body",
+    "category": "Overworld/Parts",
+    "frames": 1,
+    "source_paths": [
+      "Characters/Bosses/Ch5/Aqua/Overworld/Parts/spr_enemy_aqua_chainswing_body_0.png"
+    ]
+  },
+  {
+    "id": "spr_enemy_aqua_chainswing_front",
+    "category": "Overworld/Parts/Arms",
+    "frames": 10,
+    "source_paths": [
+      "Characters/Bosses/Ch5/Aqua/Overworld/Parts/Arms/spr_enemy_aqua_chainswing_front_0.png",
+      "Characters/Bosses/Ch5/Aqua/Overworld/Parts/Arms/spr_enemy_aqua_chainswing_front_1.png",
+      "Characters/Bosses/Ch5/Aqua/Overworld/Parts/Arms/spr_enemy_aqua_chainswing_front_2.png",
+      "Characters/Bosses/Ch5/Aqua/Overworld/Parts/Arms/spr_enemy_aqua_chainswing_front_3.png",
+      "Characters/Bosses/Ch5/Aqua/Overworld/Parts/Arms/spr_enemy_aqua_chainswing_front_4.png",
+      "Characters/Bosses/Ch5/Aqua/Overworld/Parts/Arms/spr_enemy_aqua_chainswing_front_5.png",
+      "Characters/Bosses/Ch5/Aqua/Overworld/Parts/Arms/spr_enemy_aqua_chainswing_front_6.png",
+      "Characters/Bosses/Ch5/Aqua/Overworld/Parts/Arms/spr_enemy_aqua_chainswing_front_7.png",
+      "Characters/Bosses/Ch5/Aqua/Overworld/Parts/Arms/spr_enemy_aqua_chainswing_front_8.png",
+      "Characters/Bosses/Ch5/Aqua/Overworld/Parts/Arms/spr_enemy_aqua_chainswing_front_9.png"
+    ]
+  },
+  {
+    "id": "spr_enemy_aqua_cool_pose",
+    "category": "Overworld",
+    "frames": 1,
+    "source_paths": [
+      "Characters/Bosses/Ch5/Aqua/Overworld/spr_enemy_aqua_cool_pose_0.png"
+    ]
+  },
+  {
+    "id": "spr_enemy_aqua_cool_pose_r",
+    "category": "Overworld",
+    "frames": 1,
+    "source_paths": [
+      "Characters/Bosses/Ch5/Aqua/Overworld/spr_enemy_aqua_cool_pose_r_0.png"
+    ]
+  },
+  {
+    "id": "spr_enemy_aqua_dance",
+    "category": "Overworld/Animations/Dance",
+    "frames": 4,
+    "source_paths": [
+      "Characters/Bosses/Ch5/Aqua/Overworld/Animations/Dance/spr_enemy_aqua_dance_0.png",
+      "Characters/Bosses/Ch5/Aqua/Overworld/Animations/Dance/spr_enemy_aqua_dance_1.png",
+      "Characters/Bosses/Ch5/Aqua/Overworld/Animations/Dance/spr_enemy_aqua_dance_2.png",
+      "Characters/Bosses/Ch5/Aqua/Overworld/Animations/Dance/spr_enemy_aqua_dance_3.png"
+    ]
+  },
+  {
+    "id": "spr_enemy_aqua_headtilt",
+    "category": "Overworld",
+    "frames": 1,
+    "source_paths": [
+      "Characters/Bosses/Ch5/Aqua/Overworld/spr_enemy_aqua_headtilt_0.png"
+    ]
+  },
+  {
+    "id": "spr_enemy_aqua_hurt",
+    "category": "Overworld",
+    "frames": 1,
+    "source_paths": [
+      "Characters/Bosses/Ch5/Aqua/Overworld/spr_enemy_aqua_hurt_0.png"
+    ]
+  },
+  {
+    "id": "spr_enemy_aqua_hype",
+    "category": "Overworld/Animations/Idle/Hype",
+    "frames": 8,
+    "source_paths": [
+      "Characters/Bosses/Ch5/Aqua/Overworld/Animations/Idle/Hype/spr_enemy_aqua_hype_0.png",
+      "Characters/Bosses/Ch5/Aqua/Overworld/Animations/Idle/Hype/spr_enemy_aqua_hype_1.png",
+      "Characters/Bosses/Ch5/Aqua/Overworld/Animations/Idle/Hype/spr_enemy_aqua_hype_2.png",
+      "Characters/Bosses/Ch5/Aqua/Overworld/Animations/Idle/Hype/spr_enemy_aqua_hype_3.png",
+      "Characters/Bosses/Ch5/Aqua/Overworld/Animations/Idle/Hype/spr_enemy_aqua_hype_4.png",
+      "Characters/Bosses/Ch5/Aqua/Overworld/Animations/Idle/Hype/spr_enemy_aqua_hype_5.png",
+      "Characters/Bosses/Ch5/Aqua/Overworld/Animations/Idle/Hype/spr_enemy_aqua_hype_6.png",
+      "Characters/Bosses/Ch5/Aqua/Overworld/Animations/Idle/Hype/spr_enemy_aqua_hype_7.png"
+    ]
+  },
+  {
+    "id": "spr_enemy_aqua_hype_green",
+    "category": "Overworld/Animations/Idle/Hype",
+    "frames": 8,
+    "source_paths": [
+      "Characters/Bosses/Ch5/Aqua/Overworld/Animations/Idle/Hype/spr_enemy_aqua_hype_green_0.png",
+      "Characters/Bosses/Ch5/Aqua/Overworld/Animations/Idle/Hype/spr_enemy_aqua_hype_green_1.png",
+      "Characters/Bosses/Ch5/Aqua/Overworld/Animations/Idle/Hype/spr_enemy_aqua_hype_green_2.png",
+      "Characters/Bosses/Ch5/Aqua/Overworld/Animations/Idle/Hype/spr_enemy_aqua_hype_green_3.png",
+      "Characters/Bosses/Ch5/Aqua/Overworld/Animations/Idle/Hype/spr_enemy_aqua_hype_green_4.png",
+      "Characters/Bosses/Ch5/Aqua/Overworld/Animations/Idle/Hype/spr_enemy_aqua_hype_green_5.png",
+      "Characters/Bosses/Ch5/Aqua/Overworld/Animations/Idle/Hype/spr_enemy_aqua_hype_green_6.png",
+      "Characters/Bosses/Ch5/Aqua/Overworld/Animations/Idle/Hype/spr_enemy_aqua_hype_green_7.png"
+    ]
+  },
+  {
+    "id": "spr_enemy_aqua_hype_reverse",
+    "category": "Overworld/Animations/Idle/Hype - Reverse",
+    "frames": 8,
+    "source_paths": [
+      "Characters/Bosses/Ch5/Aqua/Overworld/Animations/Idle/Hype - Reverse/spr_enemy_aqua_hype_reverse_0.png",
+      "Characters/Bosses/Ch5/Aqua/Overworld/Animations/Idle/Hype - Reverse/spr_enemy_aqua_hype_reverse_1.png",
+      "Characters/Bosses/Ch5/Aqua/Overworld/Animations/Idle/Hype - Reverse/spr_enemy_aqua_hype_reverse_2.png",
+      "Characters/Bosses/Ch5/Aqua/Overworld/Animations/Idle/Hype - Reverse/spr_enemy_aqua_hype_reverse_3.png",
+      "Characters/Bosses/Ch5/Aqua/Overworld/Animations/Idle/Hype - Reverse/spr_enemy_aqua_hype_reverse_4.png",
+      "Characters/Bosses/Ch5/Aqua/Overworld/Animations/Idle/Hype - Reverse/spr_enemy_aqua_hype_reverse_5.png",
+      "Characters/Bosses/Ch5/Aqua/Overworld/Animations/Idle/Hype - Reverse/spr_enemy_aqua_hype_reverse_6.png",
+      "Characters/Bosses/Ch5/Aqua/Overworld/Animations/Idle/Hype - Reverse/spr_enemy_aqua_hype_reverse_7.png"
+    ]
+  },
+  {
+    "id": "spr_enemy_aqua_hype_reverse_green",
+    "category": "Overworld/Animations/Idle/Hype - Reverse",
+    "frames": 8,
+    "source_paths": [
+      "Characters/Bosses/Ch5/Aqua/Overworld/Animations/Idle/Hype - Reverse/spr_enemy_aqua_hype_reverse_green_0.png",
+      "Characters/Bosses/Ch5/Aqua/Overworld/Animations/Idle/Hype - Reverse/spr_enemy_aqua_hype_reverse_green_1.png",
+      "Characters/Bosses/Ch5/Aqua/Overworld/Animations/Idle/Hype - Reverse/spr_enemy_aqua_hype_reverse_green_2.png",
+      "Characters/Bosses/Ch5/Aqua/Overworld/Animations/Idle/Hype - Reverse/spr_enemy_aqua_hype_reverse_green_3.png",
+      "Characters/Bosses/Ch5/Aqua/Overworld/Animations/Idle/Hype - Reverse/spr_enemy_aqua_hype_reverse_green_4.png",
+      "Characters/Bosses/Ch5/Aqua/Overworld/Animations/Idle/Hype - Reverse/spr_enemy_aqua_hype_reverse_green_5.png",
+      "Characters/Bosses/Ch5/Aqua/Overworld/Animations/Idle/Hype - Reverse/spr_enemy_aqua_hype_reverse_green_6.png",
+      "Characters/Bosses/Ch5/Aqua/Overworld/Animations/Idle/Hype - Reverse/spr_enemy_aqua_hype_reverse_green_7.png"
+    ]
+  },
+  {
+    "id": "spr_enemy_aqua_idle",
+    "category": "Overworld/Animations/Idle",
+    "frames": 8,
+    "source_paths": [
+      "Characters/Bosses/Ch5/Aqua/Overworld/Animations/Idle/spr_enemy_aqua_idle_0.png",
+      "Characters/Bosses/Ch5/Aqua/Overworld/Animations/Idle/spr_enemy_aqua_idle_1.png",
+      "Characters/Bosses/Ch5/Aqua/Overworld/Animations/Idle/spr_enemy_aqua_idle_2.png",
+      "Characters/Bosses/Ch5/Aqua/Overworld/Animations/Idle/spr_enemy_aqua_idle_3.png",
+      "Characters/Bosses/Ch5/Aqua/Overworld/Animations/Idle/spr_enemy_aqua_idle_4.png",
+      "Characters/Bosses/Ch5/Aqua/Overworld/Animations/Idle/spr_enemy_aqua_idle_5.png",
+      "Characters/Bosses/Ch5/Aqua/Overworld/Animations/Idle/spr_enemy_aqua_idle_6.png",
+      "Characters/Bosses/Ch5/Aqua/Overworld/Animations/Idle/spr_enemy_aqua_idle_7.png"
+    ]
+  },
+  {
+    "id": "spr_enemy_aqua_idle_fox",
+    "category": "Overworld/Animations/Idle/Netskie",
+    "frames": 8,
+    "source_paths": [
+      "Characters/Bosses/Ch5/Aqua/Overworld/Animations/Idle/Netskie/spr_enemy_aqua_idle_fox_0.png",
+      "Characters/Bosses/Ch5/Aqua/Overworld/Animations/Idle/Netskie/spr_enemy_aqua_idle_fox_1.png",
+      "Characters/Bosses/Ch5/Aqua/Overworld/Animations/Idle/Netskie/spr_enemy_aqua_idle_fox_2.png",
+      "Characters/Bosses/Ch5/Aqua/Overworld/Animations/Idle/Netskie/spr_enemy_aqua_idle_fox_3.png",
+      "Characters/Bosses/Ch5/Aqua/Overworld/Animations/Idle/Netskie/spr_enemy_aqua_idle_fox_4.png",
+      "Characters/Bosses/Ch5/Aqua/Overworld/Animations/Idle/Netskie/spr_enemy_aqua_idle_fox_5.png",
+      "Characters/Bosses/Ch5/Aqua/Overworld/Animations/Idle/Netskie/spr_enemy_aqua_idle_fox_6.png",
+      "Characters/Bosses/Ch5/Aqua/Overworld/Animations/Idle/Netskie/spr_enemy_aqua_idle_fox_7.png"
+    ]
+  },
+  {
+    "id": "spr_enemy_aqua_idle_foxleftorigin",
+    "category": "Overworld/Animations/Idle/Netskie",
+    "frames": 8,
+    "source_paths": [
+      "Characters/Bosses/Ch5/Aqua/Overworld/Animations/Idle/Netskie/spr_enemy_aqua_idle_foxleftorigin_0.png",
+      "Characters/Bosses/Ch5/Aqua/Overworld/Animations/Idle/Netskie/spr_enemy_aqua_idle_foxleftorigin_1.png",
+      "Characters/Bosses/Ch5/Aqua/Overworld/Animations/Idle/Netskie/spr_enemy_aqua_idle_foxleftorigin_2.png",
+      "Characters/Bosses/Ch5/Aqua/Overworld/Animations/Idle/Netskie/spr_enemy_aqua_idle_foxleftorigin_3.png",
+      "Characters/Bosses/Ch5/Aqua/Overworld/Animations/Idle/Netskie/spr_enemy_aqua_idle_foxleftorigin_4.png",
+      "Characters/Bosses/Ch5/Aqua/Overworld/Animations/Idle/Netskie/spr_enemy_aqua_idle_foxleftorigin_5.png",
+      "Characters/Bosses/Ch5/Aqua/Overworld/Animations/Idle/Netskie/spr_enemy_aqua_idle_foxleftorigin_6.png",
+      "Characters/Bosses/Ch5/Aqua/Overworld/Animations/Idle/Netskie/spr_enemy_aqua_idle_foxleftorigin_7.png"
+    ]
+  },
+  {
+    "id": "spr_enemy_aqua_idle_green",
+    "category": "Overworld/Animations/Idle",
+    "frames": 8,
+    "source_paths": [
+      "Characters/Bosses/Ch5/Aqua/Overworld/Animations/Idle/spr_enemy_aqua_idle_green_0.png",
+      "Characters/Bosses/Ch5/Aqua/Overworld/Animations/Idle/spr_enemy_aqua_idle_green_1.png",
+      "Characters/Bosses/Ch5/Aqua/Overworld/Animations/Idle/spr_enemy_aqua_idle_green_2.png",
+      "Characters/Bosses/Ch5/Aqua/Overworld/Animations/Idle/spr_enemy_aqua_idle_green_3.png",
+      "Characters/Bosses/Ch5/Aqua/Overworld/Animations/Idle/spr_enemy_aqua_idle_green_4.png",
+      "Characters/Bosses/Ch5/Aqua/Overworld/Animations/Idle/spr_enemy_aqua_idle_green_5.png",
+      "Characters/Bosses/Ch5/Aqua/Overworld/Animations/Idle/spr_enemy_aqua_idle_green_6.png",
+      "Characters/Bosses/Ch5/Aqua/Overworld/Animations/Idle/spr_enemy_aqua_idle_green_7.png"
+    ]
+  },
+  {
+    "id": "spr_enemy_aqua_idle_leftorigin",
+    "category": "Overworld/Animations/Idle/Unused",
+    "frames": 8,
+    "source_paths": [
+      "Characters/Bosses/Ch5/Aqua/Overworld/Animations/Idle/Unused/spr_enemy_aqua_idle_leftorigin_0.png",
+      "Characters/Bosses/Ch5/Aqua/Overworld/Animations/Idle/Unused/spr_enemy_aqua_idle_leftorigin_1.png",
+      "Characters/Bosses/Ch5/Aqua/Overworld/Animations/Idle/Unused/spr_enemy_aqua_idle_leftorigin_2.png",
+      "Characters/Bosses/Ch5/Aqua/Overworld/Animations/Idle/Unused/spr_enemy_aqua_idle_leftorigin_3.png",
+      "Characters/Bosses/Ch5/Aqua/Overworld/Animations/Idle/Unused/spr_enemy_aqua_idle_leftorigin_4.png",
+      "Characters/Bosses/Ch5/Aqua/Overworld/Animations/Idle/Unused/spr_enemy_aqua_idle_leftorigin_5.png",
+      "Characters/Bosses/Ch5/Aqua/Overworld/Animations/Idle/Unused/spr_enemy_aqua_idle_leftorigin_6.png",
+      "Characters/Bosses/Ch5/Aqua/Overworld/Animations/Idle/Unused/spr_enemy_aqua_idle_leftorigin_7.png"
+    ]
+  },
+  {
+    "id": "spr_enemy_aqua_idle_r",
+    "category": "Overworld/Animations/Idle/Right",
+    "frames": 8,
+    "source_paths": [
+      "Characters/Bosses/Ch5/Aqua/Overworld/Animations/Idle/Right/spr_enemy_aqua_idle_r_0.png",
+      "Characters/Bosses/Ch5/Aqua/Overworld/Animations/Idle/Right/spr_enemy_aqua_idle_r_1.png",
+      "Characters/Bosses/Ch5/Aqua/Overworld/Animations/Idle/Right/spr_enemy_aqua_idle_r_2.png",
+      "Characters/Bosses/Ch5/Aqua/Overworld/Animations/Idle/Right/spr_enemy_aqua_idle_r_3.png",
+      "Characters/Bosses/Ch5/Aqua/Overworld/Animations/Idle/Right/spr_enemy_aqua_idle_r_4.png",
+      "Characters/Bosses/Ch5/Aqua/Overworld/Animations/Idle/Right/spr_enemy_aqua_idle_r_5.png",
+      "Characters/Bosses/Ch5/Aqua/Overworld/Animations/Idle/Right/spr_enemy_aqua_idle_r_6.png",
+      "Characters/Bosses/Ch5/Aqua/Overworld/Animations/Idle/Right/spr_enemy_aqua_idle_r_7.png"
+    ]
+  },
+  {
+    "id": "spr_enemy_aqua_idle_r_green",
+    "category": "Overworld/Animations/Idle/Right",
+    "frames": 8,
+    "source_paths": [
+      "Characters/Bosses/Ch5/Aqua/Overworld/Animations/Idle/Right/spr_enemy_aqua_idle_r_green_0.png",
+      "Characters/Bosses/Ch5/Aqua/Overworld/Animations/Idle/Right/spr_enemy_aqua_idle_r_green_1.png",
+      "Characters/Bosses/Ch5/Aqua/Overworld/Animations/Idle/Right/spr_enemy_aqua_idle_r_green_2.png",
+      "Characters/Bosses/Ch5/Aqua/Overworld/Animations/Idle/Right/spr_enemy_aqua_idle_r_green_3.png",
+      "Characters/Bosses/Ch5/Aqua/Overworld/Animations/Idle/Right/spr_enemy_aqua_idle_r_green_4.png",
+      "Characters/Bosses/Ch5/Aqua/Overworld/Animations/Idle/Right/spr_enemy_aqua_idle_r_green_5.png",
+      "Characters/Bosses/Ch5/Aqua/Overworld/Animations/Idle/Right/spr_enemy_aqua_idle_r_green_6.png",
+      "Characters/Bosses/Ch5/Aqua/Overworld/Animations/Idle/Right/spr_enemy_aqua_idle_r_green_7.png"
+    ]
+  },
+  {
+    "id": "spr_enemy_aqua_knife_ready",
+    "category": "Misc",
+    "frames": 3,
+    "source_paths": [
+      "Characters/Bosses/Ch5/Aqua/Misc/spr_enemy_aqua_knife_ready_0.png",
+      "Characters/Bosses/Ch5/Aqua/Misc/spr_enemy_aqua_knife_ready_1.png",
+      "Characters/Bosses/Ch5/Aqua/Misc/spr_enemy_aqua_knife_ready_2.png"
+    ]
+  },
+  {
+    "id": "spr_enemy_aqua_knifespin_temp",
+    "category": "Overworld/Animations/Blur/Unused",
+    "frames": 2,
+    "source_paths": [
+      "Characters/Bosses/Ch5/Aqua/Overworld/Animations/Blur/Unused/spr_enemy_aqua_knifespin_temp_0.png",
+      "Characters/Bosses/Ch5/Aqua/Overworld/Animations/Blur/Unused/spr_enemy_aqua_knifespin_temp_1.png"
+    ]
+  },
+  {
+    "id": "spr_enemy_aqua_laugh",
+    "category": "Overworld/Animations/Laugh",
+    "frames": 2,
+    "source_paths": [
+      "Characters/Bosses/Ch5/Aqua/Overworld/Animations/Laugh/spr_enemy_aqua_laugh_0.png",
+      "Characters/Bosses/Ch5/Aqua/Overworld/Animations/Laugh/spr_enemy_aqua_laugh_1.png"
+    ]
+  },
+  {
+    "id": "spr_enemy_aqua_pose",
+    "category": "Overworld/Animations/Laugh",
+    "frames": 1,
+    "source_paths": [
+      "Characters/Bosses/Ch5/Aqua/Overworld/Animations/Laugh/spr_enemy_aqua_pose_0.png"
+    ]
+  },
+  {
+    "id": "spr_enemy_aqua_pose_r",
+    "category": "Overworld/Animations/Laugh",
+    "frames": 1,
+    "source_paths": [
+      "Characters/Bosses/Ch5/Aqua/Overworld/Animations/Laugh/spr_enemy_aqua_pose_r_0.png"
+    ]
+  },
+  {
+    "id": "spr_enemy_aqua_pose_r_green",
+    "category": "Overworld",
+    "frames": 1,
+    "source_paths": [
+      "Characters/Bosses/Ch5/Aqua/Overworld/spr_enemy_aqua_pose_r_green_0.png"
+    ]
+  },
+  {
+    "id": "spr_enemy_aqua_redsplash",
+    "category": "Overworld/Animations/Idle/Red Splash",
+    "frames": 8,
+    "source_paths": [
+      "Characters/Bosses/Ch5/Aqua/Overworld/Animations/Idle/Red Splash/spr_enemy_aqua_redsplash_0.png",
+      "Characters/Bosses/Ch5/Aqua/Overworld/Animations/Idle/Red Splash/spr_enemy_aqua_redsplash_1.png",
+      "Characters/Bosses/Ch5/Aqua/Overworld/Animations/Idle/Red Splash/spr_enemy_aqua_redsplash_2.png",
+      "Characters/Bosses/Ch5/Aqua/Overworld/Animations/Idle/Red Splash/spr_enemy_aqua_redsplash_3.png",
+      "Characters/Bosses/Ch5/Aqua/Overworld/Animations/Idle/Red Splash/spr_enemy_aqua_redsplash_4.png",
+      "Characters/Bosses/Ch5/Aqua/Overworld/Animations/Idle/Red Splash/spr_enemy_aqua_redsplash_5.png",
+      "Characters/Bosses/Ch5/Aqua/Overworld/Animations/Idle/Red Splash/spr_enemy_aqua_redsplash_6.png",
+      "Characters/Bosses/Ch5/Aqua/Overworld/Animations/Idle/Red Splash/spr_enemy_aqua_redsplash_7.png"
+    ]
+  },
+  {
+    "id": "spr_enemy_aqua_spin",
+    "category": "Overworld/Animations/Spin",
+    "frames": 5,
+    "source_paths": [
+      "Characters/Bosses/Ch5/Aqua/Overworld/Animations/Spin/spr_enemy_aqua_spin_0.png",
+      "Characters/Bosses/Ch5/Aqua/Overworld/Animations/Spin/spr_enemy_aqua_spin_1.png",
+      "Characters/Bosses/Ch5/Aqua/Overworld/Animations/Spin/spr_enemy_aqua_spin_2.png",
+      "Characters/Bosses/Ch5/Aqua/Overworld/Animations/Spin/spr_enemy_aqua_spin_3.png",
+      "Characters/Bosses/Ch5/Aqua/Overworld/Animations/Spin/spr_enemy_aqua_spin_4.png"
+    ]
+  },
+  {
+    "id": "spr_enemy_aqua_unamused",
+    "category": "Overworld",
+    "frames": 1,
+    "source_paths": [
+      "Characters/Bosses/Ch5/Aqua/Overworld/spr_enemy_aqua_unamused_0.png"
+    ]
+  },
+  {
+    "id": "spr_enemy_aqua_unamused_r",
+    "category": "Overworld",
+    "frames": 1,
+    "source_paths": [
+      "Characters/Bosses/Ch5/Aqua/Overworld/spr_enemy_aqua_unamused_r_0.png"
+    ]
+  },
+  {
+    "id": "spr_faqua",
+    "category": "Battle/Bullet Pattern/Enemy",
+    "frames": 5,
+    "source_paths": [
+      "Characters/Bosses/Ch5/Aqua/Battle/Bullet Pattern/Enemy/spr_faqua_0.png",
+      "Characters/Bosses/Ch5/Aqua/Battle/Bullet Pattern/Enemy/spr_faqua_1.png",
+      "Characters/Bosses/Ch5/Aqua/Battle/Bullet Pattern/Enemy/spr_faqua_2.png",
+      "Characters/Bosses/Ch5/Aqua/Battle/Bullet Pattern/Enemy/spr_faqua_3.png",
+      "Characters/Bosses/Ch5/Aqua/Battle/Bullet Pattern/Enemy/spr_faqua_4.png"
+    ]
+  },
+  {
+    "id": "spr_faqua_blur",
+    "category": "Battle/Bullet Pattern/Enemy",
+    "frames": 3,
+    "source_paths": [
+      "Characters/Bosses/Ch5/Aqua/Battle/Bullet Pattern/Enemy/spr_faqua_blur_0.png",
+      "Characters/Bosses/Ch5/Aqua/Battle/Bullet Pattern/Enemy/spr_faqua_blur_1.png",
+      "Characters/Bosses/Ch5/Aqua/Battle/Bullet Pattern/Enemy/spr_faqua_blur_2.png"
+    ]
+  },
+  {
+    "id": "spr_faqua_gold",
+    "category": "Battle/Bullet Pattern/Gold!",
+    "frames": 5,
+    "source_paths": [
+      "Characters/Bosses/Ch5/Aqua/Battle/Bullet Pattern/Gold!/spr_faqua_gold_0.png",
+      "Characters/Bosses/Ch5/Aqua/Battle/Bullet Pattern/Gold!/spr_faqua_gold_1.png",
+      "Characters/Bosses/Ch5/Aqua/Battle/Bullet Pattern/Gold!/spr_faqua_gold_2.png",
+      "Characters/Bosses/Ch5/Aqua/Battle/Bullet Pattern/Gold!/spr_faqua_gold_3.png",
+      "Characters/Bosses/Ch5/Aqua/Battle/Bullet Pattern/Gold!/spr_faqua_gold_4.png"
+    ]
+  },
+  {
+    "id": "spr_faqua_knife",
+    "category": "Battle/Bullet Pattern/Knife",
+    "frames": 2,
+    "source_paths": [
+      "Characters/Bosses/Ch5/Aqua/Battle/Bullet Pattern/Knife/spr_faqua_knife_0.png",
+      "Characters/Bosses/Ch5/Aqua/Battle/Bullet Pattern/Knife/spr_faqua_knife_1.png"
+    ]
+  },
+  {
+    "id": "spr_faqua_knife_cracked",
+    "category": "Battle/Bullet Pattern/Knife",
+    "frames": 3,
+    "source_paths": [
+      "Characters/Bosses/Ch5/Aqua/Battle/Bullet Pattern/Knife/spr_faqua_knife_cracked_0.png",
+      "Characters/Bosses/Ch5/Aqua/Battle/Bullet Pattern/Knife/spr_faqua_knife_cracked_1.png",
+      "Characters/Bosses/Ch5/Aqua/Battle/Bullet Pattern/Knife/spr_faqua_knife_cracked_2.png"
+    ]
+  },
+  {
+    "id": "spr_faqua_knife_spinning",
+    "category": "Battle/Bullet Pattern/Knife",
+    "frames": 4,
+    "source_paths": [
+      "Characters/Bosses/Ch5/Aqua/Battle/Bullet Pattern/Knife/spr_faqua_knife_spinning_0.png",
+      "Characters/Bosses/Ch5/Aqua/Battle/Bullet Pattern/Knife/spr_faqua_knife_spinning_1.png",
+      "Characters/Bosses/Ch5/Aqua/Battle/Bullet Pattern/Knife/spr_faqua_knife_spinning_2.png",
+      "Characters/Bosses/Ch5/Aqua/Battle/Bullet Pattern/Knife/spr_faqua_knife_spinning_3.png"
+    ]
+  },
+  {
+    "id": "spr_faqua_knife_spliteffect",
+    "category": "Battle/Bullet Pattern/Knife",
+    "frames": 4,
+    "source_paths": [
+      "Characters/Bosses/Ch5/Aqua/Battle/Bullet Pattern/Knife/spr_faqua_knife_spliteffect_0.png",
+      "Characters/Bosses/Ch5/Aqua/Battle/Bullet Pattern/Knife/spr_faqua_knife_spliteffect_1.png",
+      "Characters/Bosses/Ch5/Aqua/Battle/Bullet Pattern/Knife/spr_faqua_knife_spliteffect_2.png",
+      "Characters/Bosses/Ch5/Aqua/Battle/Bullet Pattern/Knife/spr_faqua_knife_spliteffect_3.png"
+    ]
+  },
+  {
+    "id": "spr_faqua_knife_turning",
+    "category": "Battle/Bullet Pattern/Knife",
+    "frames": 7,
+    "source_paths": [
+      "Characters/Bosses/Ch5/Aqua/Battle/Bullet Pattern/Knife/spr_faqua_knife_turning_0.png",
+      "Characters/Bosses/Ch5/Aqua/Battle/Bullet Pattern/Knife/spr_faqua_knife_turning_1.png",
+      "Characters/Bosses/Ch5/Aqua/Battle/Bullet Pattern/Knife/spr_faqua_knife_turning_2.png",
+      "Characters/Bosses/Ch5/Aqua/Battle/Bullet Pattern/Knife/spr_faqua_knife_turning_3.png",
+      "Characters/Bosses/Ch5/Aqua/Battle/Bullet Pattern/Knife/spr_faqua_knife_turning_4.png",
+      "Characters/Bosses/Ch5/Aqua/Battle/Bullet Pattern/Knife/spr_faqua_knife_turning_5.png",
+      "Characters/Bosses/Ch5/Aqua/Battle/Bullet Pattern/Knife/spr_faqua_knife_turning_6.png"
+    ]
+  },
+  {
+    "id": "spr_faqua_small",
+    "category": "Battle/Bullet Pattern/Enemy",
+    "frames": 5,
+    "source_paths": [
+      "Characters/Bosses/Ch5/Aqua/Battle/Bullet Pattern/Enemy/spr_faqua_small_0.png",
+      "Characters/Bosses/Ch5/Aqua/Battle/Bullet Pattern/Enemy/spr_faqua_small_1.png",
+      "Characters/Bosses/Ch5/Aqua/Battle/Bullet Pattern/Enemy/spr_faqua_small_2.png",
+      "Characters/Bosses/Ch5/Aqua/Battle/Bullet Pattern/Enemy/spr_faqua_small_3.png",
+      "Characters/Bosses/Ch5/Aqua/Battle/Bullet Pattern/Enemy/spr_faqua_small_4.png"
+    ]
+  },
+  {
+    "id": "spr_faqua_spin",
+    "category": "Battle/Bullet Pattern/Enemy",
+    "frames": 5,
+    "source_paths": [
+      "Characters/Bosses/Ch5/Aqua/Battle/Bullet Pattern/Enemy/spr_faqua_spin_0.png",
+      "Characters/Bosses/Ch5/Aqua/Battle/Bullet Pattern/Enemy/spr_faqua_spin_1.png",
+      "Characters/Bosses/Ch5/Aqua/Battle/Bullet Pattern/Enemy/spr_faqua_spin_2.png",
+      "Characters/Bosses/Ch5/Aqua/Battle/Bullet Pattern/Enemy/spr_faqua_spin_3.png",
+      "Characters/Bosses/Ch5/Aqua/Battle/Bullet Pattern/Enemy/spr_faqua_spin_4.png"
+    ]
+  },
+  {
+    "id": "spr_faqua_yellowknife",
+    "category": "Battle/Bullet Pattern/Gold!",
+    "frames": 1,
+    "source_paths": [
+      "Characters/Bosses/Ch5/Aqua/Battle/Bullet Pattern/Gold!/spr_faqua_yellowknife_0.png"
+    ]
+  },
+  {
+    "id": "spr_faqua_yellowknife_center",
+    "category": "Battle/Bullet Pattern/Gold!",
+    "frames": 3,
+    "source_paths": [
+      "Characters/Bosses/Ch5/Aqua/Battle/Bullet Pattern/Gold!/spr_faqua_yellowknife_center_0.png",
+      "Characters/Bosses/Ch5/Aqua/Battle/Bullet Pattern/Gold!/spr_faqua_yellowknife_center_1.png",
+      "Characters/Bosses/Ch5/Aqua/Battle/Bullet Pattern/Gold!/spr_faqua_yellowknife_center_2.png"
+    ]
+  },
+  {
+    "id": "spr_faqua_yellowknife_swing",
+    "category": "Battle/Bullet Pattern/Gold!",
+    "frames": 1,
+    "source_paths": [
+      "Characters/Bosses/Ch5/Aqua/Battle/Bullet Pattern/Gold!/spr_faqua_yellowknife_swing_0.png"
+    ]
+  },
+  {
+    "id": "spr_miniface_aqua",
+    "category": "Portraits",
+    "frames": 1,
+    "source_paths": [
+      "Characters/Bosses/Ch5/Aqua/Portraits/spr_miniface_aqua_0.png"
+    ]
+  },
+  {
+    "id": "spr_omegaf_aqua",
+    "category": "Battle/Omega Flowery",
+    "frames": 3,
+    "source_paths": [
+      "Characters/Bosses/Ch5/Aqua/Battle/Omega Flowery/spr_omegaf_aqua_0.png",
+      "Characters/Bosses/Ch5/Aqua/Battle/Omega Flowery/spr_omegaf_aqua_1.png",
+      "Characters/Bosses/Ch5/Aqua/Battle/Omega Flowery/spr_omegaf_aqua_2.png"
+    ]
+  },
+  {
+    "id": "spr_omegaf_aqua_o",
+    "category": "Battle/Omega Flowery",
+    "frames": 3,
+    "source_paths": [
+      "Characters/Bosses/Ch5/Aqua/Battle/Omega Flowery/spr_omegaf_aqua_o_0.png",
+      "Characters/Bosses/Ch5/Aqua/Battle/Omega Flowery/spr_omegaf_aqua_o_1.png",
+      "Characters/Bosses/Ch5/Aqua/Battle/Omega Flowery/spr_omegaf_aqua_o_2.png"
+    ]
+  },
+  {
+    "id": "spr_plat_bullet_yellow",
+    "category": "Battle/Bullet Pattern/Gold!",
+    "frames": 1,
+    "source_paths": [
+      "Characters/Bosses/Ch5/Aqua/Battle/Bullet Pattern/Gold!/spr_plat_bullet_yellow_0.png"
+    ]
+  },
+  {
+    "id": "spr_stolen_knife",
+    "category": "Battle/Attacks",
+    "frames": 1,
+    "source_paths": [
+      "Characters/Bosses/Ch5/Aqua/Battle/Attacks/spr_stolen_knife_0.png"
+    ]
+  },
+  {
+    "id": "spr_stolen_knife_mask",
+    "category": "Battle/Attacks",
+    "frames": 1,
+    "source_paths": [
+      "Characters/Bosses/Ch5/Aqua/Battle/Attacks/spr_stolen_knife_mask_0.png"
+    ]
+  }
+]
