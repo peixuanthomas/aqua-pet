@@ -1603,6 +1603,8 @@ pub fn run(catalog: Catalog, debug: bool, smoke: bool) -> Result<(), String> {
                 lpfnWndProc: Some(wndproc),
                 hInstance: module.into(),
                 lpszClassName: class,
+                hIcon: LoadIconW(Some(module.into()), w!("AQUA_ICON"))
+                    .map_err(|e| e.to_string())?,
                 hCursor: LoadCursorW(None, IDC_ARROW).map_err(|e| e.to_string())?,
                 hbrBackground: background,
                 ..Default::default()

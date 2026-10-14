@@ -27,7 +27,7 @@ cargo build --release
 
 构建完成后，运行 `target/release/aqua-pet.exe`，即可显示无边框的桌宠角色。
 
-Windows 构建会自动将 `assets/sprites/spr_aqua_sleevewave_0.png` 转为多尺寸图标并写入 EXE，保留透明背景和角色比例，无需额外携带图标文件。
+Windows 构建会自动将 `assets/sprites/spr_aqua_sleevewave_0.png` 转为多尺寸图标并写入 EXE，设置和 Debug 窗口的标题栏也使用该图标。图标保留透明背景和角色比例，无需额外携带图标文件。
 
 - **左键拖动**：将角色移动到屏幕上的任意位置。
 - **右键菜单**：打开桌宠设置或 Debug 动作预览面板。
