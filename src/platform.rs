@@ -2,6 +2,8 @@
 // Rust 1.98's lint also inspects the standard macro's internal lazy initializer.
 #![allow(clippy::missing_const_for_thread_local)]
 
+mod ui;
+
 use crate::{
     catalog::Catalog,
     player::Player,
@@ -65,6 +67,10 @@ const DISTANCE_LABEL: usize = 507;
 const DISTANCE_VALUE: usize = 508;
 const DISTANCE_SHORT: usize = 509;
 const DISTANCE_LONG: usize = 510;
+const SETTINGS_TITLE: usize = 511;
+const SETTINGS_SUBTITLE: usize = 512;
+const WALK_NOTE: usize = 513;
+const DISTANCE_NOTE: usize = 514;
 const SHOW_DEBUG: u32 = WM_APP + 1;
 const RATES: [f64; 7] = [0.25, 0.5, 0.75, 1.0, 1.5, 2.0, 4.0];
 
@@ -179,7 +185,7 @@ struct App {
     settings: HWND,
     controls: HashMap<usize, HWND>,
     font: HFONT,
-    settings_font: HFONT,
+    settings_fonts: ui::Fonts,
     visible: Vec<usize>,
     categories: Vec<String>,
     bounds: Bounds,
@@ -239,7 +245,7 @@ impl App {
             settings,
             controls: HashMap::new(),
             font: HFONT::default(),
-            settings_font: HFONT::default(),
+            settings_fonts: ui::Fonts::default(),
             visible: vec![],
             categories: vec![],
             bounds,
@@ -451,7 +457,20 @@ impl App {
     unsafe fn create_settings_controls(&mut self) -> windows::core::Result<()> {
         let module = GetModuleHandleW(None)?;
         for (id, class, label, style) in [
+            (SETTINGS_TITLE, w!("STATIC"), "桌宠设置", 0),
+            (
+                SETTINGS_SUBTITLE,
+                w!("STATIC"),
+                "让 AQUA 按你喜欢的节奏走动。",
+                0,
+            ),
             (WALK_LABEL, w!("STATIC"), "随机走动概率", 0),
+            (
+                WALK_NOTE,
+                w!("STATIC"),
+                "每次晃动结束后，有多大概率开始走动。",
+                0,
+            ),
             (WALK_VALUE, w!("STATIC"), "", SS_RIGHT.0),
             (
                 WALK_CHANCE,
@@ -462,6 +481,12 @@ impl App {
             (WALK_OFF, w!("STATIC"), "不走动", 0),
             (WALK_OFTEN, w!("STATIC"), "经常走动", SS_RIGHT.0),
             (DISTANCE_LABEL, w!("STATIC"), "走动距离倾向", 0),
+            (
+                DISTANCE_NOTE,
+                w!("STATIC"),
+                "每次距离仍随机，从下一次走动生效。",
+                0,
+            ),
             (
                 DISTANCE_BIAS,
                 TRACKBAR_CLASSW,
@@ -474,7 +499,7 @@ impl App {
             (
                 SETTINGS_NOTE,
                 w!("STATIC"),
-                "每次距离仍随机，距离倾向从下次走动生效。\r\n设置自动保存，行走速度保持原速。\r\n停下时仍会左右摇晃。",
+                "修改自动保存。\r\n行走保持原速，停下时仍会左右摇晃。",
                 0,
             ),
         ] {
@@ -493,6 +518,7 @@ impl App {
                 Some(module.into()),
                 None,
             )?;
+            let _ = SetWindowTheme(hwnd, w!(""), w!(""));
             self.controls.insert(id, hwnd);
         }
         for id in [WALK_CHANCE, DISTANCE_BIAS] {
@@ -530,16 +556,18 @@ impl App {
         text(self.control(DISTANCE_VALUE), label);
     }
     unsafe fn update_settings_font(&mut self) {
-        let font = Self::make_font(self.settings);
+        let fonts = ui::Fonts::new(self.settings);
         for (&id, &hwnd) in &self.controls {
             if id >= WALK_CHANCE {
+                let font = match id {
+                    SETTINGS_TITLE => fonts.heading,
+                    WALK_VALUE | DISTANCE_VALUE => fonts.value,
+                    _ => fonts.body,
+                };
                 send(hwnd, WM_SETFONT, font.0 as usize, 1);
             }
         }
-        if !self.settings_font.is_invalid() {
-            let _ = DeleteObject(self.settings_font.into());
-        }
-        self.settings_font = font;
+        self.settings_fonts = fonts;
     }
     unsafe fn layout_settings(&self) {
         if !self.controls.contains_key(&WALK_CHANCE) {
@@ -550,17 +578,21 @@ impl App {
         let dpi = GetDpiForWindow(self.settings).max(96) as f64 / 96.0;
         let width = client.right as f64 / dpi;
         for (id, x, y, w, h) in [
-            (WALK_LABEL, 24.0, 24.0, width - 140.0, 26.0),
-            (WALK_VALUE, width - 104.0, 24.0, 80.0, 26.0),
-            (WALK_CHANCE, 20.0, 64.0, width - 40.0, 32.0),
-            (WALK_OFF, 24.0, 104.0, 100.0, 26.0),
-            (WALK_OFTEN, width - 124.0, 104.0, 100.0, 26.0),
-            (DISTANCE_LABEL, 24.0, 164.0, width - 160.0, 26.0),
-            (DISTANCE_VALUE, width - 124.0, 164.0, 100.0, 26.0),
-            (DISTANCE_BIAS, 20.0, 204.0, width - 40.0, 32.0),
-            (DISTANCE_SHORT, 24.0, 244.0, 150.0, 26.0),
-            (DISTANCE_LONG, width - 174.0, 244.0, 150.0, 26.0),
-            (SETTINGS_NOTE, 24.0, 294.0, width - 48.0, 72.0),
+            (SETTINGS_TITLE, 148.0, 28.0, width - 180.0, 36.0),
+            (SETTINGS_SUBTITLE, 32.0, 78.0, width - 64.0, 26.0),
+            (WALK_LABEL, 44.0, 144.0, width - 190.0, 28.0),
+            (WALK_VALUE, width - 144.0, 140.0, 100.0, 32.0),
+            (WALK_NOTE, 44.0, 182.0, width - 88.0, 26.0),
+            (WALK_CHANCE, 40.0, 222.0, width - 80.0, 32.0),
+            (WALK_OFF, 44.0, 266.0, 100.0, 26.0),
+            (WALK_OFTEN, width - 144.0, 266.0, 100.0, 26.0),
+            (DISTANCE_LABEL, 44.0, 334.0, width - 210.0, 28.0),
+            (DISTANCE_VALUE, width - 164.0, 330.0, 120.0, 32.0),
+            (DISTANCE_NOTE, 44.0, 372.0, width - 88.0, 26.0),
+            (DISTANCE_BIAS, 40.0, 412.0, width - 80.0, 32.0),
+            (DISTANCE_SHORT, 44.0, 456.0, 150.0, 26.0),
+            (DISTANCE_LONG, width - 194.0, 456.0, 150.0, 26.0),
+            (SETTINGS_NOTE, 32.0, 524.0, width - 64.0, 52.0),
         ] {
             let _ = MoveWindow(
                 self.control(id),
@@ -571,13 +603,14 @@ impl App {
                 true,
             );
         }
+        let _ = InvalidateRect(Some(self.settings), None, true);
     }
     unsafe fn show_settings(&mut self) {
         if !IsWindowVisible(self.settings).as_bool() {
             let work = self.work_area();
             let dpi = GetDpiForWindow(self.settings).max(96) as i32;
-            let width = 480 * dpi / 96;
-            let height = 420 * dpi / 96;
+            let width = 520 * dpi / 96;
+            let height = 640 * dpi / 96;
             let _ = SetWindowPos(
                 self.settings,
                 None,
@@ -1225,6 +1258,25 @@ impl App {
         }
         let _ = EndPaint(self.debug, &ps);
     }
+    unsafe fn paint_settings(&self) {
+        let mut ps = PAINTSTRUCT::default();
+        let dc = BeginPaint(self.settings, &mut ps);
+        let mut client = RECT::default();
+        let _ = GetClientRect(self.settings, &mut client);
+        ui::fill(dc, &client, ui::BLACK);
+        let dpi = GetDpiForWindow(self.settings).max(96) as f64 / 96.0;
+        let width = client.right as f64 / dpi;
+        ui::logo(dc, dpi, 32.0, 32.0);
+        for y in [126.0, 316.0] {
+            ui::border(
+                dc,
+                ui::rect(dpi, 24.0, y, width - 48.0, 184.0),
+                ui::WHITE,
+                (2.0 * dpi).round() as i32,
+            );
+        }
+        let _ = EndPaint(self.settings, &ps);
+    }
     unsafe fn handle(&mut self, hwnd: HWND, msg: u32, wp: WPARAM, lp: LPARAM) -> Option<LRESULT> {
         let debug = hwnd == self.debug;
         let pet = hwnd == self.pet;
@@ -1338,6 +1390,10 @@ impl App {
                 self.paint();
                 Some(LRESULT(0))
             }
+            WM_PAINT if settings => {
+                self.paint_settings();
+                Some(LRESULT(0))
+            }
             WM_CLOSE => {
                 if debug {
                     self.close_debug();
@@ -1394,7 +1450,7 @@ impl App {
 }
 impl Drop for App {
     fn drop(&mut self) {
-        for font in [self.font, self.settings_font] {
+        for font in [self.font] {
             if !font.is_invalid() {
                 unsafe {
                     let _ = DeleteObject(font.into());
@@ -1405,6 +1461,12 @@ impl Drop for App {
 }
 
 unsafe extern "system" fn wndproc(hwnd: HWND, msg: u32, wp: WPARAM, lp: LPARAM) -> LRESULT {
+    // Control painting also runs during synchronous layout and text updates.
+    if GetWindowLongPtrW(hwnd, GWLP_USERDATA) == 1
+        && let Some(result) = ui::control_message(hwnd, msg, wp, lp)
+    {
+        return result;
+    }
     // Native controls can synchronously re-enter the parent while we change their values.
     // try_borrow_mut prevents overlapping Rust mutable references on those callbacks.
     let handled = APP.with(|slot| {
@@ -1456,10 +1518,7 @@ pub fn run(catalog: Catalog, debug: bool, smoke: bool) -> Result<(), String> {
                 w!("AquaPetDebug"),
                 HBRUSH((COLOR_WINDOW.0 + 1) as usize as *mut c_void),
             ),
-            (
-                w!("AquaPetSettings"),
-                HBRUSH((COLOR_WINDOW.0 + 1) as usize as *mut c_void),
-            ),
+            (w!("AquaPetSettings"), HBRUSH(GetStockObject(BLACK_BRUSH).0)),
         ] {
             let wc = WNDCLASSW {
                 lpfnWndProc: Some(wndproc),
@@ -1518,6 +1577,7 @@ pub fn run(catalog: Catalog, debug: bool, smoke: bool) -> Result<(), String> {
             None,
         )
         .map_err(|e| e.to_string())?;
+        SetWindowLongPtrW(settings, GWLP_USERDATA, 1);
         let monitor = MonitorFromWindow(panel, MONITOR_DEFAULTTONEAREST);
         let mut monitor_info = MONITORINFO {
             cbSize: size_of::<MONITORINFO>() as u32,
