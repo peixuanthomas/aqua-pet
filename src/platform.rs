@@ -53,6 +53,8 @@ const SCALE_LABEL: usize = 302;
 const SPEED_LABEL: usize = 303;
 const BACKGROUND_LABEL: usize = 304;
 const LOOP_LABEL: usize = 305;
+const ACTION_TITLE: usize = 309;
+const EMPTY: usize = 310;
 const MENU_DEBUG: u32 = 400;
 const MENU_EXIT: u32 = 401;
 const MENU_SETTINGS: u32 = 402;
@@ -184,7 +186,7 @@ struct App {
     debug: HWND,
     settings: HWND,
     controls: HashMap<usize, HWND>,
-    font: HFONT,
+    fonts: ui::Fonts,
     settings_fonts: ui::Fonts,
     visible: Vec<usize>,
     categories: Vec<String>,
@@ -244,7 +246,7 @@ impl App {
             debug,
             settings,
             controls: HashMap::new(),
-            font: HFONT::default(),
+            fonts: ui::Fonts::default(),
             settings_fonts: ui::Fonts::default(),
             visible: vec![],
             categories: vec![],
@@ -265,7 +267,7 @@ impl App {
             preview: None,
             preview_rect: RECT::default(),
             preview_dirty: true,
-            bg: 2,
+            bg: 0,
             debug_open: false,
             closing: false,
             auto_exit: if smoke {
@@ -281,8 +283,15 @@ impl App {
     }
     unsafe fn create_controls(&mut self) -> windows::core::Result<()> {
         let module = GetModuleHandleW(None)?;
-        let specs: [(usize, PCWSTR, &str, u32); 27] = [
-            (TITLE, w!("STATIC"), "AQUA  /  动作预览", 0),
+        let specs: [(usize, PCWSTR, &str, u32); 29] = [
+            (TITLE, w!("STATIC"), "Debug 动作预览", 0),
+            (ACTION_TITLE, w!("STATIC"), "", 0),
+            (
+                EMPTY,
+                w!("STATIC"),
+                "没有找到动作\r\n试试其他关键词或分类。",
+                0,
+            ),
             (SEARCH_LABEL, w!("STATIC"), "搜索动作或原始资源名", 0),
             (
                 SEARCH,
@@ -308,9 +317,9 @@ impl App {
                 "",
                 LBS_NOTIFY as u32
                     | LBS_NOINTEGRALHEIGHT as u32
-                    | WS_BORDER.0
+                    | LBS_OWNERDRAWFIXED as u32
+                    | LBS_HASSTRINGS as u32
                     | WS_VSCROLL.0
-                    | WS_HSCROLL.0
                     | WS_TABSTOP.0,
             ),
             (COUNT, w!("STATIC"), "", 0),
@@ -391,11 +400,18 @@ impl App {
             (SPEED_LABEL, w!("STATIC"), "播放速度", 0),
             (BACKGROUND_LABEL, w!("STATIC"), "预览背景", 0),
             (LOOP_LABEL, w!("STATIC"), "播放方式", 0),
-            (306, w!("STATIC"), "选中后，桌宠与面板同步播放。", 0),
-            (307, w!("STATIC"), "拖动桌宠调整位置 · 右键打开菜单", 0),
-            (308, w!("STATIC"), "关闭此面板会回到默认晃动。", 0),
+            (306, w!("STATIC"), "选中动作后，桌宠与预览同步播放。", 0),
+            (307, w!("STATIC"), "动作详情", 0),
+            (308, w!("STATIC"), "关闭面板后恢复自动活动。", 0),
         ];
         for (id, class, label, style) in specs {
+            let style = if [PLAY, RESTART, PREV, NEXT, IDLE, RESET_SPEED].contains(&id) {
+                style | BS_OWNERDRAW as u32
+            } else if [KIND, CATEGORY, LOOP, SPEED, SCALE, BG].contains(&id) {
+                style | CBS_OWNERDRAWFIXED as u32 | CBS_HASSTRINGS as u32
+            } else {
+                style
+            };
             let label = wide(label);
             let hwnd = CreateWindowExW(
                 WINDOW_EX_STYLE(0),
@@ -411,6 +427,7 @@ impl App {
                 Some(module.into()),
                 None,
             )?;
+            let _ = SetWindowTheme(hwnd, w!(""), w!(""));
             self.controls.insert(id, hwnd);
         }
         for kind in ["全部", "原作动作", "原始素材", "未使用素材"] {
@@ -438,7 +455,7 @@ impl App {
             combo_add(self.control(SPEED), &format!("{rate}×"));
         }
         for scale in 1..=8 {
-            combo_add(self.control(SCALE), &format!("{scale}× 原始像素"));
+            combo_add(self.control(SCALE), &format!("{scale}×"));
         }
         for bg in ["深色", "浅色", "棋盘格"] {
             combo_add(self.control(BG), bg);
@@ -629,35 +646,39 @@ impl App {
         let _ = SetFocus(Some(self.control(WALK_CHANCE)));
     }
     unsafe fn update_font(&mut self) {
-        let font = Self::make_font(self.debug);
+        let fonts = ui::Fonts::new(self.debug);
         for (&id, &hwnd) in &self.controls {
             if id < WALK_CHANCE {
+                let font = match id {
+                    TITLE => fonts.heading,
+                    ACTION_TITLE => fonts.value,
+                    _ => fonts.body,
+                };
                 send(hwnd, WM_SETFONT, font.0 as usize, 1);
             }
         }
-        if !self.font.is_invalid() {
-            let _ = DeleteObject(self.font.into());
+        let dpi = GetDpiForWindow(self.debug).max(96) as usize;
+        send(
+            self.control(LIST),
+            LB_SETITEMHEIGHT,
+            0,
+            (34 * dpi / 96) as isize,
+        );
+        for id in [KIND, CATEGORY, LOOP, SPEED, SCALE, BG] {
+            send(
+                self.control(id),
+                CB_SETITEMHEIGHT,
+                usize::MAX,
+                (28 * dpi / 96) as isize,
+            );
+            send(
+                self.control(id),
+                CB_SETITEMHEIGHT,
+                0,
+                (30 * dpi / 96) as isize,
+            );
         }
-        self.font = font;
-    }
-    unsafe fn make_font(window: HWND) -> HFONT {
-        let dpi = GetDpiForWindow(window).max(96);
-        CreateFontW(
-            -(((16 * dpi) / 96) as i32),
-            0,
-            0,
-            0,
-            400,
-            0,
-            0,
-            0,
-            DEFAULT_CHARSET,
-            OUT_DEFAULT_PRECIS,
-            CLIP_DEFAULT_PRECIS,
-            CLEARTYPE_QUALITY,
-            0,
-            w!("Microsoft YaHei UI"),
-        )
+        self.fonts = fonts;
     }
     unsafe fn layout(&mut self) {
         let mut client = RECT::default();
@@ -665,9 +686,9 @@ impl App {
         let dpi = GetDpiForWindow(self.debug).max(96) as f64 / 96.0;
         let w = client.right as f64 / dpi;
         let h = client.bottom as f64 / dpi;
-        let left = 310.0_f64.min(w * 0.32);
-        let right_x = left + 32.0;
-        let rw = (w - right_x - 18.0).max(320.0);
+        let left = 300.0_f64.min(w * 0.30);
+        let right_x = left + 48.0;
+        let rw = w - right_x - 24.0;
         let place = |id, x: f64, y: f64, width: f64, height: f64| {
             let _ = MoveWindow(
                 self.controls[&id],
@@ -678,28 +699,25 @@ impl App {
                 true,
             );
         };
-        place(TITLE, 16.0, 14.0, w - 32.0, 28.0);
-        place(SEARCH_LABEL, 16.0, 51.0, left, 23.0);
-        place(SEARCH, 16.0, 77.0, left, 28.0);
-        place(KIND, 16.0, 116.0, left, 260.0);
-        place(CATEGORY, 16.0, 153.0, left, 400.0);
-        place(LIST, 16.0, 193.0, left, (h - 264.0).max(150.0));
-        place(COUNT, 16.0, h - 62.0, left, 24.0);
-        place(308, 16.0, h - 34.0, left, 24.0);
-        place(306, right_x, 52.0, rw, 24.0);
-        let preview_bottom = (h - 365.0).max(150.0);
-        self.preview_rect = RECT {
-            left: (right_x * dpi) as i32,
-            top: (82.0 * dpi) as i32,
-            right: ((right_x + rw) * dpi) as i32,
-            bottom: (preview_bottom * dpi) as i32,
-        };
+        place(TITLE, 140.0, 22.0, w - 164.0, 36.0);
+        place(306, 24.0, 68.0, w - 48.0, 24.0);
+        place(SEARCH_LABEL, 24.0, 110.0, left, 24.0);
+        place(SEARCH, 24.0, 142.0, left, 30.0);
+        place(KIND, 24.0, 184.0, left, 260.0);
+        place(CATEGORY, 24.0, 226.0, left, 400.0);
+        place(LIST, 26.0, 278.0, left - 4.0, h - 366.0);
+        place(EMPTY, 40.0, 306.0, left - 32.0, 70.0);
+        place(COUNT, 24.0, h - 74.0, left, 44.0);
+        place(308, 24.0, h - 30.0, left, 24.0);
+        place(ACTION_TITLE, right_x, 108.0, rw, 30.0);
+        let preview_bottom = h - 366.0;
+        self.preview_rect = ui::rect(dpi, right_x, 150.0, rw, preview_bottom - 150.0);
         let y = preview_bottom + 10.0;
         place(TIMELINE, right_x, y, rw, 28.0);
-        place(STATUS, right_x, y + 32.0, rw, 24.0);
-        let bw = ((rw - 32.0) / 5.0).min(110.0);
+        place(STATUS, right_x, y + 34.0, rw, 44.0);
+        let bw = (rw - 32.0) / 5.0;
         for (i, id) in [PLAY, RESTART, PREV, NEXT, IDLE].iter().enumerate() {
-            place(*id, right_x + i as f64 * (bw + 8.0), y + 62.0, bw, 31.0);
+            place(*id, right_x + i as f64 * (bw + 8.0), y + 86.0, bw, 36.0);
         }
         let cw = (rw - 24.0) / 4.0;
         for (i, (label, id)) in [
@@ -712,12 +730,12 @@ impl App {
         .enumerate()
         {
             let x = right_x + i as f64 * (cw + 8.0);
-            place(*label, x, y + 105.0, cw, 23.0);
-            place(*id, x, y + 130.0, cw, 260.0);
+            place(*label, x, y + 136.0, cw, 23.0);
+            place(*id, x, y + 164.0, cw, 260.0);
         }
-        place(RESET_SPEED, right_x, y + 167.0, 110.0, 28.0);
-        place(307, right_x + 120.0, y + 170.0, rw - 120.0, 23.0);
-        place(INFO, right_x, y + 205.0, rw, (h - y - 220.0).max(70.0));
+        place(RESET_SPEED, right_x + cw + 8.0, y + 204.0, cw, 30.0);
+        place(307, right_x, y + 244.0, rw, 24.0);
+        place(INFO, right_x, y + 274.0, rw, h - y - 292.0);
         self.preview_dirty = true;
         let _ = InvalidateRect(Some(self.debug), None, true);
     }
@@ -768,7 +786,6 @@ impl App {
             ));
             send(list, LB_ADDSTRING, 0, label.as_ptr() as isize);
         }
-        send(list, LB_SETHORIZONTALEXTENT, 1000, 0);
         if let Some(i) = self.visible.iter().position(|i| *i == self.player.selected) {
             send(list, LB_SETCURSEL, i, 0);
         }
@@ -776,7 +793,28 @@ impl App {
         let _ = InvalidateRect(Some(list), None, true);
         text(
             self.control(COUNT),
-            &format!("{} 项 · 94 组素材 / 346 张原图", self.visible.len()),
+            &format!(
+                "{} 项结果\r\n{} 组素材 / {} 张原图",
+                self.visible.len(),
+                self.catalog.sprites.len(),
+                self.catalog.images.len()
+            ),
+        );
+        let _ = ShowWindow(
+            self.control(EMPTY),
+            if self.visible.is_empty() {
+                SW_SHOW
+            } else {
+                SW_HIDE
+            },
+        );
+        let _ = ShowWindow(
+            list,
+            if self.visible.is_empty() {
+                SW_HIDE
+            } else {
+                SW_SHOW
+            },
         );
     }
     unsafe fn work_area(&self) -> RECT {
@@ -884,6 +922,7 @@ impl App {
             self.catalog.source_hash
         );
         text(self.control(INFO), &details);
+        text(self.control(ACTION_TITLE), &c.label);
         send(
             self.control(LOOP),
             CB_SETCURSEL,
@@ -1197,7 +1236,7 @@ impl App {
             text(
                 self.control(STATUS),
                 &format!(
-                    "{} · {:.2}/{:.2}s · 样本 {}/{} · 图帧 {} · {:.2}× · 桌宠 {}×{}",
+                    "{}   {:.2} / {:.2} 秒\r\n样本 {}/{}   图帧 {}   {:.2}×   桌宠 {}×{}",
                     state,
                     self.player.tick / 30.0,
                     clip.duration() / 30.0,
@@ -1226,8 +1265,27 @@ impl App {
     unsafe fn paint(&self) {
         let mut ps = PAINTSTRUCT::default();
         let dc = BeginPaint(self.debug, &mut ps);
+        let mut client = RECT::default();
+        let _ = GetClientRect(self.debug, &mut client);
+        ui::fill(dc, &client, ui::BLACK);
+        let dpi = GetDpiForWindow(self.debug).max(96) as f64 / 96.0;
+        let width = client.right as f64 / dpi;
+        let height = client.bottom as f64 / dpi;
+        ui::logo(dc, dpi, 24.0, 26.0);
+        ui::border(
+            dc,
+            ui::rect(
+                dpi,
+                24.0,
+                276.0,
+                300.0_f64.min(width * 0.30),
+                height - 362.0,
+            ),
+            ui::WHITE,
+            (2.0 * dpi).round() as i32,
+        );
         let color = match self.bg {
-            0 => COLORREF(0x2c221b),
+            0 => ui::BLACK,
             1 => COLORREF(0xeaf0f0),
             _ => COLORREF(0xded8d2),
         };
@@ -1256,6 +1314,7 @@ impl App {
                 DIB_RGB_COLORS,
             );
         }
+        ui::border(dc, self.preview_rect, ui::WHITE, (2.0 * dpi).round() as i32);
         let _ = EndPaint(self.debug, &ps);
     }
     unsafe fn paint_settings(&self) {
@@ -1439,8 +1498,8 @@ impl App {
                 let info = &mut *(lp.0 as *mut MINMAXINFO);
                 let dpi = GetDpiForWindow(hwnd).max(96) as i32;
                 info.ptMinTrackSize = POINT {
-                    x: 800 * dpi / 96,
-                    y: 550 * dpi / 96,
+                    x: 920 * dpi / 96,
+                    y: 700 * dpi / 96,
                 };
                 Some(LRESULT(0))
             }
@@ -1448,18 +1507,6 @@ impl App {
         }
     }
 }
-impl Drop for App {
-    fn drop(&mut self) {
-        for font in [self.font] {
-            if !font.is_invalid() {
-                unsafe {
-                    let _ = DeleteObject(font.into());
-                }
-            }
-        }
-    }
-}
-
 unsafe extern "system" fn wndproc(hwnd: HWND, msg: u32, wp: WPARAM, lp: LPARAM) -> LRESULT {
     // Control painting also runs during synchronous layout and text updates.
     if GetWindowLongPtrW(hwnd, GWLP_USERDATA) == 1
@@ -1514,10 +1561,7 @@ pub fn run(catalog: Catalog, debug: bool, smoke: bool) -> Result<(), String> {
         let _ = InitCommonControlsEx(&common);
         for (class, background) in [
             (w!("AquaPetOverlay"), HBRUSH::default()),
-            (
-                w!("AquaPetDebug"),
-                HBRUSH((COLOR_WINDOW.0 + 1) as usize as *mut c_void),
-            ),
+            (w!("AquaPetDebug"), HBRUSH(GetStockObject(BLACK_BRUSH).0)),
             (w!("AquaPetSettings"), HBRUSH(GetStockObject(BLACK_BRUSH).0)),
         ] {
             let wc = WNDCLASSW {
@@ -1562,6 +1606,7 @@ pub fn run(catalog: Catalog, debug: bool, smoke: bool) -> Result<(), String> {
             None,
         )
         .map_err(|e| e.to_string())?;
+        SetWindowLongPtrW(panel, GWLP_USERDATA, 1);
         let settings = CreateWindowExW(
             WS_EX_APPWINDOW,
             w!("AquaPetSettings"),
@@ -1587,7 +1632,7 @@ pub fn run(catalog: Catalog, debug: bool, smoke: bool) -> Result<(), String> {
             let area = monitor_info.rcWork;
             let dpi = GetDpiForWindow(panel).max(96) as i32;
             let width = (1100 * dpi / 96).min(area.right - area.left - 32);
-            let height = (800 * dpi / 96).min(area.bottom - area.top - 32);
+            let height = (860 * dpi / 96).min(area.bottom - area.top - 32);
             let _ = SetWindowPos(
                 panel,
                 None,

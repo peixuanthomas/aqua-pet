@@ -99,7 +99,7 @@ impl Frame {
         let mut pixels = Vec::with_capacity(self.rgba.len());
         for (i, p) in self.rgba.as_chunks::<4>().0.iter().enumerate() {
             let bg = match kind {
-                0 => [27u32, 34, 44],
+                0 => [0u32, 0, 0],
                 1 => [240, 240, 234],
                 _ => {
                     if ((i % self.width) / 12 + (i / self.width) / 12).is_multiple_of(2) {
@@ -336,11 +336,10 @@ mod tests {
         let f = render_preview(&c, &step, b, 1.0, 0);
         let mut red_pixels = 0;
         for (i, p) in f.rgba.as_chunks::<4>().0.iter().enumerate() {
-            assert_eq!(p[1], 34);
-            assert_eq!(p[2], 44);
+            assert_eq!(p[1], 0);
+            assert_eq!(p[2], 0);
             assert_eq!(p[3], 255);
-            assert!(p[0] >= 27);
-            if p[0] > 27 {
+            if p[0] > 0 {
                 red_pixels += 1;
                 let x = (i % f.width) as f64 + b.left;
                 assert!((0.0..10.0).contains(&x));
@@ -356,7 +355,7 @@ mod tests {
             rgba: vec![100, 200, 50, 128, 99, 44, 33, 0],
         };
         assert_eq!(f.bgra_premultiplied(), vec![25, 100, 50, 128, 0, 0, 0, 0]);
-        assert_eq!(&f.on_background(0)[4..], &[44, 34, 27, 255]);
+        assert_eq!(&f.on_background(0)[4..], &[0, 0, 0, 255]);
     }
     #[test]
     fn all_assets_and_frames_render() {
