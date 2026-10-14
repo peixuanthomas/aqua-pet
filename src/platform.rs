@@ -2,6 +2,7 @@
 // Rust 1.98's lint also inspects the standard macro's internal lazy initializer.
 #![allow(clippy::missing_const_for_thread_local)]
 
+mod tray;
 mod ui;
 
 use crate::{
@@ -24,7 +25,10 @@ use windows::{
         Foundation::*,
         Graphics::Gdi::*,
         System::{LibraryLoader::GetModuleHandleW, SystemServices::SS_RIGHT},
-        UI::{Controls::*, HiDpi::*, Input::KeyboardAndMouse::*, WindowsAndMessaging::*},
+        UI::{
+            Controls::*, HiDpi::*, Input::KeyboardAndMouse::*, Shell::NIN_SELECT,
+            WindowsAndMessaging::*,
+        },
     },
     core::{PCWSTR, w},
 };
@@ -185,6 +189,7 @@ struct App {
     pet: HWND,
     debug: HWND,
     settings: HWND,
+    tray: Option<tray::TrayIcon>,
     controls: HashMap<usize, HWND>,
     fonts: ui::Fonts,
     settings_fonts: ui::Fonts,
@@ -245,6 +250,7 @@ impl App {
             pet,
             debug,
             settings,
+            tray: None,
             controls: HashMap::new(),
             fonts: ui::Fonts::default(),
             settings_fonts: ui::Fonts::default(),
@@ -984,13 +990,14 @@ impl App {
         }
         self.closing = true;
         self.save_settings();
+        self.tray.take();
         let _ = KillTimer(Some(self.pet), 1);
         let _ = DestroyWindow(self.debug);
         let _ = DestroyWindow(self.settings);
         let _ = DestroyWindow(self.pet);
         PostQuitMessage(0);
     }
-    unsafe fn menu(&mut self) {
+    unsafe fn menu(&mut self, point: Option<POINT>) {
         if !self.debug_open {
             self.reset_wander();
         }
@@ -1000,8 +1007,11 @@ impl App {
         let _ = AppendMenuW(menu, MF_STRING, MENU_SETTINGS as usize, w!("设置"));
         let _ = AppendMenuW(menu, MF_STRING, MENU_DEBUG as usize, w!("Debug · 动作预览"));
         let _ = AppendMenuW(menu, MF_STRING, MENU_EXIT as usize, w!("关闭"));
-        let mut point = POINT::default();
-        let _ = GetCursorPos(&mut point);
+        let point = point.unwrap_or_else(|| {
+            let mut point = POINT::default();
+            let _ = GetCursorPos(&mut point);
+            point
+        });
         let _ = SetForegroundWindow(self.pet);
         let command = TrackPopupMenu(
             menu,
@@ -1013,6 +1023,8 @@ impl App {
             None,
         )
         .0 as u32;
+        // Keep subsequent tray menus open until the user selects or dismisses them.
+        let _ = PostMessageW(Some(self.pet), WM_NULL, WPARAM(0), LPARAM(0));
         let _ = DestroyMenu(menu);
         self.last_clock = Instant::now();
         if command == MENU_SETTINGS {
@@ -1353,7 +1365,30 @@ impl App {
                 Some(LRESULT(0))
             }
             WM_CONTEXTMENU if pet => {
-                self.menu();
+                self.menu(None);
+                Some(LRESULT(0))
+            }
+            tray::CALLBACK_MESSAGE if pet => {
+                if matches!(
+                    lp.0 as u32 & 0xffff,
+                    NIN_SELECT | tray::NIN_KEYSELECT | WM_CONTEXTMENU
+                ) {
+                    self.menu(Some(POINT {
+                        x: wp.0 as u16 as i16 as i32,
+                        y: (wp.0 >> 16) as u16 as i16 as i32,
+                    }));
+                }
+                Some(LRESULT(0))
+            }
+            _ if pet
+                && self
+                    .tray
+                    .as_ref()
+                    .is_some_and(|tray| msg == tray.taskbar_created) =>
+            {
+                if let Err(error) = self.tray.as_ref().unwrap().add() {
+                    show_error(&format!("恢复托盘图标失败：{error}"));
+                }
                 Some(LRESULT(0))
             }
             WM_MOUSEACTIVATE if pet => Some(LRESULT(MA_NOACTIVATE as isize)),
@@ -1650,6 +1685,7 @@ pub fn run(catalog: Catalog, debug: bool, smoke: bool) -> Result<(), String> {
             app.restore_settings();
             app.create_controls()?;
             app.update()?;
+            app.tray = Some(tray::TrayIcon::new(pet)?);
             let _ = ShowWindow(pet, SW_SHOWNOACTIVATE);
             if debug || smoke {
                 app.show_debug();
