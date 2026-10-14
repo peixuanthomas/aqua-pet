@@ -160,14 +160,9 @@ pub unsafe fn control_message(hwnd: HWND, msg: u32, wp: WPARAM, lp: LPARAM) -> O
                     if draw.dwItemSpec == TBCD_CHANNEL as usize {
                         fill(draw.hdc, &draw.rc, WHITE);
                     } else if draw.dwItemSpec == TBCD_THUMB as usize {
-                        let center = (draw.rc.left + draw.rc.right) / 2;
-                        let thumb = RECT {
-                            left: center - (6.0 * dpi).round() as i32,
-                            right: center + (6.0 * dpi).round() as i32,
-                            ..draw.rc
-                        };
-                        fill(draw.hdc, &thumb, CYAN);
-                        border(draw.hdc, thumb, BLACK, dpi.round() as i32);
+                        // Windows only clears this rectangle when the thumb moves.
+                        fill(draw.hdc, &draw.rc, CYAN);
+                        border(draw.hdc, draw.rc, BLACK, dpi.round() as i32);
                     }
                     Some(LRESULT(CDRF_SKIPDEFAULT as isize))
                 }
@@ -262,5 +257,73 @@ pub unsafe fn control_message(hwnd: HWND, msg: u32, wp: WPARAM, lp: LPARAM) -> O
             Some(LRESULT(1))
         }
         _ => None,
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn moving_thumb_leaves_no_pixels_outside_its_native_bounds() {
+        unsafe {
+            let surface = Surface::new(64, 32).unwrap();
+            let client = RECT {
+                left: 0,
+                top: 0,
+                right: 64,
+                bottom: 32,
+            };
+            fill(surface.dc, &client, BLACK);
+            let mut draw = NMCUSTOMDRAW {
+                hdr: NMHDR {
+                    idFrom: WALK_CHANCE,
+                    code: NM_CUSTOMDRAW,
+                    ..Default::default()
+                },
+                dwDrawStage: CDDS_ITEMPREPAINT,
+                hdc: surface.dc,
+                rc: RECT {
+                    left: 10,
+                    top: 4,
+                    right: 19,
+                    bottom: 28,
+                },
+                dwItemSpec: TBCD_THUMB as usize,
+                ..Default::default()
+            };
+            control_message(
+                HWND::default(),
+                WM_NOTIFY,
+                WPARAM(0),
+                LPARAM((&draw as *const NMCUSTOMDRAW) as isize),
+            );
+            // Windows only clears the old native thumb rectangle when it moves.
+            fill(surface.dc, &draw.rc, BLACK);
+            draw.rc.left = 35;
+            draw.rc.right = 44;
+            control_message(
+                HWND::default(),
+                WM_NOTIFY,
+                WPARAM(0),
+                LPARAM((&draw as *const NMCUSTOMDRAW) as isize),
+            );
+            assert_eq!(GetPixel(surface.dc, 39, 16), CYAN);
+            for y in 0..32 {
+                for x in 0..64 {
+                    if x < draw.rc.left
+                        || x >= draw.rc.right
+                        || y < draw.rc.top
+                        || y >= draw.rc.bottom
+                    {
+                        assert_eq!(
+                            GetPixel(surface.dc, x, y),
+                            BLACK,
+                            "stale pixel at ({x}, {y})"
+                        );
+                    }
+                }
+            }
+        }
     }
 }
