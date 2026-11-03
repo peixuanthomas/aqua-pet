@@ -7,6 +7,27 @@ use std::collections::HashSet;
 use windows::Win32::Graphics::Dwm::{
     DWMWA_CLOAKED, DWMWA_EXTENDED_FRAME_BOUNDS, DwmGetWindowAttribute,
 };
+use windows::Win32::System::SystemInformation::GetTickCount;
+
+fn idle_for_two_minutes(now: u32, last_input: u32) -> bool {
+    now.wrapping_sub(last_input) >= 120_000
+}
+
+pub(super) unsafe fn activity(foot: (f64, f64), body: Bounds) -> (bool, bool) {
+    let mut point = POINT::default();
+    let near = GetCursorPos(&mut point).is_ok() && {
+        let (x, y) = (point.x as f64 - foot.0, point.y as f64 - foot.1);
+        (x - x.clamp(body.left, body.right)).hypot(y - y.clamp(body.top, body.bottom))
+            <= body.width()
+    };
+    let mut last = LASTINPUTINFO {
+        cbSize: size_of::<LASTINPUTINFO>() as u32,
+        ..Default::default()
+    };
+    let idle =
+        GetLastInputInfo(&mut last).as_bool() && idle_for_two_minutes(GetTickCount(), last.dwTime);
+    (near, idle)
+}
 
 unsafe fn visible_frame(hwnd: HWND) -> Option<Bounds> {
     if !IsWindowVisible(hwnd).as_bool() || IsIconic(hwnd).as_bool() {
@@ -92,7 +113,7 @@ impl Desktop {
         now: Instant,
         own: &[HWND],
         riding: Option<Footing>,
-    ) -> Option<POINT> {
+    ) -> Option<(f64, f64)> {
         if self
             .last_scan
             .is_none_or(|t| now.duration_since(t) >= Duration::from_millis(200))
@@ -120,10 +141,7 @@ impl Desktop {
         }
         let s = riding?;
         let rect = self.windows.iter().find(|w| w.id == s.window)?.rect;
-        Some(POINT {
-            x: (rect.left + s.offset).round() as i32,
-            y: rect.top as i32 - 1,
-        })
+        Some((rect.left + s.offset, rect.top))
     }
 
     pub fn ledges(&mut self, work: Bounds, body: Bounds) -> &Ledges {
@@ -180,82 +198,123 @@ mod tests {
     #[test]
     #[ignore = "opens two temporary windows on an interactive Windows desktop"]
     fn live_overlapping_windows_carry_the_pet_and_release_it_on_minimize() {
+        unsafe extern "system" fn monitor_center(
+            _: HMONITOR,
+            _: HDC,
+            rect: *mut RECT,
+            data: LPARAM,
+        ) -> windows::core::BOOL {
+            let rect = *rect;
+            let points = &mut *(data.0 as *mut Vec<POINT>);
+            points.push(POINT {
+                x: (rect.left + rect.right) / 2,
+                y: (rect.top + rect.bottom) / 2,
+            });
+            true.into()
+        }
         unsafe {
             let _ = SetProcessDpiAwarenessContext(DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2);
-            let work = App::work_bounds_at(POINT::default());
-            let x = work.left as i32 + 40;
-            let y = work.top as i32 + 240;
-            let back = Fixture::new(w!("AQUA 测试 · 后窗"), x, y, 580, 200);
-            let front = Fixture::new(w!("AQUA 测试 · 前窗"), x + 240, y - 70, 220, 180);
-            DwmFlush().unwrap();
-            let back_rect = visible_frame(back.0).unwrap();
-            let front_rect = visible_frame(front.0).unwrap();
-            let mut desktop = Desktop::default();
-            let now = Instant::now();
-            desktop.refresh(now, &[], None);
-            let body = Bounds {
-                left: -18.0,
-                top: -36.0,
-                right: 18.0,
-                bottom: 0.0,
-            };
-            let world = desktop.ledges(work, body);
-            let id = back.0.0 as usize;
-            let back_edges: Vec<_> = world.edges.iter().filter(|e| e.window == id).collect();
-            assert_eq!(back_edges.len(), 2);
-            assert!(back_edges[0].right < front_rect.left && back_edges[1].left > front_rect.right);
-            // The user's other open apps should not decide which of the two test windows wins.
-            let fixture_world = Ledges {
-                limits: world.limits,
-                edges: world
-                    .edges
-                    .iter()
-                    .copied()
-                    .filter(|e| [crate::ledges::FLOOR, id, front.0.0 as usize].contains(&e.window))
-                    .collect(),
-            };
-            let mut roaming = Wander::new(42);
-            roaming.set_probability(100);
-            roaming.place((world.limits.right, world.limits.bottom));
-            let mut jumped = false;
-            let mut paced = false;
-            for _ in 0..60 * 300 {
-                roaming.advance(1.0 / 60.0, 30.0, 1, &fixture_world);
-                jumped |= roaming.pose() == Pose::Rise;
-                paced |= roaming.riding().is_some()
-                    && matches!(roaming.pose(), Pose::Left | Pose::Right);
-                if jumped && paced {
-                    break;
-                }
+            let mut centers = Vec::<POINT>::new();
+            assert!(
+                EnumDisplayMonitors(
+                    None,
+                    None,
+                    Some(monitor_center),
+                    LPARAM((&raw mut centers) as isize)
+                )
+                .as_bool()
+            );
+            assert!(!centers.is_empty());
+            for center in centers {
+                check_windows(App::work_bounds_at(center));
             }
-            assert!(jumped && paced);
-            let foot = (back_rect.left + 60.0, back_rect.top);
-            let mut pet = Wander::new(42);
-            pet.set_probability(0);
-            pet.place((foot.0, foot.1 - 50.0));
-            pet.advance(0.7, 30.0, 1, world);
-            assert_eq!(pet.foot, foot);
-            assert_eq!(pet.riding().unwrap().window, id);
-            SetWindowPos(
-                back.0,
-                None,
-                x + 30,
-                y + 20,
-                580,
-                200,
-                SWP_NOACTIVATE | SWP_NOZORDER,
-            )
-            .unwrap();
-            DwmFlush().unwrap();
-            desktop.refresh(now + Duration::from_millis(16), &[], pet.riding());
-            pet.advance(0.016, 30.0, 1, desktop.ledges(work, body));
-            assert_eq!(pet.foot, (foot.0 + 30.0, foot.1 + 20.0));
-            let _ = ShowWindow(back.0, SW_SHOWMINNOACTIVE);
-            DwmFlush().unwrap();
-            desktop.refresh(now + Duration::from_millis(32), &[], pet.riding());
-            pet.advance(0.1, 30.0, 1, desktop.ledges(work, body));
-            assert!(pet.foot.1 > foot.1 + 20.0);
-            assert!(pet.riding().is_none_or(|s| s.window != id));
         }
+    }
+
+    unsafe fn check_windows(work: Bounds) {
+        let x = work.left as i32 + 40;
+        let y = work.top as i32 + 240;
+        let back = Fixture::new(w!("AQUA 测试 · 后窗"), x, y, 580, 200);
+        let front = Fixture::new(w!("AQUA 测试 · 前窗"), x + 240, y - 70, 220, 180);
+        DwmFlush().unwrap();
+        let back_rect = visible_frame(back.0).unwrap();
+        let front_rect = visible_frame(front.0).unwrap();
+        eprintln!(
+            "Checked work area {work:?} at {} DPI",
+            GetDpiForWindow(back.0)
+        );
+        let mut desktop = Desktop::default();
+        let now = Instant::now();
+        desktop.refresh(now, &[], None);
+        let body = Bounds {
+            left: -18.0,
+            top: -36.0,
+            right: 18.0,
+            bottom: 0.0,
+        };
+        let world = desktop.ledges(work, body);
+        let id = back.0.0 as usize;
+        let back_edges: Vec<_> = world.edges.iter().filter(|e| e.window == id).collect();
+        assert_eq!(back_edges.len(), 2);
+        assert!(back_edges[0].right < front_rect.left && back_edges[1].left > front_rect.right);
+        // The user's other open apps should not decide which of the two test windows wins.
+        let fixture_world = Ledges {
+            limits: world.limits,
+            edges: world
+                .edges
+                .iter()
+                .copied()
+                .filter(|e| [crate::ledges::FLOOR, id, front.0.0 as usize].contains(&e.window))
+                .collect(),
+        };
+        let mut roaming = Wander::for_test(42);
+        roaming.set_probability(100);
+        roaming.place((world.limits.right, world.limits.bottom));
+        let mut jumped = false;
+        let mut paced = false;
+        for _ in 0..60 * 300 {
+            roaming.advance(1.0 / 60.0, 30.0, 1, &fixture_world);
+            jumped |= roaming.pose() == Pose::Rise;
+            paced |=
+                roaming.riding().is_some() && matches!(roaming.pose(), Pose::Left | Pose::Right);
+            if jumped && paced {
+                break;
+            }
+        }
+        assert!(jumped && paced);
+        let foot = (back_rect.left + 60.0, back_rect.top);
+        let mut pet = Wander::for_test(42);
+        pet.set_probability(0);
+        pet.place((foot.0, foot.1 - 50.0));
+        pet.advance(0.7, 30.0, 1, world);
+        assert_eq!(pet.foot, foot);
+        assert_eq!(pet.riding().unwrap().window, id);
+        SetWindowPos(
+            back.0,
+            None,
+            x + 30,
+            y + 20,
+            580,
+            200,
+            SWP_NOACTIVATE | SWP_NOZORDER,
+        )
+        .unwrap();
+        DwmFlush().unwrap();
+        desktop.refresh(now + Duration::from_millis(16), &[], pet.riding());
+        pet.advance(0.016, 30.0, 1, desktop.ledges(work, body));
+        assert_eq!(pet.foot, (foot.0 + 30.0, foot.1 + 20.0));
+        let _ = ShowWindow(back.0, SW_SHOWMINNOACTIVE);
+        DwmFlush().unwrap();
+        desktop.refresh(now + Duration::from_millis(32), &[], pet.riding());
+        pet.advance(0.1, 30.0, 1, desktop.ledges(work, body));
+        assert!(pet.foot.1 > foot.1 + 20.0);
+        assert!(pet.riding().is_none_or(|s| s.window != id));
+    }
+
+    #[test]
+    fn idle_threshold_survives_the_windows_tick_counter_wrapping() {
+        let last = u32::MAX - 10;
+        assert!(!idle_for_two_minutes(last.wrapping_add(119_999), last));
+        assert!(idle_for_two_minutes(last.wrapping_add(120_000), last));
     }
 }

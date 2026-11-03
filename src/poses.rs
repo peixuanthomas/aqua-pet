@@ -11,16 +11,28 @@ pub enum Pose {
     Rise,
     Fall,
     Held,
+    Wave,
+    Sleeve,
+    Clap,
+    Spin,
+    Bored,
+    Sit,
 }
 
 impl Pose {
-    const ALL: [Self; 6] = [
+    pub const ALL: [Self; 12] = [
         Self::Idle,
         Self::Left,
         Self::Right,
         Self::Rise,
         Self::Fall,
         Self::Held,
+        Self::Wave,
+        Self::Sleeve,
+        Self::Clap,
+        Self::Spin,
+        Self::Bored,
+        Self::Sit,
     ];
 
     // Keep the planted foot centered when an arm or sleeve extends to one side.
@@ -32,6 +44,12 @@ impl Pose {
             Self::Rise => ("grab-jump", 9.0),
             Self::Fall => ("grab-jump-air", 9.0),
             Self::Held => ("grab-hold", 10.0),
+            Self::Wave => ("wave-cliff", 12.0),
+            Self::Sleeve => ("sleeve-garden", 7.0),
+            Self::Clap => ("clap-cafe", 10.0),
+            Self::Spin => ("battle-spin", 10.0),
+            Self::Bored => ("battle-bored", 9.0),
+            Self::Sit => ("sit-smile", -2.0),
         }
     }
 }
@@ -106,6 +124,45 @@ impl Poses {
             top: self.body.top * s,
             right: self.body.right * s,
             bottom: 0.0,
+        }
+    }
+
+    pub fn durations(&self, catalog: &Catalog) -> [f64; Pose::ALL.len()] {
+        self.clips
+            .each_ref()
+            .map(|c| catalog.clips[c.index].duration() / catalog.game_fps)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn every_automatic_frame_plants_its_last_visible_pixel_above_the_ledge() {
+        let catalog = Catalog::load().unwrap();
+        let poses = Poses::new(&catalog);
+        for pose in Pose::ALL {
+            let p = poses.get(pose);
+            for (index, step) in catalog.clips[p.index].steps.iter().enumerate() {
+                for scale in [1, 4, 8] {
+                    let frame = render::render(&catalog, step, p.bounds, scale as f64, false);
+                    let bottom = frame
+                        .rgba
+                        .as_chunks::<4>()
+                        .0
+                        .rchunks(frame.width)
+                        .position(|row| row.iter().any(|px| px[3] != 0))
+                        .unwrap();
+                    let painted = frame.height - bottom;
+                    let (_, sole) = p.foot(index);
+                    assert_eq!(
+                        painted as f64 + (p.bounds.top - sole) * scale as f64,
+                        0.0,
+                        "{pose:?} frame {index}"
+                    );
+                }
+            }
         }
     }
 }

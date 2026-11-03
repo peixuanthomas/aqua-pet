@@ -27,6 +27,8 @@ impl Footing {
 #[derive(Clone, Copy, Debug)]
 enum Motion {
     Idle,
+    Action(Pose),
+    Rest(Pose),
     Walk {
         right: bool,
         end: f64,
@@ -47,10 +49,15 @@ pub struct Wander {
     pub animation_seconds: f64,
     probability: u8,
     distance_bias: u8,
+    pose_seconds: [f64; Pose::ALL.len()],
+    last_daily: Option<Pose>,
+    mouse_near: bool,
+    wave_cooldown: f64,
+    computer_idle: bool,
 }
 
 impl Wander {
-    pub fn new(seed: u64) -> Self {
+    pub fn new(seed: u64, pose_seconds: [f64; Pose::ALL.len()]) -> Self {
         Self {
             rng: seed.max(1),
             foot: (0.0, 0.0),
@@ -59,6 +66,11 @@ impl Wander {
             animation_seconds: 0.0,
             probability: DEFAULT_WALK_CHANCE,
             distance_bias: DEFAULT_DISTANCE_BIAS,
+            pose_seconds,
+            last_daily: None,
+            mouse_near: false,
+            wave_cooldown: 0.0,
+            computer_idle: false,
         }
     }
 
@@ -88,6 +100,7 @@ impl Wander {
     pub fn pose(&self) -> Pose {
         match self.motion {
             Motion::Idle => Pose::Idle,
+            Motion::Action(pose) | Motion::Rest(pose) => pose,
             Motion::Walk { right: true, .. } => Pose::Right,
             Motion::Walk { right: false, .. } => Pose::Left,
             Motion::Air { vy, .. } if vy < 0.0 => Pose::Rise,
@@ -97,6 +110,20 @@ impl Wander {
 
     pub fn probability(&self) -> u8 {
         self.probability
+    }
+
+    pub fn observe(&mut self, near: bool, idle: bool, elapsed: f64) {
+        self.wave_cooldown = (self.wave_cooldown - elapsed).max(0.0);
+        self.computer_idle = idle;
+        if !idle && matches!(self.motion, Motion::Rest(_)) {
+            self.start(Motion::Idle);
+        }
+        if near && !self.mouse_near && !idle && self.wave_cooldown == 0.0 && self.support.is_some()
+        {
+            self.start(Motion::Action(Pose::Wave));
+            self.wave_cooldown = 15.0;
+        }
+        self.mouse_near = near;
     }
 
     pub fn riding(&self) -> Option<Footing> {
@@ -140,6 +167,16 @@ impl Wander {
     fn choose(&mut self, edge: Ledge, world: &Ledges, speed: f64, scale: f64) {
         self.start(Motion::Idle);
         if self.random() * 100.0 >= self.probability as f64 {
+            if self.random() < 0.15 {
+                let daily = [Pose::Sleeve, Pose::Clap, Pose::Spin];
+                let choices: Vec<_> = daily
+                    .into_iter()
+                    .filter(|p| Some(*p) != self.last_daily)
+                    .collect();
+                let pose = choices[(self.random() * choices.len() as f64) as usize];
+                self.last_daily = Some(pose);
+                self.start(Motion::Action(pose));
+            }
             return;
         }
         let x = self.foot.0;
@@ -283,7 +320,20 @@ impl Wander {
             let edge = world
                 .at_offset(standing.window, standing.offset)
                 .expect("standing on visible ledge");
+            if self.computer_idle && !matches!(self.motion, Motion::Rest(_)) {
+                let pose = if self.random() < 0.5 {
+                    Pose::Sit
+                } else {
+                    Pose::Bored
+                };
+                self.start(Motion::Rest(pose));
+            }
             match self.motion {
+                Motion::Action(pose)
+                    if self.animation_seconds + 1e-9 >= self.pose_seconds[pose as usize] =>
+                {
+                    self.start(Motion::Idle)
+                }
                 Motion::Idle if self.animation_seconds + 1e-9 >= IDLE_SECONDS => {
                     self.choose(edge, world, speed, scale)
                 }

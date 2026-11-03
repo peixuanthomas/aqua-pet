@@ -233,6 +233,7 @@ impl App {
             .as_nanos() as u64
             ^ std::process::id() as u64;
         let player = Player::new(idle, &catalog.clips[idle]);
+        let wander = Wander::new(seed, poses.durations(&catalog));
         Self {
             catalog,
             player,
@@ -250,7 +251,7 @@ impl App {
             desktop: desktop::Desktop::default(),
             poses,
             auto_pose: Pose::Idle,
-            wander: Wander::new(seed),
+            wander,
             scale: 4,
             effective_scale: 4,
             anchor: POINT { x: 0, y: 0 },
@@ -512,7 +513,7 @@ impl App {
             (
                 SETTINGS_NOTE,
                 w!("STATIC"),
-                "修改自动保存。\r\n调到 0% 后，松手或失去支撑仍会落地。",
+                "修改自动保存。\r\n0% 时仍会挥手、休息，松手后也会落地。",
                 0,
             ),
         ] {
@@ -1124,17 +1125,17 @@ impl App {
                     &[self.pet, self.debug, self.settings],
                     self.wander.riding(),
                 );
-                let (x, y) = self.wander.foot;
-                let point = carried.unwrap_or(POINT {
+                let (x, y) = carried.unwrap_or(self.wander.foot);
+                let work = Self::work_bounds_at(POINT {
                     x: x.round() as i32,
                     y: y.round() as i32 - 1,
                 });
-                let work = Self::work_bounds_at(point);
                 self.effective_scale =
                     crate::placement::fit_scale(self.scale, self.poses.body(1), work);
-                let world = self
-                    .desktop
-                    .ledges(work, self.poses.body(self.effective_scale));
+                let body = self.poses.body(self.effective_scale);
+                let (near, idle) = desktop::activity((x, y), body);
+                self.wander.observe(near, idle, dt);
+                let world = self.desktop.ledges(work, body);
                 self.wander
                     .advance(dt, self.catalog.game_fps, self.effective_scale, world);
                 self.sync_anchor();
@@ -1773,7 +1774,7 @@ mod settings_tests {
             };
             let bytes = serde_json::to_vec(&settings).unwrap();
             let restored: Settings = serde_json::from_slice(&bytes).unwrap();
-            let mut wander = Wander::new(1);
+            let mut wander = Wander::for_test(1);
             wander.set_probability(restored.walk_probability);
             assert_eq!(wander.probability(), probability);
         }
@@ -1794,7 +1795,7 @@ mod settings_tests {
             };
             let restored: Settings =
                 serde_json::from_slice(&serde_json::to_vec(&settings).unwrap()).unwrap();
-            let mut wander = Wander::new(1);
+            let mut wander = Wander::for_test(1);
             wander.set_probability(restored.walk_probability);
             wander.set_distance_bias(restored.walk_distance_bias);
             assert_eq!(wander.distance_bias(), bias);
