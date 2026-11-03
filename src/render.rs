@@ -1,6 +1,6 @@
 use crate::catalog::{Catalog, Clip, Hologram, Layer, Step};
 
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, PartialEq)]
 pub struct Bounds {
     pub left: f64,
     pub top: f64,

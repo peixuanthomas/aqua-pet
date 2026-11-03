@@ -9,10 +9,7 @@ pub fn fit(
     motion: Bounds,
     work: Bounds,
 ) -> ((i32, i32), u32) {
-    let scale = requested_scale
-        .clamp(1, 8)
-        .min(((work.width() - 16.0) / motion.width()).floor().max(1.0) as u32)
-        .min(((work.height() - 16.0) / motion.height()).floor().max(1.0) as u32);
+    let scale = fit_scale(requested_scale, motion, work);
     let limits = anchor_limits(scale, motion, work);
     (
         (
@@ -21,6 +18,13 @@ pub fn fit(
         ),
         scale,
     )
+}
+
+pub fn fit_scale(requested: u32, motion: Bounds, work: Bounds) -> u32 {
+    requested
+        .clamp(1, 8)
+        .min(((work.width() - 16.0) / motion.width()).floor().max(1.0) as u32)
+        .min(((work.height() - 16.0) / motion.height()).floor().max(1.0) as u32)
 }
 
 /// Allowed anchor positions, leaving the entire sprite inside the work area.

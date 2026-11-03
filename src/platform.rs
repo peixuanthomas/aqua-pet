@@ -2,14 +2,16 @@
 // Rust 1.98's lint also inspects the standard macro's internal lazy initializer.
 #![allow(clippy::missing_const_for_thread_local)]
 
+mod desktop;
 mod tray;
 mod ui;
 
 use crate::{
     catalog::Catalog,
     player::Player,
+    poses::{Pose, Poses},
     render::{self, Bounds, Frame},
-    wander::{DEFAULT_DISTANCE_BIAS, DEFAULT_WALK_CHANCE, Direction, Wander},
+    wander::{DEFAULT_DISTANCE_BIAS, DEFAULT_WALK_CHANCE, Wander},
 };
 use serde::{Deserialize, Serialize};
 use std::{
@@ -197,8 +199,9 @@ struct App {
     categories: Vec<String>,
     bounds: Bounds,
     motion_bounds: Bounds,
-    wander_bounds: Bounds,
-    walk_clips: [usize; 4],
+    desktop: desktop::Desktop,
+    poses: Poses,
+    auto_pose: Pose,
     wander: Wander,
     scale: u32,
     effective_scale: u32,
@@ -223,21 +226,7 @@ impl App {
     fn new(catalog: Catalog, pet: HWND, debug: HWND, settings: HWND, smoke: bool) -> Self {
         let idle = catalog.idle_index();
         let bounds = render::clip_bounds(&catalog, &catalog.clips[idle], false);
-        let walk_clips = Direction::ALL.map(|direction| {
-            catalog
-                .clips
-                .iter()
-                .position(|c| c.id == direction.clip_id())
-                .expect("Missing verified walk clip")
-        });
-        // All automatic poses share one allowed area. Changing from a narrow
-        // walk sprite to the wider idle must not push the pet sideways.
-        let mut wander_bounds = bounds;
-        for index in walk_clips {
-            let b = render::clip_bounds(&catalog, &catalog.clips[index], true);
-            wander_bounds.point(b.left, b.top);
-            wander_bounds.point(b.right, b.bottom);
-        }
+        let poses = Poses::new(&catalog);
         let seed = SystemTime::now()
             .duration_since(UNIX_EPOCH)
             .unwrap_or_default()
@@ -257,9 +246,10 @@ impl App {
             visible: vec![],
             categories: vec![],
             bounds,
-            motion_bounds: wander_bounds,
-            wander_bounds,
-            walk_clips,
+            motion_bounds: bounds,
+            desktop: desktop::Desktop::default(),
+            poses,
+            auto_pose: Pose::Idle,
             wander: Wander::new(seed),
             scale: 4,
             effective_scale: 4,
@@ -484,30 +474,30 @@ impl App {
             (
                 SETTINGS_SUBTITLE,
                 w!("STATIC"),
-                "让 AQUA 按你喜欢的节奏走动。",
+                "调整 AQUA 在地面和窗口上活动的节奏。",
                 0,
             ),
-            (WALK_LABEL, w!("STATIC"), "随机走动概率", 0),
+            (WALK_LABEL, w!("STATIC"), "主动走跳概率", 0),
             (
                 WALK_NOTE,
                 w!("STATIC"),
-                "每次晃动结束后，有多大概率开始走动。",
+                "每轮待机后，开始走路或跳向窗口的概率。",
                 0,
             ),
             (WALK_VALUE, w!("STATIC"), "", SS_RIGHT.0),
             (
                 WALK_CHANCE,
                 TRACKBAR_CLASSW,
-                "随机走动概率",
+                "主动走跳概率",
                 TBS_NOTICKS | WS_TABSTOP.0,
             ),
-            (WALK_OFF, w!("STATIC"), "不走动", 0),
-            (WALK_OFTEN, w!("STATIC"), "经常走动", SS_RIGHT.0),
+            (WALK_OFF, w!("STATIC"), "不主动走跳", 0),
+            (WALK_OFTEN, w!("STATIC"), "经常走跳", SS_RIGHT.0),
             (DISTANCE_LABEL, w!("STATIC"), "走动距离倾向", 0),
             (
                 DISTANCE_NOTE,
                 w!("STATIC"),
-                "每次距离仍随机，从下一次走动生效。",
+                "影响每段散步的长短，跳跃高度随窗口变化。",
                 0,
             ),
             (
@@ -522,7 +512,7 @@ impl App {
             (
                 SETTINGS_NOTE,
                 w!("STATIC"),
-                "修改自动保存。\r\n行走保持原速，停下时仍会左右摇晃。",
+                "修改自动保存。\r\n调到 0% 后，松手或失去支撑仍会落地。",
                 0,
             ),
         ] {
@@ -824,7 +814,10 @@ impl App {
         );
     }
     unsafe fn work_area(&self) -> RECT {
-        let monitor = MonitorFromPoint(self.anchor, MONITOR_DEFAULTTONEAREST);
+        Self::work_area_at(self.anchor)
+    }
+    unsafe fn work_area_at(point: POINT) -> RECT {
+        let monitor = MonitorFromPoint(point, MONITOR_DEFAULTTONEAREST);
         let mut info = MONITORINFO {
             cbSize: size_of::<MONITORINFO>() as u32,
             ..Default::default()
@@ -840,8 +833,8 @@ impl App {
             }
         }
     }
-    unsafe fn work_bounds(&self) -> Bounds {
-        let area = self.work_area();
+    unsafe fn work_bounds_at(point: POINT) -> Bounds {
+        let area = Self::work_area_at(point);
         Bounds {
             left: area.left as f64,
             top: area.top as f64,
@@ -850,14 +843,41 @@ impl App {
         }
     }
     unsafe fn fit(&mut self) {
+        let work = Self::work_bounds_at(self.anchor);
+        if !self.debug_open {
+            self.effective_scale =
+                crate::placement::fit_scale(self.scale, self.poses.body(1), work);
+            let s = self.effective_scale as f64;
+            let (fx, fy) = self.poses.get(Pose::Idle).foot(0);
+            let limits = self
+                .desktop
+                .ledges(work, self.poses.body(self.effective_scale))
+                .limits;
+            let foot = (
+                (self.anchor.x as f64 + fx * s).clamp(limits.left, limits.right),
+                (self.anchor.y as f64 + fy * s).clamp(limits.top, limits.bottom),
+            );
+            self.wander.place(foot);
+            self.sync_anchor();
+            return;
+        }
         let ((x, y), scale) = crate::placement::fit(
             (self.anchor.x, self.anchor.y),
             self.scale,
             self.motion_bounds,
-            self.work_bounds(),
+            work,
         );
         self.anchor = POINT { x, y };
         self.effective_scale = scale;
+    }
+    fn sync_anchor(&mut self) {
+        // Saved positions and Debug use the original idle sprite origin.
+        let (fx, fy) = self.poses.get(Pose::Idle).foot(0);
+        let scale = self.effective_scale as f64;
+        self.anchor = POINT {
+            x: (self.wander.foot.0 - fx * scale).round() as i32,
+            y: (self.wander.foot.1 - fy * scale).round() as i32,
+        };
     }
     unsafe fn restore_settings(&mut self) {
         let settings = std::fs::read(settings_path())
@@ -950,11 +970,7 @@ impl App {
     unsafe fn select(&mut self, index: usize) {
         self.player.select(index, &self.catalog.clips[index]);
         self.bounds = render::clip_bounds(&self.catalog, &self.catalog.clips[index], false);
-        self.motion_bounds = if self.debug_open {
-            render::clip_bounds(&self.catalog, &self.catalog.clips[index], true)
-        } else {
-            self.wander_bounds
-        };
+        self.motion_bounds = render::clip_bounds(&self.catalog, &self.catalog.clips[index], true);
         self.last_frame = None;
         self.preview_dirty = true;
         self.fit();
@@ -963,15 +979,21 @@ impl App {
         }
         self.last_clock = Instant::now();
     }
-    unsafe fn reset_wander(&mut self) {
-        self.wander.reset();
-        self.select(self.catalog.idle_index());
+    fn show_pose(&mut self, pose: Pose) {
+        let clip = self.poses.get(pose);
+        self.auto_pose = pose;
+        if self.player.selected != clip.index {
+            self.player
+                .select(clip.index, &self.catalog.clips[clip.index]);
+            self.last_frame = None;
+        }
+        self.bounds = clip.bounds;
     }
     unsafe fn show_debug(&mut self) {
         let was_open = self.debug_open;
         self.debug_open = true;
         if !was_open {
-            self.reset_wander();
+            self.select(self.catalog.idle_index());
         }
         self.preview_dirty = true;
         let _ = ShowWindow(self.debug, SW_RESTORE);
@@ -981,7 +1003,8 @@ impl App {
     unsafe fn close_debug(&mut self) {
         self.debug_open = false;
         let _ = ShowWindow(self.debug, SW_HIDE);
-        self.reset_wander();
+        self.show_pose(Pose::Idle);
+        self.fit();
         self.save_settings();
     }
     unsafe fn exit(&mut self) {
@@ -998,9 +1021,6 @@ impl App {
         PostQuitMessage(0);
     }
     unsafe fn menu(&mut self, point: Option<POINT>) {
-        if !self.debug_open {
-            self.reset_wander();
-        }
         let Ok(menu) = CreatePopupMenu() else {
             return;
         };
@@ -1099,33 +1119,29 @@ impl App {
         // Resuming from sleep or a suspended process should not jump across an entire scene.
         if dt < 2.0 {
             if !self.debug_open && self.drag.is_none() {
-                let limits = crate::placement::anchor_limits(
-                    self.effective_scale,
-                    self.wander_bounds,
-                    self.work_bounds(),
+                let carried = self.desktop.refresh(
+                    now,
+                    &[self.pet, self.debug, self.settings],
+                    self.wander.riding(),
                 );
-                let (x, y) = self.wander.advance(
-                    dt,
-                    self.catalog.game_fps,
-                    self.effective_scale,
-                    (self.anchor.x, self.anchor.y),
-                    limits,
-                );
-                self.anchor = POINT { x, y };
-                let selected = self
-                    .wander
-                    .direction()
-                    .map(|d| self.walk_clips[d as usize])
-                    .unwrap_or_else(|| self.catalog.idle_index());
-                if self.player.selected != selected {
-                    self.select(selected);
-                    // select() resets the preview clock; automatic walking must
-                    // still account for all time between timer callbacks.
-                    self.last_clock = now;
-                }
-                let clip = &self.catalog.clips[selected];
+                let (x, y) = self.wander.foot;
+                let point = carried.unwrap_or(POINT {
+                    x: x.round() as i32,
+                    y: y.round() as i32 - 1,
+                });
+                let work = Self::work_bounds_at(point);
+                self.effective_scale =
+                    crate::placement::fit_scale(self.scale, self.poses.body(1), work);
+                let world = self
+                    .desktop
+                    .ledges(work, self.poses.body(self.effective_scale));
+                self.wander
+                    .advance(dt, self.catalog.game_fps, self.effective_scale, world);
+                self.sync_anchor();
+                self.show_pose(self.wander.pose());
+                let clip = &self.catalog.clips[self.player.selected];
                 self.player.tick =
-                    (self.wander.animation_seconds() * self.catalog.game_fps) % clip.duration();
+                    (self.wander.animation_seconds * self.catalog.game_fps) % clip.duration();
             } else {
                 let clip = &self.catalog.clips[self.player.selected];
                 self.player.advance(dt, self.catalog.game_fps, clip);
@@ -1162,7 +1178,13 @@ impl App {
             self.preview_dirty = true;
         }
         if let Some(surface) = &self.surface {
-            let (rx, ry) = self.player.root(clip);
+            let (rx, ry) = if self.debug_open {
+                self.player.root(clip)
+            } else {
+                let (ix, iy) = self.poses.get(Pose::Idle).foot(0);
+                let (fx, fy) = self.poses.get(self.auto_pose).foot(index);
+                (ix - fx, iy - fy)
+            };
             let s = self.effective_scale as f64;
             let dst = POINT {
                 x: self.anchor.x + ((self.bounds.left + rx) * s).round() as i32,
@@ -1394,7 +1416,7 @@ impl App {
             WM_MOUSEACTIVATE if pet => Some(LRESULT(MA_NOACTIVATE as isize)),
             WM_LBUTTONDOWN if pet => {
                 if !self.debug_open {
-                    self.reset_wander();
+                    self.show_pose(Pose::Held);
                 }
                 let mut p = POINT::default();
                 let _ = GetCursorPos(&mut p);
@@ -1418,7 +1440,7 @@ impl App {
                 self.drag = None;
                 let _ = ReleaseCapture();
                 if !self.debug_open {
-                    self.reset_wander();
+                    self.show_pose(Pose::Idle);
                 }
                 self.fit();
                 self.last_frame = None;
@@ -1428,7 +1450,7 @@ impl App {
             WM_CAPTURECHANGED if pet => {
                 if self.drag.take().is_some() {
                     if !self.debug_open {
-                        self.reset_wander();
+                        self.show_pose(Pose::Idle);
                     }
                     self.fit();
                     self.last_frame = None;
@@ -1445,9 +1467,6 @@ impl App {
                     send(self.control(WALK_CHANCE), WM_USER, 0, 0).clamp(0, 100) as u8;
                 self.wander.set_probability(probability);
                 text(self.control(WALK_VALUE), &format!("{probability}%"));
-                if probability == 0 && !self.debug_open {
-                    self.select(self.catalog.idle_index());
-                }
                 // Apply while dragging; save on release, keyboard or page clicks.
                 if wp.0 & 0xffff != TB_THUMBTRACK as usize {
                     self.save_settings();
@@ -1500,7 +1519,9 @@ impl App {
                 Some(LRESULT(0))
             }
             WM_DISPLAYCHANGE => {
-                self.fit();
+                if self.debug_open {
+                    self.fit();
+                }
                 self.last_frame = None;
                 Some(LRESULT(0))
             }
@@ -1524,7 +1545,9 @@ impl App {
                         self.layout_settings();
                     }
                 } else {
-                    self.fit();
+                    if self.debug_open {
+                        self.fit();
+                    }
                     self.last_frame = None;
                 }
                 Some(LRESULT(0))

@@ -1,9 +1,11 @@
 #![cfg_attr(all(windows, not(debug_assertions)), windows_subsystem = "windows")]
 mod catalog;
+mod ledges;
 mod placement;
 #[cfg(windows)]
 mod platform;
 mod player;
+mod poses;
 mod render;
 mod wander;
 
