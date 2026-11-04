@@ -3,12 +3,27 @@ use super::*;
 pub const BLACK: COLORREF = COLORREF(0x000000);
 pub const WHITE: COLORREF = COLORREF(0xffffff);
 pub const CYAN: COLORREF = COLORREF(0xf5e469);
-pub const PURPLE: COLORREF = COLORREF(0xa63c70);
 pub const MUTED: COLORREF = COLORREF(0xbdb6b6);
+pub const RED: COLORREF = COLORREF(0x0000ff);
+pub const YELLOW: COLORREF = COLORREF(0x00ffff);
+pub const DIM: COLORREF = COLORREF(0x3c3c3c);
+
+#[derive(Default)]
+pub struct State {
+    pub hot: Option<usize>,
+    pub active: Option<usize>,
+    pub focus: Option<usize>,
+    pub popup: Option<usize>,
+    pub popup_top: usize,
+    pub popup_hot: Option<usize>,
+    pub list_top: usize,
+    pub list_hot: Option<usize>,
+}
 
 #[derive(Default)]
 pub struct Fonts {
     pub body: HFONT,
+    pub small: HFONT,
     pub heading: HFONT,
     pub value: HFONT,
 }
@@ -16,7 +31,7 @@ pub struct Fonts {
 impl Fonts {
     pub unsafe fn new(window: HWND) -> Self {
         let dpi = GetDpiForWindow(window).max(96) as i32;
-        let make = |size: i32, weight| {
+        let make = |size: i32, weight, face: PCWSTR| {
             CreateFontW(
                 -size * dpi / 96,
                 0,
@@ -31,20 +46,21 @@ impl Fonts {
                 CLIP_DEFAULT_PRECIS,
                 CLEARTYPE_QUALITY,
                 0,
-                w!("Microsoft YaHei UI"),
+                face,
             )
         };
         Self {
-            body: make(16, 400),
-            heading: make(24, 700),
-            value: make(20, 700),
+            body: make(16, 400, w!("Microsoft YaHei UI")),
+            small: make(13, 400, w!("Microsoft YaHei UI")),
+            heading: make(24, 700, w!("Microsoft YaHei UI")),
+            value: make(18, 700, w!("Consolas")),
         }
     }
 }
 
 impl Drop for Fonts {
     fn drop(&mut self) {
-        for font in [self.body, self.heading, self.value] {
+        for font in [self.body, self.small, self.heading, self.value] {
             if !font.is_invalid() {
                 unsafe {
                     let _ = DeleteObject(font.into());
@@ -92,6 +108,78 @@ pub fn rect(dpi: f64, x: f64, y: f64, width: f64, height: f64) -> RECT {
     }
 }
 
+pub fn contains(rect: &RECT, point: POINT) -> bool {
+    point.x >= rect.left && point.x < rect.right && point.y >= rect.top && point.y < rect.bottom
+}
+
+pub fn point(lp: LPARAM) -> POINT {
+    POINT {
+        x: lp.0 as u16 as i16 as i32,
+        y: (lp.0 >> 16) as u16 as i16 as i32,
+    }
+}
+
+pub fn slider_value(rect: &RECT, x: i32, maximum: i32) -> i32 {
+    let width = (rect.right - rect.left - 16).max(1);
+    ((x - rect.left - 8).clamp(0, width) * maximum + width / 2) / width
+}
+
+pub fn scroll_offset(current: usize, delta: i32, count: usize, visible: usize) -> usize {
+    let maximum = count.saturating_sub(visible);
+    if delta < 0 {
+        current.saturating_sub((-delta) as usize).min(maximum)
+    } else {
+        current.saturating_add(delta as usize).min(maximum)
+    }
+}
+
+pub unsafe fn text(
+    dc: HDC,
+    rect: &mut RECT,
+    value: &str,
+    font: HFONT,
+    color: COLORREF,
+    format: DRAW_TEXT_FORMAT,
+) {
+    let old = SelectObject(dc, font.into());
+    SetTextColor(dc, color);
+    SetBkMode(dc, TRANSPARENT);
+    let mut value = wide(value);
+    DrawTextW(dc, &mut value, rect, format);
+    SelectObject(dc, old);
+}
+
+pub unsafe fn label(dc: HDC, rect: RECT, value: &str, font: HFONT, color: COLORREF) {
+    let mut rect = rect;
+    text(
+        dc,
+        &mut rect,
+        value,
+        font,
+        color,
+        DT_SINGLELINE | DT_VCENTER | DT_NOPREFIX | DT_END_ELLIPSIS,
+    );
+}
+
+pub unsafe fn heart(dc: HDC, dpi: f64, x: f64, y: f64) {
+    let rows = [0x36u8, 0x7f, 0x7f, 0x3e, 0x1c, 0x08];
+    let pixel = (2.0 * dpi).round().max(1.0) as i32;
+    for (row, bits) in rows.iter().enumerate() {
+        let row = row as i32;
+        for column in 0..7 {
+            if bits & (1 << (6 - column)) != 0 {
+                let rect = RECT {
+                    left: (x * dpi).round() as i32 + column * pixel as i32,
+                    top: (y * dpi).round() as i32 + row * pixel as i32,
+                    right: (x * dpi).round() as i32 + (column + 1) * pixel as i32,
+                    bottom: (y * dpi).round() as i32 + (row + 1) * pixel as i32,
+                };
+                fill(dc, &rect, RED);
+            }
+        }
+    }
+}
+
 pub unsafe fn logo(dc: HDC, dpi: f64, x: f64, y: f64) {
     let letters = [
         [14u8, 17, 17, 31, 17, 17, 17],
@@ -120,143 +208,151 @@ pub unsafe fn logo(dc: HDC, dpi: f64, x: f64, y: f64) {
     }
 }
 
-pub unsafe fn control_message(hwnd: HWND, msg: u32, wp: WPARAM, lp: LPARAM) -> Option<LRESULT> {
-    match msg {
-        WM_MEASUREITEM => {
-            let item = &mut *(lp.0 as *mut MEASUREITEMSTRUCT);
-            item.itemHeight = 34 * GetDpiForWindow(hwnd).max(96) / 96;
-            Some(LRESULT(1))
-        }
-        WM_CTLCOLORSTATIC | WM_CTLCOLOREDIT | WM_CTLCOLORLISTBOX | WM_CTLCOLORBTN => {
-            let dc = HDC(wp.0 as *mut c_void);
-            let id = GetDlgCtrlID(HWND(lp.0 as *mut c_void)) as usize;
-            let color = match id {
-                WALK_VALUE | DISTANCE_VALUE | ACTION_TITLE => CYAN,
-                WALK_OFF | WALK_OFTEN | DISTANCE_SHORT | DISTANCE_LONG | SETTINGS_NOTE | COUNT
-                | STATUS | EMPTY | 306 | 308 => MUTED,
-                _ => WHITE,
-            };
-            SetTextColor(dc, color);
-            SetBkColor(dc, BLACK);
-            Some(LRESULT(GetStockObject(BLACK_BRUSH).0 as isize))
-        }
-        WM_NOTIFY => {
-            let header = &*(lp.0 as *const NMHDR);
-            if header.code != NM_CUSTOMDRAW
-                || ![WALK_CHANCE, DISTANCE_BIAS, TIMELINE].contains(&header.idFrom)
-            {
-                return None;
-            }
-            let draw = &*(lp.0 as *const NMCUSTOMDRAW);
-            let dpi = GetDpiForWindow(hwnd).max(96) as f64 / 96.0;
-            match draw.dwDrawStage {
-                CDDS_PREPAINT => {
-                    fill(draw.hdc, &draw.rc, BLACK);
-                    Some(LRESULT(
-                        (CDRF_NOTIFYITEMDRAW | CDRF_NOTIFYPOSTPAINT) as isize,
-                    ))
-                }
-                CDDS_ITEMPREPAINT => {
-                    if draw.dwItemSpec == TBCD_CHANNEL as usize {
-                        fill(draw.hdc, &draw.rc, WHITE);
-                    } else if draw.dwItemSpec == TBCD_THUMB as usize {
-                        // Windows only clears this rectangle when the thumb moves.
-                        fill(draw.hdc, &draw.rc, CYAN);
-                        border(draw.hdc, draw.rc, BLACK, dpi.round() as i32);
-                    }
-                    Some(LRESULT(CDRF_SKIPDEFAULT as isize))
-                }
-                CDDS_POSTPAINT => {
-                    if GetFocus() == header.hwndFrom {
-                        let mut client = RECT::default();
-                        let _ = GetClientRect(header.hwndFrom, &mut client);
-                        border(draw.hdc, client, CYAN, dpi.round() as i32);
-                    }
-                    Some(LRESULT(CDRF_DODEFAULT as isize))
-                }
-                _ => None,
-            }
-        }
-        WM_DRAWITEM => {
-            let draw = &*(lp.0 as *const DRAWITEMSTRUCT);
-            let selected = draw.itemState.0 & ODS_SELECTED.0 != 0;
-            let focused = draw.itemState.0 & ODS_FOCUS.0 != 0;
-            let button = draw.CtlType == ODT_BUTTON;
-            let primary = draw.CtlID as usize == PLAY;
-            let dpi = GetDpiForWindow(hwnd).max(96) as f64 / 96.0;
-            let background = if selected {
-                PURPLE
-            } else if primary {
-                CYAN
-            } else {
-                BLACK
-            };
-            fill(draw.hDC, &draw.rcItem, background);
-            SetTextColor(draw.hDC, if primary && !selected { BLACK } else { WHITE });
-            SetBkMode(draw.hDC, TRANSPARENT);
-            let font = send(draw.hwndItem, WM_GETFONT, 0, 0);
-            let old = SelectObject(draw.hDC, HGDIOBJ(font as *mut c_void));
-            let mut label: Vec<u16> = if button {
-                window_text(draw.hwndItem).encode_utf16().collect()
-            } else if draw.itemID != u32::MAX {
-                let (length, get) = if draw.CtlType == ODT_LISTBOX {
-                    (LB_GETTEXTLEN, LB_GETTEXT)
-                } else {
-                    (CB_GETLBTEXTLEN, CB_GETLBTEXT)
-                };
-                let len = send(draw.hwndItem, length, draw.itemID as usize, 0).max(0) as usize;
-                let mut buffer = vec![0u16; len + 1];
-                send(
-                    draw.hwndItem,
-                    get,
-                    draw.itemID as usize,
-                    buffer.as_mut_ptr() as isize,
-                );
-                buffer.truncate(len);
-                buffer
-            } else {
-                Vec::new()
-            };
-            let mut area = draw.rcItem;
-            area.left += (12.0 * dpi).round() as i32;
-            area.right -= (8.0 * dpi).round() as i32;
-            DrawTextW(
-                draw.hDC,
-                &mut label,
-                &mut area,
-                DT_SINGLELINE
-                    | DT_VCENTER
-                    | DT_NOPREFIX
-                    | DT_END_ELLIPSIS
-                    | if button { DT_CENTER } else { DT_LEFT },
-            );
-            SelectObject(draw.hDC, old);
-            if button || focused {
-                border(
-                    draw.hDC,
-                    draw.rcItem,
-                    if focused { CYAN } else { WHITE },
-                    (2.0 * dpi).round() as i32,
-                );
-            }
-            if focused {
-                let inset = (4.0 * dpi).round() as i32;
-                let focus = RECT {
-                    left: draw.rcItem.left + inset,
-                    top: draw.rcItem.top + inset,
-                    right: draw.rcItem.right - inset,
-                    bottom: draw.rcItem.bottom - inset,
-                };
-                border(
-                    draw.hDC,
-                    focus,
-                    if primary && !selected { BLACK } else { CYAN },
-                    dpi.round() as i32,
-                );
-            }
-            Some(LRESULT(1))
-        }
-        _ => None,
+pub unsafe fn button(
+    dc: HDC,
+    state: &State,
+    dpi: f64,
+    id: usize,
+    rect: RECT,
+    value: &str,
+    font: HFONT,
+    primary: bool,
+) {
+    let selected = state.hot == Some(id) || state.focus == Some(id);
+    let color = if primary { CYAN } else { WHITE };
+    if selected {
+        heart(
+            dc,
+            dpi,
+            rect.left as f64 / dpi - 18.0,
+            rect.top as f64 / dpi + 11.0,
+        );
+    }
+    label(
+        dc,
+        rect,
+        value,
+        font,
+        if state.active == Some(id) {
+            YELLOW
+        } else {
+            color
+        },
+    );
+}
+
+pub unsafe fn choice(
+    dc: HDC,
+    state: &State,
+    dpi: f64,
+    id: usize,
+    rect: RECT,
+    name: &str,
+    value: &str,
+    font: HFONT,
+) {
+    let selected = state.hot == Some(id) || state.focus == Some(id) || state.popup == Some(id);
+    if selected {
+        heart(
+            dc,
+            dpi,
+            rect.left as f64 / dpi - 18.0,
+            rect.top as f64 / dpi + 10.0,
+        );
+    }
+    let name_rect = RECT {
+        right: rect.left + (rect.right - rect.left) * 45 / 100,
+        ..rect
+    };
+    label(dc, name_rect, name, font, MUTED);
+    let mut value_rect = RECT {
+        left: name_rect.right,
+        ..rect
+    };
+    text(
+        dc,
+        &mut value_rect,
+        value,
+        font,
+        if selected { YELLOW } else { WHITE },
+        DT_SINGLELINE | DT_VCENTER | DT_RIGHT | DT_NOPREFIX | DT_END_ELLIPSIS,
+    );
+    let arrow_x = rect.right - (8.0 * dpi) as i32;
+    let arrow_y = rect.top + (rect.bottom - rect.top) / 2;
+    for row in 0..3 {
+        let width = (5 - row * 2) * dpi.round() as i32;
+        fill(
+            dc,
+            &RECT {
+                left: arrow_x - width / 2,
+                top: arrow_y + row * dpi.round() as i32,
+                right: arrow_x + (width + 1) / 2,
+                bottom: arrow_y + (row + 1) * dpi.round() as i32,
+            },
+            if selected { YELLOW } else { WHITE },
+        );
+    }
+}
+
+pub unsafe fn slider(
+    dc: HDC,
+    state: &State,
+    dpi: f64,
+    id: usize,
+    rect: RECT,
+    value: i32,
+    maximum: i32,
+) {
+    let selected = state.hot == Some(id) || state.focus == Some(id);
+    let unit = dpi.round().max(1.0) as i32;
+    let track = RECT {
+        left: rect.left + 8 * unit,
+        top: rect.top + (rect.bottom - rect.top) / 2 - unit,
+        right: rect.right - 8 * unit,
+        bottom: rect.top + (rect.bottom - rect.top) / 2 + unit,
+    };
+    fill(dc, &track, DIM);
+    let width = track.right - track.left;
+    let position = track.left + width * value.clamp(0, maximum) / maximum.max(1);
+    fill(
+        dc,
+        &RECT {
+            right: position,
+            ..track
+        },
+        CYAN,
+    );
+    fill(
+        dc,
+        &RECT {
+            left: position - 4 * unit,
+            top: rect.top + 2 * unit,
+            right: position + 4 * unit,
+            bottom: rect.bottom - 2 * unit,
+        },
+        if selected { YELLOW } else { WHITE },
+    );
+}
+
+pub fn popup_rect(anchor: &RECT, dpi: f64, count: usize) -> RECT {
+    let rows = count.clamp(1, 8) as f64;
+    let height = rows * 34.0 + 4.0;
+    RECT {
+        left: anchor.left,
+        top: anchor.bottom + (4.0 * dpi).round() as i32,
+        right: anchor.right,
+        bottom: anchor.bottom + ((height + 4.0) * dpi).round() as i32,
+    }
+}
+
+pub unsafe fn edit_color(msg: u32, wp: WPARAM) -> Option<LRESULT> {
+    if msg == WM_CTLCOLOREDIT {
+        let dc = HDC(wp.0 as *mut c_void);
+        SetTextColor(dc, WHITE);
+        SetBkColor(dc, BLACK);
+        Some(LRESULT(GetStockObject(BLACK_BRUSH).0 as isize))
+    } else {
+        None
     }
 }
 
@@ -265,65 +361,25 @@ mod tests {
     use super::*;
 
     #[test]
-    fn moving_thumb_leaves_no_pixels_outside_its_native_bounds() {
-        unsafe {
-            let surface = Surface::new(64, 32).unwrap();
-            let client = RECT {
-                left: 0,
-                top: 0,
-                right: 64,
-                bottom: 32,
-            };
-            fill(surface.dc, &client, BLACK);
-            let mut draw = NMCUSTOMDRAW {
-                hdr: NMHDR {
-                    idFrom: WALK_CHANCE,
-                    code: NM_CUSTOMDRAW,
-                    ..Default::default()
-                },
-                dwDrawStage: CDDS_ITEMPREPAINT,
-                hdc: surface.dc,
-                rc: RECT {
-                    left: 10,
-                    top: 4,
-                    right: 19,
-                    bottom: 28,
-                },
-                dwItemSpec: TBCD_THUMB as usize,
-                ..Default::default()
-            };
-            control_message(
-                HWND::default(),
-                WM_NOTIFY,
-                WPARAM(0),
-                LPARAM((&draw as *const NMCUSTOMDRAW) as isize),
-            );
-            // Windows only clears the old native thumb rectangle when it moves.
-            fill(surface.dc, &draw.rc, BLACK);
-            draw.rc.left = 35;
-            draw.rc.right = 44;
-            control_message(
-                HWND::default(),
-                WM_NOTIFY,
-                WPARAM(0),
-                LPARAM((&draw as *const NMCUSTOMDRAW) as isize),
-            );
-            assert_eq!(GetPixel(surface.dc, 39, 16), CYAN);
-            for y in 0..32 {
-                for x in 0..64 {
-                    if x < draw.rc.left
-                        || x >= draw.rc.right
-                        || y < draw.rc.top
-                        || y >= draw.rc.bottom
-                    {
-                        assert_eq!(
-                            GetPixel(surface.dc, x, y),
-                            BLACK,
-                            "stale pixel at ({x}, {y})"
-                        );
-                    }
-                }
-            }
-        }
+    fn custom_slider_stays_within_endpoints() {
+        let rect = RECT {
+            left: 20,
+            top: 0,
+            right: 136,
+            bottom: 30,
+        };
+        assert_eq!(slider_value(&rect, -100, 100), 0);
+        assert_eq!(slider_value(&rect, 28, 100), 0);
+        assert_eq!(slider_value(&rect, 78, 100), 50);
+        assert_eq!(slider_value(&rect, 128, 100), 100);
+        assert_eq!(slider_value(&rect, 500, 100), 100);
+    }
+
+    #[test]
+    fn scrolling_is_clamped_in_both_directions() {
+        assert_eq!(scroll_offset(0, -3, 20, 8), 0);
+        assert_eq!(scroll_offset(4, 3, 20, 8), 7);
+        assert_eq!(scroll_offset(11, 3, 20, 8), 12);
+        assert_eq!(scroll_offset(3, -3, 2, 8), 0);
     }
 }

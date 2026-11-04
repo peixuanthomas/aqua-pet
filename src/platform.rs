@@ -2,7 +2,9 @@
 // Rust 1.98's lint also inspects the standard macro's internal lazy initializer.
 #![allow(clippy::missing_const_for_thread_local)]
 
+mod debug;
 mod desktop;
+mod settings;
 mod tray;
 mod ui;
 
@@ -26,7 +28,7 @@ use windows::{
     Win32::{
         Foundation::*,
         Graphics::Gdi::*,
-        System::{LibraryLoader::GetModuleHandleW, SystemServices::SS_RIGHT},
+        System::LibraryLoader::GetModuleHandleW,
         UI::{
             Controls::*, HiDpi::*, Input::KeyboardAndMouse::*, Shell::NIN_SELECT,
             WindowsAndMessaging::*,
@@ -39,46 +41,24 @@ const SEARCH: usize = 100;
 const KIND: usize = 101;
 const CATEGORY: usize = 102;
 const LIST: usize = 103;
-const COUNT: usize = 104;
 const PLAY: usize = 200;
 const RESTART: usize = 201;
 const PREV: usize = 202;
 const NEXT: usize = 203;
 const LOOP: usize = 204;
 const SPEED: usize = 205;
-const RESET_SPEED: usize = 206;
 const SCALE: usize = 207;
 const BG: usize = 208;
 const TIMELINE: usize = 209;
-const STATUS: usize = 210;
-const INFO: usize = 211;
+const DETAILS: usize = 211;
 const IDLE: usize = 212;
-const TITLE: usize = 300;
-const SEARCH_LABEL: usize = 301;
-const SCALE_LABEL: usize = 302;
-const SPEED_LABEL: usize = 303;
-const BACKGROUND_LABEL: usize = 304;
-const LOOP_LABEL: usize = 305;
-const ACTION_TITLE: usize = 309;
-const EMPTY: usize = 310;
+const DETAILS_CLOSE: usize = 213;
+const CLEAR_FILTERS: usize = 214;
 const MENU_DEBUG: u32 = 400;
 const MENU_EXIT: u32 = 401;
 const MENU_SETTINGS: u32 = 402;
 const WALK_CHANCE: usize = 500;
-const WALK_LABEL: usize = 501;
-const WALK_VALUE: usize = 502;
-const WALK_OFF: usize = 503;
-const WALK_OFTEN: usize = 504;
-const SETTINGS_NOTE: usize = 505;
 const DISTANCE_BIAS: usize = 506;
-const DISTANCE_LABEL: usize = 507;
-const DISTANCE_VALUE: usize = 508;
-const DISTANCE_SHORT: usize = 509;
-const DISTANCE_LONG: usize = 510;
-const SETTINGS_TITLE: usize = 511;
-const SETTINGS_SUBTITLE: usize = 512;
-const WALK_NOTE: usize = 513;
-const DISTANCE_NOTE: usize = 514;
 const SHOW_DEBUG: u32 = WM_APP + 1;
 const RATES: [f64; 7] = [0.25, 0.5, 0.75, 1.0, 1.5, 2.0, 4.0];
 
@@ -92,13 +72,6 @@ unsafe fn text(hwnd: HWND, s: &str) {
 }
 unsafe fn send(hwnd: HWND, msg: u32, wp: usize, lp: isize) -> isize {
     SendMessageW(hwnd, msg, Some(WPARAM(wp)), Some(LPARAM(lp))).0
-}
-unsafe fn combo_add(hwnd: HWND, s: &str) {
-    let s = wide(s);
-    send(hwnd, CB_ADDSTRING, 0, s.as_ptr() as isize);
-}
-unsafe fn combo_index(hwnd: HWND) -> usize {
-    send(hwnd, CB_GETCURSEL, 0, 0).max(0) as usize
 }
 unsafe fn window_text(hwnd: HWND) -> String {
     let mut buf = vec![0u16; GetWindowTextLengthW(hwnd).max(0) as usize + 1];
@@ -192,9 +165,18 @@ struct App {
     debug: HWND,
     settings: HWND,
     tray: Option<tray::TrayIcon>,
-    controls: HashMap<usize, HWND>,
+    search: HWND,
     fonts: ui::Fonts,
     settings_fonts: ui::Fonts,
+    debug_ui: ui::State,
+    settings_ui: ui::State,
+    debug_regions: HashMap<usize, RECT>,
+    settings_regions: HashMap<usize, RECT>,
+    kind_filter: usize,
+    category_filter: usize,
+    details_open: bool,
+    details_scroll: i32,
+    details_height: i32,
     visible: Vec<usize>,
     categories: Vec<String>,
     bounds: Bounds,
@@ -241,9 +223,24 @@ impl App {
             debug,
             settings,
             tray: None,
-            controls: HashMap::new(),
+            search: HWND::default(),
             fonts: ui::Fonts::default(),
             settings_fonts: ui::Fonts::default(),
+            debug_ui: ui::State {
+                focus: Some(LIST),
+                ..Default::default()
+            },
+            settings_ui: ui::State {
+                focus: Some(WALK_CHANCE),
+                ..Default::default()
+            },
+            debug_regions: HashMap::new(),
+            settings_regions: HashMap::new(),
+            kind_filter: 0,
+            category_filter: 0,
+            details_open: false,
+            details_scroll: 0,
+            details_height: 0,
             visible: vec![],
             categories: vec![],
             bounds,
@@ -275,544 +272,10 @@ impl App {
             smoke,
         }
     }
-    fn control(&self, id: usize) -> HWND {
-        self.controls[&id]
-    }
     unsafe fn create_controls(&mut self) -> windows::core::Result<()> {
-        let module = GetModuleHandleW(None)?;
-        let specs: [(usize, PCWSTR, &str, u32); 29] = [
-            (TITLE, w!("STATIC"), "Debug 动作预览", 0),
-            (ACTION_TITLE, w!("STATIC"), "", 0),
-            (
-                EMPTY,
-                w!("STATIC"),
-                "没有找到动作\r\n试试其他关键词或分类。",
-                0,
-            ),
-            (SEARCH_LABEL, w!("STATIC"), "搜索动作或原始资源名", 0),
-            (
-                SEARCH,
-                w!("EDIT"),
-                "",
-                ES_AUTOHSCROLL as u32 | WS_BORDER.0 | WS_TABSTOP.0,
-            ),
-            (
-                KIND,
-                w!("COMBOBOX"),
-                "",
-                CBS_DROPDOWNLIST as u32 | WS_VSCROLL.0 | WS_TABSTOP.0,
-            ),
-            (
-                CATEGORY,
-                w!("COMBOBOX"),
-                "",
-                CBS_DROPDOWNLIST as u32 | WS_VSCROLL.0 | WS_TABSTOP.0,
-            ),
-            (
-                LIST,
-                w!("LISTBOX"),
-                "",
-                LBS_NOTIFY as u32
-                    | LBS_NOINTEGRALHEIGHT as u32
-                    | LBS_OWNERDRAWFIXED as u32
-                    | LBS_HASSTRINGS as u32
-                    | WS_VSCROLL.0
-                    | WS_TABSTOP.0,
-            ),
-            (COUNT, w!("STATIC"), "", 0),
-            (
-                PLAY,
-                w!("BUTTON"),
-                "暂停",
-                BS_PUSHBUTTON as u32 | WS_TABSTOP.0,
-            ),
-            (
-                RESTART,
-                w!("BUTTON"),
-                "重播",
-                BS_PUSHBUTTON as u32 | WS_TABSTOP.0,
-            ),
-            (
-                PREV,
-                w!("BUTTON"),
-                "上一帧",
-                BS_PUSHBUTTON as u32 | WS_TABSTOP.0,
-            ),
-            (
-                NEXT,
-                w!("BUTTON"),
-                "下一帧",
-                BS_PUSHBUTTON as u32 | WS_TABSTOP.0,
-            ),
-            (
-                IDLE,
-                w!("BUTTON"),
-                "默认晃动",
-                BS_PUSHBUTTON as u32 | WS_TABSTOP.0,
-            ),
-            (
-                LOOP,
-                w!("COMBOBOX"),
-                "",
-                CBS_DROPDOWNLIST as u32 | WS_VSCROLL.0 | WS_TABSTOP.0,
-            ),
-            (
-                SPEED,
-                w!("COMBOBOX"),
-                "",
-                CBS_DROPDOWNLIST as u32 | WS_VSCROLL.0 | WS_TABSTOP.0,
-            ),
-            (
-                RESET_SPEED,
-                w!("BUTTON"),
-                "恢复原速",
-                BS_PUSHBUTTON as u32 | WS_TABSTOP.0,
-            ),
-            (
-                SCALE,
-                w!("COMBOBOX"),
-                "",
-                CBS_DROPDOWNLIST as u32 | WS_VSCROLL.0 | WS_TABSTOP.0,
-            ),
-            (
-                BG,
-                w!("COMBOBOX"),
-                "",
-                CBS_DROPDOWNLIST as u32 | WS_VSCROLL.0 | WS_TABSTOP.0,
-            ),
-            (TIMELINE, TRACKBAR_CLASSW, "", TBS_NOTICKS | WS_TABSTOP.0),
-            (STATUS, w!("STATIC"), "", 0),
-            (
-                INFO,
-                w!("EDIT"),
-                "",
-                ES_MULTILINE as u32
-                    | ES_READONLY as u32
-                    | ES_AUTOVSCROLL as u32
-                    | WS_VSCROLL.0
-                    | WS_BORDER.0
-                    | WS_TABSTOP.0,
-            ),
-            (SCALE_LABEL, w!("STATIC"), "桌宠大小", 0),
-            (SPEED_LABEL, w!("STATIC"), "播放速度", 0),
-            (BACKGROUND_LABEL, w!("STATIC"), "预览背景", 0),
-            (LOOP_LABEL, w!("STATIC"), "播放方式", 0),
-            (306, w!("STATIC"), "选中动作后，桌宠与预览同步播放。", 0),
-            (307, w!("STATIC"), "动作详情", 0),
-            (308, w!("STATIC"), "关闭面板后恢复自动活动。", 0),
-        ];
-        for (id, class, label, style) in specs {
-            let style = if [PLAY, RESTART, PREV, NEXT, IDLE, RESET_SPEED].contains(&id) {
-                style | BS_OWNERDRAW as u32
-            } else if [KIND, CATEGORY, LOOP, SPEED, SCALE, BG].contains(&id) {
-                style | CBS_OWNERDRAWFIXED as u32 | CBS_HASSTRINGS as u32
-            } else {
-                style
-            };
-            let label = wide(label);
-            let hwnd = CreateWindowExW(
-                WINDOW_EX_STYLE(0),
-                class,
-                PCWSTR(label.as_ptr()),
-                WS_CHILD | WS_VISIBLE | WINDOW_STYLE(style),
-                0,
-                0,
-                10,
-                10,
-                Some(self.debug),
-                Some(HMENU(id as *mut c_void)),
-                Some(module.into()),
-                None,
-            )?;
-            let _ = SetWindowTheme(hwnd, w!(""), w!(""));
-            self.controls.insert(id, hwnd);
-        }
-        for kind in ["全部", "原作动作", "原始素材", "未使用素材"] {
-            combo_add(self.control(KIND), kind);
-        }
-        combo_add(self.control(CATEGORY), "全部分类");
-        self.categories = self
-            .catalog
-            .clips
-            .iter()
-            .map(|c| c.category.clone())
-            .collect();
-        self.categories.sort();
-        self.categories.dedup();
-        for category in &self.categories {
-            combo_add(self.control(CATEGORY), category);
-        }
-        for id in [KIND, CATEGORY] {
-            send(self.control(id), CB_SETCURSEL, 0, 0);
-        }
-        for mode in ["单次", "循环"] {
-            combo_add(self.control(LOOP), mode);
-        }
-        for rate in RATES {
-            combo_add(self.control(SPEED), &format!("{rate}×"));
-        }
-        for scale in 1..=8 {
-            combo_add(self.control(SCALE), &format!("{scale}×"));
-        }
-        for bg in ["深色", "浅色", "棋盘格"] {
-            combo_add(self.control(BG), bg);
-        }
-        send(self.control(BG), CB_SETCURSEL, self.bg, 0);
-        send(self.control(TIMELINE), TBM_SETRANGEMIN, 0, 0);
-        send(self.control(TIMELINE), TBM_SETRANGEMAX, 1, 10000);
-        self.update_font();
-        self.filter();
-        self.sync_selection();
-        self.layout();
-        send(self.control(LIST), LB_SETTOPINDEX, 0, 0);
-        self.create_settings_controls()?;
+        self.create_debug_controls()?;
+        self.create_settings_panel();
         Ok(())
-    }
-    unsafe fn create_settings_controls(&mut self) -> windows::core::Result<()> {
-        let module = GetModuleHandleW(None)?;
-        for (id, class, label, style) in [
-            (SETTINGS_TITLE, w!("STATIC"), "桌宠设置", 0),
-            (
-                SETTINGS_SUBTITLE,
-                w!("STATIC"),
-                "调整 AQUA 在地面和窗口上活动的节奏。",
-                0,
-            ),
-            (WALK_LABEL, w!("STATIC"), "主动走跳概率", 0),
-            (
-                WALK_NOTE,
-                w!("STATIC"),
-                "每轮待机后，开始走路或跳向窗口的概率。",
-                0,
-            ),
-            (WALK_VALUE, w!("STATIC"), "", SS_RIGHT.0),
-            (
-                WALK_CHANCE,
-                TRACKBAR_CLASSW,
-                "主动走跳概率",
-                TBS_NOTICKS | WS_TABSTOP.0,
-            ),
-            (WALK_OFF, w!("STATIC"), "不主动走跳", 0),
-            (WALK_OFTEN, w!("STATIC"), "经常走跳", SS_RIGHT.0),
-            (DISTANCE_LABEL, w!("STATIC"), "走动距离倾向", 0),
-            (
-                DISTANCE_NOTE,
-                w!("STATIC"),
-                "影响每段散步的长短，跳跃高度随窗口变化。",
-                0,
-            ),
-            (
-                DISTANCE_BIAS,
-                TRACKBAR_CLASSW,
-                "走动距离倾向",
-                TBS_NOTICKS | WS_TABSTOP.0,
-            ),
-            (DISTANCE_VALUE, w!("STATIC"), "", SS_RIGHT.0),
-            (DISTANCE_SHORT, w!("STATIC"), "更倾向短路线", 0),
-            (DISTANCE_LONG, w!("STATIC"), "更倾向长路线", SS_RIGHT.0),
-            (
-                SETTINGS_NOTE,
-                w!("STATIC"),
-                "修改自动保存。\r\n0% 时仍会挥手、休息，松手后也会落地。",
-                0,
-            ),
-        ] {
-            let label = wide(label);
-            let hwnd = CreateWindowExW(
-                WINDOW_EX_STYLE(0),
-                class,
-                PCWSTR(label.as_ptr()),
-                WS_CHILD | WS_VISIBLE | WINDOW_STYLE(style),
-                0,
-                0,
-                10,
-                10,
-                Some(self.settings),
-                Some(HMENU(id as *mut c_void)),
-                Some(module.into()),
-                None,
-            )?;
-            let _ = SetWindowTheme(hwnd, w!(""), w!(""));
-            self.controls.insert(id, hwnd);
-        }
-        for id in [WALK_CHANCE, DISTANCE_BIAS] {
-            send(self.control(id), TBM_SETRANGEMIN, 0, 0);
-            send(self.control(id), TBM_SETRANGEMAX, 1, 100);
-            send(self.control(id), TBM_SETPAGESIZE, 0, 10);
-        }
-        self.sync_walk_chance();
-        self.sync_distance_bias();
-        self.update_settings_font();
-        self.layout_settings();
-        Ok(())
-    }
-    unsafe fn sync_walk_chance(&self) {
-        let probability = self.wander.probability();
-        send(
-            self.control(WALK_CHANCE),
-            TBM_SETPOS,
-            1,
-            probability as isize,
-        );
-        text(self.control(WALK_VALUE), &format!("{probability}%"));
-    }
-    unsafe fn sync_distance_bias(&self) {
-        let bias = self.wander.distance_bias();
-        send(self.control(DISTANCE_BIAS), TBM_SETPOS, 1, bias as isize);
-        self.update_distance_label();
-    }
-    unsafe fn update_distance_label(&self) {
-        let label = match self.wander.distance_bias() {
-            0..50 => "偏短",
-            50 => "长短均衡",
-            _ => "偏长",
-        };
-        text(self.control(DISTANCE_VALUE), label);
-    }
-    unsafe fn update_settings_font(&mut self) {
-        let fonts = ui::Fonts::new(self.settings);
-        for (&id, &hwnd) in &self.controls {
-            if id >= WALK_CHANCE {
-                let font = match id {
-                    SETTINGS_TITLE => fonts.heading,
-                    WALK_VALUE | DISTANCE_VALUE => fonts.value,
-                    _ => fonts.body,
-                };
-                send(hwnd, WM_SETFONT, font.0 as usize, 1);
-            }
-        }
-        self.settings_fonts = fonts;
-    }
-    unsafe fn layout_settings(&self) {
-        if !self.controls.contains_key(&WALK_CHANCE) {
-            return;
-        }
-        let mut client = RECT::default();
-        let _ = GetClientRect(self.settings, &mut client);
-        let dpi = GetDpiForWindow(self.settings).max(96) as f64 / 96.0;
-        let width = client.right as f64 / dpi;
-        for (id, x, y, w, h) in [
-            (SETTINGS_TITLE, 148.0, 28.0, width - 180.0, 36.0),
-            (SETTINGS_SUBTITLE, 32.0, 78.0, width - 64.0, 26.0),
-            (WALK_LABEL, 44.0, 144.0, width - 190.0, 28.0),
-            (WALK_VALUE, width - 144.0, 140.0, 100.0, 32.0),
-            (WALK_NOTE, 44.0, 182.0, width - 88.0, 26.0),
-            (WALK_CHANCE, 40.0, 222.0, width - 80.0, 32.0),
-            (WALK_OFF, 44.0, 266.0, 100.0, 26.0),
-            (WALK_OFTEN, width - 144.0, 266.0, 100.0, 26.0),
-            (DISTANCE_LABEL, 44.0, 334.0, width - 210.0, 28.0),
-            (DISTANCE_VALUE, width - 164.0, 330.0, 120.0, 32.0),
-            (DISTANCE_NOTE, 44.0, 372.0, width - 88.0, 26.0),
-            (DISTANCE_BIAS, 40.0, 412.0, width - 80.0, 32.0),
-            (DISTANCE_SHORT, 44.0, 456.0, 150.0, 26.0),
-            (DISTANCE_LONG, width - 194.0, 456.0, 150.0, 26.0),
-            (SETTINGS_NOTE, 32.0, 524.0, width - 64.0, 52.0),
-        ] {
-            let _ = MoveWindow(
-                self.control(id),
-                (x * dpi) as i32,
-                (y * dpi) as i32,
-                (w * dpi) as i32,
-                (h * dpi) as i32,
-                true,
-            );
-        }
-        let _ = InvalidateRect(Some(self.settings), None, true);
-    }
-    unsafe fn show_settings(&mut self) {
-        if !IsWindowVisible(self.settings).as_bool() {
-            let work = self.work_area();
-            let dpi = GetDpiForWindow(self.settings).max(96) as i32;
-            let width = 520 * dpi / 96;
-            let height = 640 * dpi / 96;
-            let _ = SetWindowPos(
-                self.settings,
-                None,
-                work.left + (work.right - work.left - width) / 2,
-                work.top + (work.bottom - work.top - height) / 2,
-                width,
-                height,
-                SWP_NOACTIVATE | SWP_NOZORDER,
-            );
-        }
-        self.sync_walk_chance();
-        self.sync_distance_bias();
-        self.layout_settings();
-        let _ = ShowWindow(self.settings, SW_RESTORE);
-        let _ = SetForegroundWindow(self.settings);
-        let _ = SetFocus(Some(self.control(WALK_CHANCE)));
-    }
-    unsafe fn update_font(&mut self) {
-        let fonts = ui::Fonts::new(self.debug);
-        for (&id, &hwnd) in &self.controls {
-            if id < WALK_CHANCE {
-                let font = match id {
-                    TITLE => fonts.heading,
-                    ACTION_TITLE => fonts.value,
-                    _ => fonts.body,
-                };
-                send(hwnd, WM_SETFONT, font.0 as usize, 1);
-            }
-        }
-        let dpi = GetDpiForWindow(self.debug).max(96) as usize;
-        send(
-            self.control(LIST),
-            LB_SETITEMHEIGHT,
-            0,
-            (34 * dpi / 96) as isize,
-        );
-        for id in [KIND, CATEGORY, LOOP, SPEED, SCALE, BG] {
-            send(
-                self.control(id),
-                CB_SETITEMHEIGHT,
-                usize::MAX,
-                (28 * dpi / 96) as isize,
-            );
-            send(
-                self.control(id),
-                CB_SETITEMHEIGHT,
-                0,
-                (30 * dpi / 96) as isize,
-            );
-        }
-        self.fonts = fonts;
-    }
-    unsafe fn layout(&mut self) {
-        let mut client = RECT::default();
-        let _ = GetClientRect(self.debug, &mut client);
-        let dpi = GetDpiForWindow(self.debug).max(96) as f64 / 96.0;
-        let w = client.right as f64 / dpi;
-        let h = client.bottom as f64 / dpi;
-        let left = 300.0_f64.min(w * 0.30);
-        let right_x = left + 48.0;
-        let rw = w - right_x - 24.0;
-        let place = |id, x: f64, y: f64, width: f64, height: f64| {
-            let _ = MoveWindow(
-                self.controls[&id],
-                (x * dpi) as i32,
-                (y * dpi) as i32,
-                (width * dpi) as i32,
-                (height * dpi) as i32,
-                true,
-            );
-        };
-        place(TITLE, 140.0, 22.0, w - 164.0, 36.0);
-        place(306, 24.0, 68.0, w - 48.0, 24.0);
-        place(SEARCH_LABEL, 24.0, 110.0, left, 24.0);
-        place(SEARCH, 24.0, 142.0, left, 30.0);
-        place(KIND, 24.0, 184.0, left, 260.0);
-        place(CATEGORY, 24.0, 226.0, left, 400.0);
-        place(LIST, 26.0, 278.0, left - 4.0, h - 366.0);
-        place(EMPTY, 40.0, 306.0, left - 32.0, 70.0);
-        place(COUNT, 24.0, h - 74.0, left, 44.0);
-        place(308, 24.0, h - 30.0, left, 24.0);
-        place(ACTION_TITLE, right_x, 108.0, rw, 30.0);
-        let preview_bottom = h - 366.0;
-        self.preview_rect = ui::rect(dpi, right_x, 150.0, rw, preview_bottom - 150.0);
-        let y = preview_bottom + 10.0;
-        place(TIMELINE, right_x, y, rw, 28.0);
-        place(STATUS, right_x, y + 34.0, rw, 44.0);
-        let bw = (rw - 32.0) / 5.0;
-        for (i, id) in [PLAY, RESTART, PREV, NEXT, IDLE].iter().enumerate() {
-            place(*id, right_x + i as f64 * (bw + 8.0), y + 86.0, bw, 36.0);
-        }
-        let cw = (rw - 24.0) / 4.0;
-        for (i, (label, id)) in [
-            (LOOP_LABEL, LOOP),
-            (SPEED_LABEL, SPEED),
-            (SCALE_LABEL, SCALE),
-            (BACKGROUND_LABEL, BG),
-        ]
-        .iter()
-        .enumerate()
-        {
-            let x = right_x + i as f64 * (cw + 8.0);
-            place(*label, x, y + 136.0, cw, 23.0);
-            place(*id, x, y + 164.0, cw, 260.0);
-        }
-        place(RESET_SPEED, right_x + cw + 8.0, y + 204.0, cw, 30.0);
-        place(307, right_x, y + 244.0, rw, 24.0);
-        place(INFO, right_x, y + 274.0, rw, h - y - 292.0);
-        self.preview_dirty = true;
-        let _ = InvalidateRect(Some(self.debug), None, true);
-    }
-    unsafe fn filter(&mut self) {
-        let search = window_text(self.control(SEARCH)).to_lowercase();
-        let kind = combo_index(self.control(KIND));
-        let category = combo_index(self.control(CATEGORY));
-        self.visible = self
-            .catalog
-            .clips
-            .iter()
-            .enumerate()
-            .filter(|(_, c)| {
-                let kind_ok = match kind {
-                    1 => c.kind == "action",
-                    2 => c.kind == "resource",
-                    3 => c.category.contains("Unused"),
-                    _ => true,
-                };
-                kind_ok
-                    && (category == 0 || self.categories.get(category - 1) == Some(&c.category))
-                    && (search.is_empty()
-                        || format!("{} {} {} {}", c.id, c.label, c.category, c.notes)
-                            .to_lowercase()
-                            .contains(&search)
-                        || c.steps
-                            .iter()
-                            .flat_map(|s| &s.layers)
-                            .any(|l| l.sprite.to_lowercase().contains(&search)))
-            })
-            .map(|(i, _)| i)
-            .collect();
-        let list = self.control(LIST);
-        send(list, WM_SETREDRAW, 0, 0);
-        send(list, LB_RESETCONTENT, 0, 0);
-        for &index in &self.visible {
-            let c = &self.catalog.clips[index];
-            let label = wide(&format!(
-                "{} {}",
-                if c.kind == "resource" {
-                    "[素材]"
-                } else if c.verified {
-                    "[原作]"
-                } else {
-                    "[待核实]"
-                },
-                c.label
-            ));
-            send(list, LB_ADDSTRING, 0, label.as_ptr() as isize);
-        }
-        if let Some(i) = self.visible.iter().position(|i| *i == self.player.selected) {
-            send(list, LB_SETCURSEL, i, 0);
-        }
-        send(list, WM_SETREDRAW, 1, 0);
-        let _ = InvalidateRect(Some(list), None, true);
-        text(
-            self.control(COUNT),
-            &format!(
-                "{} 项结果\r\n{} 组素材 / {} 张原图",
-                self.visible.len(),
-                self.catalog.sprites.len(),
-                self.catalog.images.len()
-            ),
-        );
-        let _ = ShowWindow(
-            self.control(EMPTY),
-            if self.visible.is_empty() {
-                SW_SHOW
-            } else {
-                SW_HIDE
-            },
-        );
-        let _ = ShowWindow(
-            list,
-            if self.visible.is_empty() {
-                SW_HIDE
-            } else {
-                SW_SHOW
-            },
-        );
     }
     unsafe fn work_area(&self) -> RECT {
         Self::work_area_at(self.anchor)
@@ -919,64 +382,17 @@ impl App {
             let _ = std::fs::write(path, bytes);
         }
     }
-    unsafe fn sync_selection(&mut self) {
-        if self.controls.is_empty() {
-            return;
-        }
-        let c = &self.catalog.clips[self.player.selected];
-        let resources = c
-            .steps
-            .iter()
-            .flat_map(|s| &s.layers)
-            .map(|l| l.sprite.as_str())
-            .collect::<std::collections::BTreeSet<_>>()
-            .into_iter()
-            .collect::<Vec<_>>()
-            .join("\r\n");
-        let details = format!(
-            "{}\r\n{}\r\n\r\n原始资源：\r\n{}\r\n\r\n{}\r\n\r\n原作依据：\r\n{}\r\n游戏：30 ticks/s · data.win SHA-256 {}",
-            c.label,
-            if c.kind == "resource" {
-                "原始资源预览（不是原作动作的播放速度）"
-            } else if c.verified {
-                "片段已对照原作脚本（尚未逐帧录像比对）"
-            } else {
-                "待核实：请查看说明"
-            },
-            resources,
-            c.notes,
-            c.evidence.join("\r\n"),
-            self.catalog.source_hash
-        );
-        text(self.control(INFO), &details);
-        text(self.control(ACTION_TITLE), &c.label);
-        send(
-            self.control(LOOP),
-            CB_SETCURSEL,
-            usize::from(self.player.looping),
-            0,
-        );
-        send(self.control(SPEED), CB_SETCURSEL, 3, 0);
-        send(
-            self.control(SCALE),
-            CB_SETCURSEL,
-            (self.scale - 1) as usize,
-            0,
-        );
-        if let Some(i) = self.visible.iter().position(|i| *i == self.player.selected) {
-            send(self.control(LIST), LB_SETCURSEL, i, 0);
-        }
-        self.last_status = Instant::now() - Duration::from_secs(1);
-    }
-    unsafe fn select(&mut self, index: usize) {
+    fn select(&mut self, index: usize) {
         self.player.select(index, &self.catalog.clips[index]);
         self.bounds = render::clip_bounds(&self.catalog, &self.catalog.clips[index], false);
         self.motion_bounds = render::clip_bounds(&self.catalog, &self.catalog.clips[index], true);
         self.last_frame = None;
         self.preview_dirty = true;
-        self.fit();
-        if self.debug_open {
-            self.sync_selection();
+        unsafe {
+            self.fit();
+            if self.debug_open {
+                self.sync_selection();
+            }
         }
         self.last_clock = Instant::now();
     }
@@ -999,10 +415,18 @@ impl App {
         self.preview_dirty = true;
         let _ = ShowWindow(self.debug, SW_RESTORE);
         let _ = SetForegroundWindow(self.debug);
+        if self.debug_ui.focus == Some(SEARCH) {
+            let _ = SetFocus(Some(self.search));
+        } else {
+            let _ = SetFocus(Some(self.debug));
+        }
         self.layout();
     }
     unsafe fn close_debug(&mut self) {
         self.debug_open = false;
+        self.details_open = false;
+        self.debug_ui.popup = None;
+        self.debug_ui.active = None;
         let _ = ShowWindow(self.debug, SW_HIDE);
         self.show_pose(Pose::Idle);
         self.fit();
@@ -1055,56 +479,6 @@ impl App {
         } else if command == MENU_EXIT {
             self.exit();
         }
-    }
-    unsafe fn command(&mut self, wp: WPARAM) {
-        let id = wp.0 & 0xffff;
-        let notification = (wp.0 >> 16) & 0xffff;
-        if (id == SEARCH && notification == EN_CHANGE as usize)
-            || ([KIND, CATEGORY].contains(&id) && notification == CBN_SELCHANGE as usize)
-        {
-            self.filter();
-            return;
-        }
-        if id == LIST && notification == LBN_SELCHANGE as usize {
-            let i = send(self.control(LIST), LB_GETCURSEL, 0, 0);
-            if i >= 0
-                && let Some(&index) = self.visible.get(i as usize)
-            {
-                self.select(index);
-            }
-            return;
-        }
-        let clip = &self.catalog.clips[self.player.selected];
-        match id {
-            PLAY => self.player.toggle(),
-            RESTART => self.player.restart(),
-            PREV => self.player.step(clip, false),
-            NEXT => self.player.step(clip, true),
-            LOOP if notification == CBN_SELCHANGE as usize => {
-                self.player.looping = combo_index(self.control(LOOP)) == 1
-            }
-            SPEED if notification == CBN_SELCHANGE as usize => {
-                self.player.rate = RATES[combo_index(self.control(SPEED)).min(6)]
-            }
-            RESET_SPEED => {
-                self.player.rate = 1.0;
-                send(self.control(SPEED), CB_SETCURSEL, 3, 0);
-            }
-            SCALE if notification == CBN_SELCHANGE as usize => {
-                self.scale = combo_index(self.control(SCALE)) as u32 + 1;
-                self.fit();
-                self.last_frame = None;
-                self.save_settings();
-            }
-            BG if notification == CBN_SELCHANGE as usize => self.bg = combo_index(self.control(BG)),
-            IDLE => {
-                self.select(self.catalog.idle_index());
-            }
-            _ => return,
-        }
-        self.preview_dirty = true;
-        self.last_status = Instant::now() - Duration::from_secs(1);
-        self.last_clock = Instant::now();
     }
     unsafe fn update(&mut self) -> windows::core::Result<()> {
         if self
@@ -1244,132 +618,10 @@ impl App {
             let _ = InvalidateRect(Some(self.debug), Some(&self.preview_rect), false);
         }
         if self.debug_open && now.duration_since(self.last_status) >= Duration::from_millis(100) {
-            let clip = &self.catalog.clips[self.player.selected];
-            let frame_number = clip.steps[index]
-                .layers
-                .last()
-                .map_or("空白".into(), |l| (l.frame + 1).to_string());
-            text(
-                self.control(PLAY),
-                if self.player.waiting.is_some() {
-                    "继续"
-                } else if self.player.playing {
-                    "暂停"
-                } else {
-                    "播放"
-                },
-            );
-            let state = if self.player.waiting.is_some() {
-                "等待手动继续"
-            } else if self.player.finished {
-                "完成 · 已回起点"
-            } else if self.player.playing {
-                "播放中"
-            } else {
-                "暂停"
-            };
-            text(
-                self.control(STATUS),
-                &format!(
-                    "{}   {:.2} / {:.2} 秒\r\n样本 {}/{}   图帧 {}   {:.2}×   桌宠 {}×{}",
-                    state,
-                    self.player.tick / 30.0,
-                    clip.duration() / 30.0,
-                    index + 1,
-                    clip.steps.len(),
-                    frame_number,
-                    self.player.rate,
-                    self.effective_scale,
-                    if self.effective_scale < self.scale {
-                        "（适应屏幕）"
-                    } else {
-                        ""
-                    }
-                ),
-            );
-            send(
-                self.control(TIMELINE),
-                TBM_SETPOS,
-                1,
-                (self.player.tick / clip.duration() * 10000.0).round() as isize,
-            );
+            let _ = InvalidateRect(Some(self.debug), None, false);
             self.last_status = now;
         }
         Ok(())
-    }
-    unsafe fn paint(&self) {
-        let mut ps = PAINTSTRUCT::default();
-        let dc = BeginPaint(self.debug, &mut ps);
-        let mut client = RECT::default();
-        let _ = GetClientRect(self.debug, &mut client);
-        ui::fill(dc, &client, ui::BLACK);
-        let dpi = GetDpiForWindow(self.debug).max(96) as f64 / 96.0;
-        let width = client.right as f64 / dpi;
-        let height = client.bottom as f64 / dpi;
-        ui::logo(dc, dpi, 24.0, 26.0);
-        ui::border(
-            dc,
-            ui::rect(
-                dpi,
-                24.0,
-                276.0,
-                300.0_f64.min(width * 0.30),
-                height - 362.0,
-            ),
-            ui::WHITE,
-            (2.0 * dpi).round() as i32,
-        );
-        let color = match self.bg {
-            0 => ui::BLACK,
-            1 => COLORREF(0xeaf0f0),
-            _ => COLORREF(0xded8d2),
-        };
-        let brush = CreateSolidBrush(color);
-        FillRect(dc, &self.preview_rect, brush);
-        let _ = DeleteObject(brush.into());
-        if let Some(frame) = &self.preview {
-            let x = self.preview_rect.left
-                + (self.preview_rect.right - self.preview_rect.left - frame.width as i32) / 2;
-            let y = self.preview_rect.top
-                + (self.preview_rect.bottom - self.preview_rect.top - frame.height as i32) / 2;
-            let pixels = frame.on_background(self.bg);
-            let info = bitmap_info(frame.width as i32, frame.height as i32);
-            SetDIBitsToDevice(
-                dc,
-                x,
-                y,
-                frame.width as u32,
-                frame.height as u32,
-                0,
-                0,
-                0,
-                frame.height as u32,
-                pixels.as_ptr().cast(),
-                &info,
-                DIB_RGB_COLORS,
-            );
-        }
-        ui::border(dc, self.preview_rect, ui::WHITE, (2.0 * dpi).round() as i32);
-        let _ = EndPaint(self.debug, &ps);
-    }
-    unsafe fn paint_settings(&self) {
-        let mut ps = PAINTSTRUCT::default();
-        let dc = BeginPaint(self.settings, &mut ps);
-        let mut client = RECT::default();
-        let _ = GetClientRect(self.settings, &mut client);
-        ui::fill(dc, &client, ui::BLACK);
-        let dpi = GetDpiForWindow(self.settings).max(96) as f64 / 96.0;
-        let width = client.right as f64 / dpi;
-        ui::logo(dc, dpi, 32.0, 32.0);
-        for y in [126.0, 316.0] {
-            ui::border(
-                dc,
-                ui::rect(dpi, 24.0, y, width - 48.0, 184.0),
-                ui::WHITE,
-                (2.0 * dpi).round() as i32,
-            );
-        }
-        let _ = EndPaint(self.settings, &ps);
     }
     unsafe fn handle(&mut self, hwnd: HWND, msg: u32, wp: WPARAM, lp: LPARAM) -> Option<LRESULT> {
         let debug = hwnd == self.debug;
@@ -1460,36 +712,28 @@ impl App {
                 Some(LRESULT(0))
             }
             WM_COMMAND if debug => {
-                self.command(wp);
+                self.debug_command(wp);
                 Some(LRESULT(0))
             }
-            WM_HSCROLL if settings && lp.0 == self.control(WALK_CHANCE).0 as isize => {
-                let probability =
-                    send(self.control(WALK_CHANCE), WM_USER, 0, 0).clamp(0, 100) as u8;
-                self.wander.set_probability(probability);
-                text(self.control(WALK_VALUE), &format!("{probability}%"));
-                // Apply while dragging; save on release, keyboard or page clicks.
-                if wp.0 & 0xffff != TB_THUMBTRACK as usize {
-                    self.save_settings();
-                }
+            WM_MOUSEMOVE | WM_LBUTTONDOWN | WM_LBUTTONUP | WM_MOUSEWHEEL if debug => {
+                self.debug_mouse(msg, wp, lp);
                 Some(LRESULT(0))
             }
-            WM_HSCROLL if debug && lp.0 == self.control(TIMELINE).0 as isize => {
-                // TBM_GETPOS is WM_USER; windows 0.62 does not export its named constant.
-                let position = send(self.control(TIMELINE), WM_USER, 0, 0);
-                let clip = &self.catalog.clips[self.player.selected];
-                self.player
-                    .seek(clip, clip.duration() * position as f64 / 10000.0);
-                self.preview_dirty = true;
+            WM_MOUSEMOVE | WM_LBUTTONDOWN | WM_LBUTTONUP | WM_MOUSEWHEEL if settings => {
+                self.settings_mouse(msg, wp, lp);
                 Some(LRESULT(0))
             }
-            WM_HSCROLL if settings && lp.0 == self.control(DISTANCE_BIAS).0 as isize => {
-                let bias = send(self.control(DISTANCE_BIAS), WM_USER, 0, 0).clamp(0, 100) as u8;
-                self.wander.set_distance_bias(bias);
-                self.update_distance_label();
-                if wp.0 & 0xffff != TB_THUMBTRACK as usize {
-                    self.save_settings();
-                }
+            WM_KEYDOWN if debug => {
+                self.debug_key(VIRTUAL_KEY(wp.0 as u16));
+                Some(LRESULT(0))
+            }
+            WM_KEYDOWN if settings => {
+                self.settings_key(VIRTUAL_KEY(wp.0 as u16));
+                Some(LRESULT(0))
+            }
+            WM_CAPTURECHANGED if debug || settings => {
+                self.debug_ui.active = None;
+                self.settings_ui.active = None;
                 Some(LRESULT(0))
             }
             WM_SIZE if debug => {
@@ -1567,9 +811,8 @@ impl App {
     }
 }
 unsafe extern "system" fn wndproc(hwnd: HWND, msg: u32, wp: WPARAM, lp: LPARAM) -> LRESULT {
-    // Control painting also runs during synchronous layout and text updates.
     if GetWindowLongPtrW(hwnd, GWLP_USERDATA) == 1
-        && let Some(result) = ui::control_message(hwnd, msg, wp, lp)
+        && let Some(result) = ui::edit_color(msg, wp)
     {
         return result;
     }
@@ -1731,13 +974,39 @@ pub fn run(catalog: Catalog, debug: bool, smoke: bool) -> Result<(), String> {
             if result < 0 {
                 return Err(windows::core::Error::from_thread().to_string());
             }
-            if !(IsWindowVisible(panel).as_bool() && IsDialogMessageW(panel, &message).as_bool()
-                || IsWindowVisible(settings).as_bool()
-                    && IsDialogMessageW(settings, &message).as_bool())
-            {
-                let _ = TranslateMessage(&message);
-                DispatchMessageW(&message);
+            if message.message == WM_KEYDOWN && message.wParam.0 == VK_TAB.0 as usize {
+                let reverse = GetKeyState(VK_SHIFT.0 as i32) < 0;
+                let handled = APP.with(|slot| {
+                    let mut borrowed = slot.borrow_mut();
+                    let app = borrowed.as_mut().unwrap();
+                    if message.hwnd == settings {
+                        app.settings_tab(reverse);
+                        true
+                    } else if message.hwnd == panel || message.hwnd == app.search {
+                        app.debug_tab(reverse);
+                        true
+                    } else {
+                        false
+                    }
+                });
+                if handled {
+                    continue;
+                }
             }
+            if message.message == WM_MOUSEWHEEL {
+                let root = GetAncestor(message.hwnd, GA_ROOT);
+                if (root == panel || root == settings) && root != message.hwnd {
+                    let _ = SendMessageW(
+                        root,
+                        WM_MOUSEWHEEL,
+                        Some(message.wParam),
+                        Some(message.lParam),
+                    );
+                    continue;
+                }
+            }
+            let _ = TranslateMessage(&message);
+            DispatchMessageW(&message);
         }
         APP.with(|slot| {
             slot.borrow_mut().take();
