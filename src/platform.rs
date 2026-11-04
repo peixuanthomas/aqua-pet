@@ -4,6 +4,8 @@
 
 mod debug;
 mod desktop;
+#[cfg(test)]
+mod panel_tests;
 mod settings;
 mod tray;
 mod ui;
@@ -12,7 +14,7 @@ use crate::{
     catalog::Catalog,
     player::Player,
     poses::{Pose, Poses},
-    render::{self, Bounds, Frame},
+    render::{self, Bounds},
     wander::{DEFAULT_DISTANCE_BIAS, DEFAULT_WALK_CHANCE, Wander},
 };
 use serde::{Deserialize, Serialize};
@@ -194,7 +196,7 @@ struct App {
     last_status: Instant,
     last_frame: Option<(usize, usize, bool, u32)>,
     last_position: Option<(i32, i32)>,
-    preview: Option<Frame>,
+    preview: Option<(BITMAPINFO, Vec<u8>)>,
     preview_rect: RECT,
     preview_dirty: bool,
     bg: usize,
@@ -491,6 +493,7 @@ impl App {
         let now = Instant::now();
         let dt = now.duration_since(self.last_clock).as_secs_f64();
         self.last_clock = now;
+        let was_playing = self.player.playing;
         // Resuming from sleep or a suspended process should not jump across an entire scene.
         if dt < 2.0 {
             if !self.debug_open && self.drag.is_none() {
@@ -591,7 +594,9 @@ impl App {
                 self.last_position = Some((dst.x, dst.y));
             }
         }
-        if self.debug_open && self.preview_dirty {
+        let preview_visible =
+            self.debug_open && !self.details_open && !IsIconic(self.debug).as_bool();
+        if preview_visible && self.preview_dirty {
             let rw = (self.preview_rect.right - self.preview_rect.left - 24).max(1) as f64;
             let rh = (self.preview_rect.bottom - self.preview_rect.top - 24).max(1) as f64;
             let fit = (rw / self.motion_bounds.width())
@@ -607,18 +612,21 @@ impl App {
                 step.root_x = 0.0;
                 step.root_y = 0.0;
             }
-            self.preview = Some(render::render_preview(
-                &self.catalog,
-                &step,
-                self.motion_bounds,
-                scale,
-                self.bg,
+            let frame =
+                render::render_preview(&self.catalog, &step, self.motion_bounds, scale, self.bg);
+            self.preview = Some((
+                bitmap_info(frame.width as i32, frame.height as i32),
+                frame.on_background(self.bg),
             ));
             self.preview_dirty = false;
             let _ = InvalidateRect(Some(self.debug), Some(&self.preview_rect), false);
         }
-        if self.debug_open && now.duration_since(self.last_status) >= Duration::from_millis(100) {
-            let _ = InvalidateRect(Some(self.debug), None, false);
+        if preview_visible
+            && was_playing
+            && (!self.player.playing
+                || now.duration_since(self.last_status) >= Duration::from_millis(100))
+        {
+            self.invalidate_playback();
             self.last_status = now;
         }
         Ok(())
@@ -861,10 +869,10 @@ pub fn run(catalog: Catalog, debug: bool, smoke: bool) -> Result<(), String> {
             dwICC: ICC_BAR_CLASSES | ICC_STANDARD_CLASSES,
         };
         let _ = InitCommonControlsEx(&common);
-        for (class, background) in [
-            (w!("AquaPetOverlay"), HBRUSH::default()),
-            (w!("AquaPetDebug"), HBRUSH(GetStockObject(BLACK_BRUSH).0)),
-            (w!("AquaPetSettings"), HBRUSH(GetStockObject(BLACK_BRUSH).0)),
+        for class in [
+            w!("AquaPetOverlay"),
+            w!("AquaPetDebug"),
+            w!("AquaPetSettings"),
         ] {
             let wc = WNDCLASSW {
                 lpfnWndProc: Some(wndproc),
@@ -873,7 +881,6 @@ pub fn run(catalog: Catalog, debug: bool, smoke: bool) -> Result<(), String> {
                 hIcon: LoadIconW(Some(module.into()), w!("AQUA_ICON"))
                     .map_err(|e| e.to_string())?,
                 hCursor: LoadCursorW(None, IDC_ARROW).map_err(|e| e.to_string())?,
-                hbrBackground: background,
                 ..Default::default()
             };
             if RegisterClassW(&wc) == 0 {
@@ -896,7 +903,7 @@ pub fn run(catalog: Catalog, debug: bool, smoke: bool) -> Result<(), String> {
         )
         .map_err(|e| e.to_string())?;
         let panel = CreateWindowExW(
-            WS_EX_APPWINDOW,
+            WS_EX_APPWINDOW | WS_EX_COMPOSITED,
             w!("AquaPetDebug"),
             w!("AQUA · Debug 动作预览"),
             WS_OVERLAPPEDWINDOW | WS_CLIPCHILDREN,
@@ -912,7 +919,7 @@ pub fn run(catalog: Catalog, debug: bool, smoke: bool) -> Result<(), String> {
         .map_err(|e| e.to_string())?;
         SetWindowLongPtrW(panel, GWLP_USERDATA, 1);
         let settings = CreateWindowExW(
-            WS_EX_APPWINDOW,
+            WS_EX_APPWINDOW | WS_EX_COMPOSITED,
             w!("AquaPetSettings"),
             w!("AQUA · 设置"),
             WS_OVERLAPPED | WS_CAPTION | WS_SYSMENU | WS_MINIMIZEBOX | WS_CLIPCHILDREN,

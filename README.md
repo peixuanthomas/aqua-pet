@@ -27,7 +27,7 @@ cargo build --release
 
 构建完成后，运行 `target/release/aqua-pet.exe`，即可显示无边框的桌宠角色。
 
-在 Windows 桌面运行 `cargo test live_overlapping_windows -- --ignored`，可以用两个临时窗口验证跳上边沿、跟随移动和最小化后下落。测试结束会自动关闭这两个窗口。
+在 Windows 桌面运行 `cargo test -- --ignored`，可以验证桌宠跟随窗口边沿，以及 Debug 播放和暂停时的重画范围。测试结束后会自动关闭临时窗口。
 
 Windows 构建会自动将 `assets/sprites/spr_aqua_sleevewave_0.png` 转为多尺寸图标并写入 EXE，设置和 Debug 窗口的标题栏也使用该图标。图标保留透明背景和角色比例，无需额外携带图标文件。
 

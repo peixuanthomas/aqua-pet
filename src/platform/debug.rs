@@ -101,7 +101,7 @@ impl App {
         }
         self.debug_ui.popup = None;
         self.preview_dirty = true;
-        let _ = InvalidateRect(Some(self.debug), None, true);
+        let _ = InvalidateRect(Some(self.debug), None, false);
     }
 
     pub unsafe fn filter(&mut self) {
@@ -353,12 +353,14 @@ impl App {
         };
         let position = ui::slider_value(rect, point.x, 10000);
         let clip = &self.catalog.clips[self.player.selected];
-        self.player
-            .seek(clip, clip.duration() * position as f64 / 10000.0);
-        self.preview_dirty = true;
-        self.last_status = Instant::now() - Duration::from_secs(1);
-        unsafe {
-            let _ = InvalidateRect(Some(self.debug), None, false);
+        self.seek_debug(clip.duration() * position as f64 / 10000.0);
+    }
+
+    fn seek_debug(&mut self, tick: f64) {
+        let clip = &self.catalog.clips[self.player.selected];
+        if self.player.playing || self.player.waiting.is_some() || self.player.tick != tick {
+            self.player.seek(clip, tick);
+            unsafe { self.invalidate_playback() };
         }
     }
 
@@ -534,10 +536,7 @@ impl App {
                 key if key == VK_END => clip.duration(),
                 _ => return,
             };
-            self.player.seek(clip, next);
-            self.preview_dirty = true;
-            self.last_status = Instant::now() - Duration::from_secs(1);
-            let _ = InvalidateRect(Some(self.debug), None, false);
+            self.seek_debug(next);
             return;
         }
         if matches!(focus, KIND | CATEGORY | SPEED | SCALE | BG)
@@ -583,12 +582,20 @@ impl App {
         }
     }
 
+    pub(super) unsafe fn invalidate_playback(&self) {
+        let area = RECT {
+            bottom: self.debug_regions[&PLAY].bottom,
+            ..self.debug_regions[&TIMELINE]
+        };
+        let _ = InvalidateRect(Some(self.debug), Some(&area), false);
+    }
+
     pub unsafe fn paint(&mut self) {
         let mut ps = PAINTSTRUCT::default();
         let dc = BeginPaint(self.debug, &mut ps);
         let mut client = RECT::default();
         let _ = GetClientRect(self.debug, &mut client);
-        ui::fill(dc, &client, ui::BLACK);
+        ui::fill(dc, &ps.rcPaint, ui::BLACK);
         let dpi = GetDpiForWindow(self.debug).max(96) as f64 / 96.0;
         let width = client.right as f64 / dpi;
         let left = 300.0_f64.min(width * 0.30);
@@ -652,7 +659,9 @@ impl App {
                 false,
             );
         }
-        self.paint_preview(dc);
+        if !self.details_open && RectVisible(dc, &self.preview_rect).as_bool() {
+            self.paint_preview(dc);
+        }
         let position = (self.player.tick / clip.duration() * 10000.0).round() as i32;
         ui::slider(
             dc,
@@ -761,25 +770,25 @@ impl App {
             _ => COLORREF(0xded8d2),
         };
         ui::fill(dc, &self.preview_rect, color);
-        if let Some(frame) = &self.preview {
+        if let Some((info, pixels)) = &self.preview {
+            let width = info.bmiHeader.biWidth;
+            let height = -info.bmiHeader.biHeight;
             let x = self.preview_rect.left
-                + (self.preview_rect.right - self.preview_rect.left - frame.width as i32) / 2;
+                + (self.preview_rect.right - self.preview_rect.left - width) / 2;
             let y = self.preview_rect.top
-                + (self.preview_rect.bottom - self.preview_rect.top - frame.height as i32) / 2;
-            let pixels = frame.on_background(self.bg);
-            let info = bitmap_info(frame.width as i32, frame.height as i32);
+                + (self.preview_rect.bottom - self.preview_rect.top - height) / 2;
             SetDIBitsToDevice(
                 dc,
                 x,
                 y,
-                frame.width as u32,
-                frame.height as u32,
+                width as u32,
+                height as u32,
                 0,
                 0,
                 0,
-                frame.height as u32,
+                height as u32,
                 pixels.as_ptr().cast(),
-                &info,
+                info,
                 DIB_RGB_COLORS,
             );
         }
@@ -789,6 +798,13 @@ impl App {
 
     unsafe fn paint_list(&self, dc: HDC, dpi: f64) {
         let rect = self.debug_regions[&LIST];
+        let area = RECT {
+            bottom: rect.bottom + (34.0 * dpi).round() as i32,
+            ..rect
+        };
+        if !RectVisible(dc, &area).as_bool() {
+            return;
+        }
         ui::border(dc, rect, ui::WHITE, (2.0 * dpi).round() as i32);
         let saved = SaveDC(dc);
         IntersectClipRect(
@@ -908,6 +924,9 @@ impl App {
 
     unsafe fn paint_details(&mut self, dc: HDC, dpi: f64) {
         let panel = self.details_panel();
+        if !RectVisible(dc, &panel).as_bool() {
+            return;
+        }
         ui::fill(dc, &panel, ui::BLACK);
         ui::border(dc, panel, ui::WHITE, (2.0 * dpi).round() as i32);
         ui::label(

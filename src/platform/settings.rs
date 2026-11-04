@@ -23,7 +23,7 @@ impl App {
             self.settings_regions
                 .insert(*id, ui::rect(dpi, 58.0, y + 50.0, width - 116.0, 32.0));
         }
-        let _ = InvalidateRect(Some(self.settings), None, true);
+        let _ = InvalidateRect(Some(self.settings), None, false);
     }
 
     pub unsafe fn show_settings(&mut self) {
@@ -54,7 +54,7 @@ impl App {
         let dc = BeginPaint(self.settings, &mut ps);
         let mut client = RECT::default();
         let _ = GetClientRect(self.settings, &mut client);
-        ui::fill(dc, &client, ui::BLACK);
+        ui::fill(dc, &ps.rcPaint, ui::BLACK);
         let dpi = GetDpiForWindow(self.settings).max(96) as f64 / 96.0;
         let width = client.right as f64 / dpi;
         let height = client.bottom as f64 / dpi;

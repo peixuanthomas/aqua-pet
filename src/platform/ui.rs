@@ -76,9 +76,8 @@ impl Drop for Fonts {
 }
 
 pub unsafe fn fill(dc: HDC, rect: &RECT, color: COLORREF) {
-    let brush = CreateSolidBrush(color);
-    FillRect(dc, rect, brush);
-    let _ = DeleteObject(brush.into());
+    SetDCBrushColor(dc, color);
+    FillRect(dc, rect, HBRUSH(GetStockObject(DC_BRUSH).0));
 }
 
 pub unsafe fn border(dc: HDC, rect: RECT, color: COLORREF, thickness: i32) {
