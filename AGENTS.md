@@ -39,6 +39,7 @@
 
 ## Github
 - 使用本地gh进行操作
+- 提交了使用codex编辑的内容时，将共同作者添加 @codex
 
 ## 文档
 - 所有crate都要拥有自己的README，用于提示此crate的作用。在进行了相应的修改之后也要一并修改README的内容，确保README和当前代码能够对上。
