@@ -20,6 +20,11 @@ pub struct State {
     pub list_hot: Option<usize>,
 }
 
+pub struct ControlRegion {
+    pub id: usize,
+    pub rect: RECT,
+}
+
 #[derive(Default)]
 pub struct Fonts {
     pub body: HFONT,
@@ -169,10 +174,10 @@ pub unsafe fn heart(dc: HDC, dpi: f64, x: f64, y: f64) {
         for column in 0..7 {
             if bits & (1 << (6 - column)) != 0 {
                 let rect = RECT {
-                    left: (x * dpi).round() as i32 + column * pixel as i32,
-                    top: (y * dpi).round() as i32 + row * pixel as i32,
-                    right: (x * dpi).round() as i32 + (column + 1) * pixel as i32,
-                    bottom: (y * dpi).round() as i32 + (row + 1) * pixel as i32,
+                    left: (x * dpi).round() as i32 + column * pixel,
+                    top: (y * dpi).round() as i32 + row * pixel,
+                    right: (x * dpi).round() as i32 + (column + 1) * pixel,
+                    bottom: (y * dpi).round() as i32 + (row + 1) * pixel,
                 };
                 fill(dc, &rect, RED);
             }
@@ -212,12 +217,12 @@ pub unsafe fn button(
     dc: HDC,
     state: &State,
     dpi: f64,
-    id: usize,
-    rect: RECT,
+    region: ControlRegion,
     value: &str,
     font: HFONT,
     primary: bool,
 ) {
+    let ControlRegion { id, rect } = region;
     let selected = state.hot == Some(id) || state.focus == Some(id);
     let color = if primary { CYAN } else { WHITE };
     if selected {
@@ -245,12 +250,12 @@ pub unsafe fn choice(
     dc: HDC,
     state: &State,
     dpi: f64,
-    id: usize,
-    rect: RECT,
+    region: ControlRegion,
     name: &str,
     value: &str,
     font: HFONT,
 ) {
+    let ControlRegion { id, rect } = region;
     let selected = state.hot == Some(id) || state.focus == Some(id) || state.popup == Some(id);
     if selected {
         heart(

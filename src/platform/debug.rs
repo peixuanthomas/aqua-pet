@@ -576,6 +576,13 @@ impl App {
         let _ = InvalidateRect(Some(self.debug), None, false);
     }
 
+    fn debug_region(&self, id: usize) -> ui::ControlRegion {
+        ui::ControlRegion {
+            id,
+            rect: self.debug_regions[&id],
+        }
+    }
+
     pub unsafe fn paint(&mut self) {
         let mut ps = PAINTSTRUCT::default();
         let dc = BeginPaint(self.debug, &mut ps);
@@ -615,8 +622,7 @@ impl App {
                 dc,
                 &self.debug_ui,
                 dpi,
-                id,
-                self.debug_regions[&id],
+                self.debug_region(id),
                 name,
                 &items[self.choice_index(id)],
                 self.fonts.small,
@@ -636,8 +642,7 @@ impl App {
                 dc,
                 &self.debug_ui,
                 dpi,
-                id,
-                self.debug_regions[&id],
+                self.debug_region(id),
                 if id == IDLE {
                     "默认动作"
                 } else {
@@ -704,8 +709,7 @@ impl App {
                 dc,
                 &self.debug_ui,
                 dpi,
-                id,
-                self.debug_regions[&id],
+                self.debug_region(id),
                 match id {
                     PLAY => play_label,
                     RESTART => "重播",
@@ -720,8 +724,7 @@ impl App {
             dc,
             &self.debug_ui,
             dpi,
-            LOOP,
-            self.debug_regions[&LOOP],
+            self.debug_region(LOOP),
             if self.player.looping {
                 "循环：开"
             } else {
@@ -736,8 +739,7 @@ impl App {
                 dc,
                 &self.debug_ui,
                 dpi,
-                id,
-                self.debug_regions[&id],
+                self.debug_region(id),
                 name,
                 &items[self.choice_index(id)],
                 self.fonts.small,
@@ -856,8 +858,7 @@ impl App {
                 dc,
                 &self.debug_ui,
                 dpi,
-                CLEAR_FILTERS,
-                self.debug_regions[&CLEAR_FILTERS],
+                self.debug_region(CLEAR_FILTERS),
                 "清空筛选",
                 self.fonts.body,
                 true,
@@ -925,8 +926,7 @@ impl App {
             dc,
             &self.debug_ui,
             dpi,
-            DETAILS_CLOSE,
-            self.debug_regions[&DETAILS_CLOSE],
+            self.debug_region(DETAILS_CLOSE),
             "关闭",
             self.fonts.small,
             false,
