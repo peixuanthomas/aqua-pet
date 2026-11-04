@@ -8,16 +8,67 @@ pub const RED: COLORREF = COLORREF(0x0000ff);
 pub const YELLOW: COLORREF = COLORREF(0x00ffff);
 pub const DIM: COLORREF = COLORREF(0x3c3c3c);
 
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum Hover {
+    Control(usize),
+    ActionRow(usize),
+    PopupRow(usize),
+}
+
 #[derive(Default)]
 pub struct State {
-    pub hot: Option<usize>,
+    pub hot: Option<Hover>,
+    pub(super) pointer_window: HWND,
     pub active: Option<usize>,
     pub focus: Option<usize>,
     pub popup: Option<usize>,
     pub popup_top: usize,
-    pub popup_hot: Option<usize>,
     pub list_top: usize,
-    pub list_hot: Option<usize>,
+}
+
+impl State {
+    pub unsafe fn track_pointer(&mut self, hwnd: HWND) {
+        if self.pointer_window != hwnd
+            && TrackMouseEvent(&mut TRACKMOUSEEVENT {
+                cbSize: size_of::<TRACKMOUSEEVENT>() as u32,
+                dwFlags: TME_LEAVE,
+                hwndTrack: hwnd,
+                ..Default::default()
+            })
+            .is_ok()
+        {
+            self.pointer_window = hwnd;
+        }
+    }
+
+    pub fn pointer_left(&mut self, hwnd: HWND) -> bool {
+        if self.pointer_window != hwnd {
+            return false;
+        }
+        self.pointer_window = HWND::default();
+        true
+    }
+
+    pub fn selected(&self, id: usize) -> bool {
+        self.popup.is_none() && self.focus == Some(id)
+    }
+
+    pub fn hot_control(&self) -> Option<usize> {
+        match self.hot {
+            Some(Hover::Control(id)) => Some(id),
+            _ => None,
+        }
+    }
+}
+
+pub(super) unsafe fn paint_window(hwnd: HWND, draw: impl FnOnce(HDC, RECT)) {
+    let mut ps = PAINTSTRUCT::default();
+    let dc = BeginPaint(hwnd, &mut ps);
+    let mut client = RECT::default();
+    let _ = GetClientRect(hwnd, &mut client);
+    fill(dc, &ps.rcPaint, BLACK);
+    draw(dc, client);
+    let _ = EndPaint(hwnd, &ps);
 }
 
 pub struct ControlRegion {
@@ -145,6 +196,9 @@ pub unsafe fn text(
     color: COLORREF,
     format: DRAW_TEXT_FORMAT,
 ) {
+    if !RectVisible(dc, rect).as_bool() {
+        return;
+    }
     let old = SelectObject(dc, font.into());
     SetTextColor(dc, color);
     SetBkMode(dc, TRANSPARENT);
@@ -185,6 +239,9 @@ pub unsafe fn heart(dc: HDC, dpi: f64, x: f64, y: f64) {
 }
 
 pub unsafe fn logo(dc: HDC, dpi: f64, x: f64, y: f64) {
+    if !RectVisible(dc, &rect(dpi, x, y, 92.0, 28.0)).as_bool() {
+        return;
+    }
     let letters = [
         [14u8, 17, 17, 31, 17, 17, 17],
         [14, 17, 17, 17, 21, 18, 13],
@@ -222,9 +279,14 @@ pub unsafe fn button(
     primary: bool,
 ) {
     let ControlRegion { id, rect } = region;
-    let selected = state.hot == Some(id) || state.focus == Some(id);
-    let color = if primary { CYAN } else { WHITE };
-    if selected {
+    let color = if state.hot_control() == Some(id) {
+        YELLOW
+    } else if primary {
+        CYAN
+    } else {
+        WHITE
+    };
+    if state.selected(id) {
         heart(
             dc,
             dpi,
@@ -232,17 +294,7 @@ pub unsafe fn button(
             rect.top as f64 / dpi + 11.0,
         );
     }
-    label(
-        dc,
-        rect,
-        value,
-        font,
-        if state.active == Some(id) {
-            YELLOW
-        } else {
-            color
-        },
-    );
+    label(dc, rect, value, font, color);
 }
 
 pub unsafe fn choice(
@@ -255,8 +307,8 @@ pub unsafe fn choice(
     font: HFONT,
 ) {
     let ControlRegion { id, rect } = region;
-    let selected = state.hot == Some(id) || state.focus == Some(id) || state.popup == Some(id);
-    if selected {
+    let hot = state.hot_control() == Some(id);
+    if state.selected(id) {
         heart(
             dc,
             dpi,
@@ -268,7 +320,7 @@ pub unsafe fn choice(
         right: rect.left + (rect.right - rect.left) * 45 / 100,
         ..rect
     };
-    label(dc, name_rect, name, font, MUTED);
+    label(dc, name_rect, name, font, if hot { YELLOW } else { MUTED });
     let mut value_rect = RECT {
         left: name_rect.right,
         ..rect
@@ -278,7 +330,7 @@ pub unsafe fn choice(
         &mut value_rect,
         value,
         font,
-        if selected { YELLOW } else { WHITE },
+        if hot { YELLOW } else { WHITE },
         DT_SINGLELINE | DT_VCENTER | DT_RIGHT | DT_NOPREFIX | DT_END_ELLIPSIS,
     );
     let arrow_x = rect.right - (8.0 * dpi) as i32;
@@ -293,7 +345,7 @@ pub unsafe fn choice(
                 right: arrow_x + (width + 1) / 2,
                 bottom: arrow_y + (row + 1) * dpi.round() as i32,
             },
-            if selected { YELLOW } else { WHITE },
+            if hot { YELLOW } else { WHITE },
         );
     }
 }
@@ -307,7 +359,7 @@ pub unsafe fn slider(
     value: i32,
     maximum: i32,
 ) {
-    let selected = state.hot == Some(id) || state.focus == Some(id);
+    let hot = state.hot_control() == Some(id);
     let unit = dpi.round().max(1.0) as i32;
     let track = RECT {
         left: rect.left + 8 * unit,
@@ -334,7 +386,7 @@ pub unsafe fn slider(
             right: position + 4 * unit,
             bottom: rect.bottom - 2 * unit,
         },
-        if selected { YELLOW } else { WHITE },
+        if hot { YELLOW } else { WHITE },
     );
 }
 

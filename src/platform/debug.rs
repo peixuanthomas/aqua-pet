@@ -19,14 +19,27 @@ impl App {
         )?;
         let prompt = wide("搜索动作或资源名");
         send(self.search, 0x1501, 1, prompt.as_ptr() as isize);
-        self.categories = self
+        let mut categories: Vec<_> = self
             .catalog
             .clips
             .iter()
             .map(|clip| clip.category.clone())
             .collect();
-        self.categories.sort();
-        self.categories.dedup();
+        categories.sort();
+        categories.dedup();
+        categories.insert(0, "全部分类".into());
+        self.choices = HashMap::from([
+            (
+                KIND,
+                ["全部类型", "原作动作", "原始素材", "未使用素材"]
+                    .map(str::to_owned)
+                    .to_vec(),
+            ),
+            (CATEGORY, categories),
+            (SPEED, RATES.iter().map(|rate| format!("{rate}×")).collect()),
+            (SCALE, (1..=8).map(|scale| format!("{scale}×")).collect()),
+            (BG, ["深色", "浅色", "棋盘格"].map(str::to_owned).to_vec()),
+        ]);
         self.update_font();
         self.filter();
         self.sync_selection();
@@ -100,6 +113,7 @@ impl App {
             );
         }
         self.debug_ui.popup = None;
+        self.refresh_debug_hover();
         self.preview_dirty = true;
         let _ = InvalidateRect(Some(self.debug), None, false);
     }
@@ -120,7 +134,8 @@ impl App {
                 };
                 kind_ok
                     && (self.category_filter == 0
-                        || self.categories.get(self.category_filter - 1) == Some(&clip.category))
+                        || self.choices[&CATEGORY].get(self.category_filter)
+                            == Some(&clip.category))
                     && (search.is_empty()
                         || format!(
                             "{} {} {} {}",
@@ -137,7 +152,6 @@ impl App {
             .map(|(index, _)| index)
             .collect();
         self.debug_ui.list_top = 0;
-        self.debug_ui.list_hot = None;
         self.layout();
     }
 
@@ -146,7 +160,7 @@ impl App {
             return 1;
         };
         let dpi = unsafe { GetDpiForWindow(self.debug).max(96) as f64 / 96.0 };
-        (((rect.bottom - rect.top) as f64 / dpi) as usize / 36).max(1)
+        ((rect.bottom - rect.top) / (36.0 * dpi).round() as i32).max(1) as usize
     }
 
     pub unsafe fn sync_selection(&mut self) {
@@ -167,19 +181,8 @@ impl App {
         let _ = InvalidateRect(Some(self.debug), None, false);
     }
 
-    fn choice_items(&self, id: usize) -> Vec<String> {
-        match id {
-            KIND => ["全部类型", "原作动作", "原始素材", "未使用素材"]
-                .map(str::to_string)
-                .to_vec(),
-            CATEGORY => std::iter::once("全部分类".to_string())
-                .chain(self.categories.iter().cloned())
-                .collect(),
-            SPEED => RATES.iter().map(|rate| format!("{rate}×")).collect(),
-            SCALE => (1..=8).map(|scale| format!("{scale}×")).collect(),
-            BG => ["深色", "浅色", "棋盘格"].map(str::to_string).to_vec(),
-            _ => Vec::new(),
-        }
+    fn choice_items(&self, id: usize) -> &[String] {
+        &self.choices[&id]
     }
 
     fn choice_index(&self, id: usize) -> usize {
@@ -219,7 +222,8 @@ impl App {
             return None;
         }
         let dpi = unsafe { GetDpiForWindow(self.debug).max(96) as f64 / 96.0 };
-        let row = ((point.y - rect.top) as f64 / dpi) as usize / 34;
+        let y = point.y - rect.top - (2.0 * dpi) as i32;
+        let row = usize::try_from(y).ok()? / (34.0 * dpi).round() as usize;
         let index = self.debug_ui.popup_top + row;
         (row < 8 && index < self.choice_items(id).len()).then_some(index)
     }
@@ -230,7 +234,7 @@ impl App {
             return None;
         }
         let dpi = unsafe { GetDpiForWindow(self.debug).max(96) as f64 / 96.0 };
-        let row = ((point.y - rect.top) as f64 / dpi) as usize / 36;
+        let row = (point.y - rect.top) as usize / (36.0 * dpi).round() as usize;
         let index = self.debug_ui.list_top + row;
         (row < self.list_rows() && index < self.visible.len()).then_some(index)
     }
@@ -257,14 +261,92 @@ impl App {
                 .filter(|rect| ui::contains(rect, point))
                 .map(|_| DETAILS_CLOSE);
         }
+        if self
+            .debug_regions
+            .get(&CLEAR_FILTERS)
+            .is_some_and(|rect| ui::contains(rect, point))
+        {
+            return Some(CLEAR_FILTERS);
+        }
         self.debug_regions
             .iter()
             .find_map(|(&id, rect)| ui::contains(rect, point).then_some(id))
     }
 
+    fn debug_hover_at(&self, point: POINT) -> Option<ui::Hover> {
+        if self.debug_ui.popup.is_some() {
+            return self.popup_row(point).map(ui::Hover::PopupRow);
+        }
+        match self.debug_hit(point)? {
+            LIST => self.list_row(point).map(ui::Hover::ActionRow),
+            id => Some(ui::Hover::Control(id)),
+        }
+    }
+
+    unsafe fn debug_hover_area(&self, hot: ui::Hover) -> Option<RECT> {
+        let dpi = GetDpiForWindow(self.debug).max(96) as f64 / 96.0;
+        let (mut area, row, height) = match hot {
+            ui::Hover::Control(id) => return self.debug_regions.get(&id).copied(),
+            ui::Hover::ActionRow(index) => (
+                self.debug_regions[&LIST],
+                index.checked_sub(self.debug_ui.list_top)?,
+                36.0,
+            ),
+            ui::Hover::PopupRow(index) => {
+                let mut rect = self.popup_rect(self.debug_ui.popup?);
+                rect.top += (2.0 * dpi) as i32;
+                (rect, index.checked_sub(self.debug_ui.popup_top)?, 34.0)
+            }
+        };
+        let height = (height * dpi).round() as i32;
+        area.top += row as i32 * height;
+        area.bottom = area.bottom.min(area.top + height);
+        (area.top < area.bottom).then_some(area)
+    }
+
+    unsafe fn set_debug_hover(&mut self, next: Option<ui::Hover>) {
+        let old = self.debug_ui.hot;
+        if next == old {
+            return;
+        }
+        self.debug_ui.hot = next;
+        for hot in [old, next].into_iter().flatten() {
+            if let Some(rect) = self.debug_hover_area(hot) {
+                let _ = InvalidateRect(Some(self.debug), Some(&rect), false);
+            }
+        }
+    }
+
+    unsafe fn refresh_debug_hover(&mut self) {
+        let mut point = POINT::default();
+        let window = GetCursorPos(&mut point)
+            .ok()
+            .map(|()| WindowFromPoint(point));
+        let next = if let Some(hwnd) = window
+            && (hwnd == self.debug || hwnd == self.search)
+        {
+            self.debug_ui.track_pointer(hwnd);
+            let _ = ScreenToClient(self.debug, &mut point);
+            self.debug_hover_at(point)
+        } else {
+            None
+        };
+        self.set_debug_hover(next);
+    }
+
+    pub(super) unsafe fn debug_pointer(&mut self, hwnd: HWND, msg: u32, point: POINT) {
+        if msg == WM_MOUSEMOVE {
+            self.debug_ui.track_pointer(hwnd);
+            self.set_debug_hover(self.debug_hover_at(point));
+        } else if self.debug_ui.pointer_left(hwnd) {
+            self.set_debug_hover(None);
+        }
+    }
+
     fn toggle_details(&mut self, open: bool) {
         self.details_open = open;
         self.details_scroll = 0;
+        self.debug_ui.focus = Some(if open { DETAILS_CLOSE } else { DETAILS });
         unsafe {
             self.layout();
         }
@@ -291,6 +373,7 @@ impl App {
                 text(self.search, "");
                 self.kind_filter = 0;
                 self.category_filter = 0;
+                self.debug_ui.focus = Some(LIST);
                 self.filter();
                 return;
             },
@@ -302,9 +385,9 @@ impl App {
                     self.debug_ui.popup_top = self.choice_index(id).saturating_sub(3);
                     let maximum = self.choice_items(id).len().saturating_sub(8);
                     self.debug_ui.popup_top = self.debug_ui.popup_top.min(maximum);
-                    self.debug_ui.popup_hot = None;
                 }
                 unsafe {
+                    self.refresh_debug_hover();
                     let _ = InvalidateRect(Some(self.debug), None, false);
                 }
                 return;
@@ -370,7 +453,9 @@ impl App {
         if id == SEARCH && notification == EN_CHANGE as usize {
             self.filter();
         } else if id == SEARCH && notification == EN_SETFOCUS as usize {
+            self.debug_ui.popup = None;
             self.debug_ui.focus = Some(SEARCH);
+            self.refresh_debug_hover();
             let _ = InvalidateRect(Some(self.debug), None, false);
         }
     }
@@ -378,23 +463,9 @@ impl App {
     pub unsafe fn debug_mouse(&mut self, msg: u32, wp: WPARAM, lp: LPARAM) {
         let point = ui::point(lp);
         match msg {
-            WM_MOUSEMOVE => {
-                if self.debug_ui.popup.is_some() {
-                    let hot = self.popup_row(point);
-                    if self.debug_ui.popup_hot != hot {
-                        self.debug_ui.popup_hot = hot;
-                        let _ = InvalidateRect(Some(self.debug), None, false);
-                    }
-                    return;
-                }
-                let hot = self.debug_hit(point);
-                let list_hot = self.list_row(point);
-                if self.debug_ui.hot != hot || self.debug_ui.list_hot != list_hot {
-                    self.debug_ui.hot = hot;
-                    self.debug_ui.list_hot = list_hot;
-                    let _ = InvalidateRect(Some(self.debug), None, false);
-                }
-                if self.debug_ui.active == Some(TIMELINE) {
+            WM_MOUSEMOVE | WM_MOUSELEAVE => {
+                self.debug_pointer(self.debug, msg, point);
+                if msg == WM_MOUSEMOVE && self.debug_ui.active == Some(TIMELINE) {
                     self.seek_from_point(point);
                 }
             }
@@ -407,15 +478,16 @@ impl App {
                         self.debug_ui.popup = None;
                         let _ = InvalidateRect(Some(self.debug), None, false);
                     }
+                    self.set_debug_hover(self.debug_hover_at(point));
                     return;
                 }
                 let Some(id) = self.debug_hit(point) else {
                     return;
                 };
                 self.debug_ui.focus = Some(id);
+                let _ = InvalidateRect(Some(self.debug), None, false);
                 if id == SEARCH {
                     let _ = SetFocus(Some(self.search));
-                    let _ = InvalidateRect(Some(self.debug), None, false);
                     return;
                 }
                 let _ = SetFocus(Some(self.debug));
@@ -441,10 +513,11 @@ impl App {
             WM_MOUSEWHEEL => {
                 let delta = (wp.0 >> 16) as u16 as i16 as i32;
                 let direction = if delta > 0 { -3 } else { 3 };
-                if let Some(popup) = self.debug_ui.popup {
+                let area = if let Some(popup) = self.debug_ui.popup {
                     let count = self.choice_items(popup).len();
                     self.debug_ui.popup_top =
                         ui::scroll_offset(self.debug_ui.popup_top, direction, count, 8);
+                    self.popup_rect(popup)
                 } else if self.details_open {
                     let panel = self.details_panel();
                     let dpi = GetDpiForWindow(self.debug).max(96) as f64 / 96.0;
@@ -452,6 +525,7 @@ impl App {
                     let maximum = (self.details_height - visible).max(0);
                     self.details_scroll =
                         (self.details_scroll - delta.signum() * 48).clamp(0, maximum);
+                    panel
                 } else {
                     let count = self.visible.len();
                     self.debug_ui.list_top = ui::scroll_offset(
@@ -460,8 +534,10 @@ impl App {
                         count,
                         self.list_rows(),
                     );
-                }
-                let _ = InvalidateRect(Some(self.debug), None, false);
+                    self.debug_regions[&LIST]
+                };
+                self.refresh_debug_hover();
+                let _ = InvalidateRect(Some(self.debug), Some(&area), false);
             }
             _ => {}
         }
@@ -478,6 +554,7 @@ impl App {
     pub unsafe fn debug_key(&mut self, key: VIRTUAL_KEY) {
         if key == VK_ESCAPE {
             if self.debug_ui.popup.take().is_some() {
+                self.refresh_debug_hover();
                 let _ = InvalidateRect(Some(self.debug), None, false);
             } else if self.details_open {
                 self.toggle_details(false);
@@ -496,12 +573,20 @@ impl App {
                 key if key == VK_END => count as i32 - 1,
                 key if key == VK_RETURN || key == VK_SPACE => {
                     self.debug_ui.popup = None;
+                    self.refresh_debug_hover();
                     let _ = InvalidateRect(Some(self.debug), None, false);
                     return;
                 }
                 _ => return,
             };
-            self.select_choice(popup, next.clamp(0, count as i32 - 1) as usize);
+            let index = next.clamp(0, count as i32 - 1) as usize;
+            self.select_choice(popup, index);
+            self.debug_ui.popup = Some(popup);
+            self.debug_ui.popup_top = self
+                .debug_ui
+                .popup_top
+                .clamp(index.saturating_sub(7), index);
+            self.refresh_debug_hover();
             return;
         }
         let Some(focus) = self.debug_ui.focus else {
@@ -555,16 +640,25 @@ impl App {
     }
 
     pub unsafe fn debug_tab(&mut self, reverse: bool) {
-        const ORDER: [usize; 15] = [
-            SEARCH, KIND, CATEGORY, LIST, PLAY, RESTART, PREV, NEXT, IDLE, DETAILS, LOOP, SPEED,
-            SCALE, BG, TIMELINE,
-        ];
-        let current = ORDER
+        let list = if self.visible.is_empty() {
+            CLEAR_FILTERS
+        } else {
+            LIST
+        };
+        let order: &[usize] = if self.details_open {
+            &[SEARCH, KIND, CATEGORY, list, DETAILS_CLOSE]
+        } else {
+            &[
+                SEARCH, KIND, CATEGORY, list, PLAY, RESTART, PREV, NEXT, IDLE, DETAILS, LOOP,
+                SPEED, SCALE, BG, TIMELINE,
+            ]
+        };
+        let current = order
             .iter()
             .position(|id| Some(*id) == self.debug_ui.focus)
             .unwrap_or(0) as i32;
-        let next = (current + if reverse { -1 } else { 1 }).rem_euclid(ORDER.len() as i32);
-        let id = ORDER[next as usize];
+        let next = (current + if reverse { -1 } else { 1 }).rem_euclid(order.len() as i32);
+        let id = order[next as usize];
         self.debug_ui.popup = None;
         self.debug_ui.focus = Some(id);
         if id == SEARCH {
@@ -572,6 +666,7 @@ impl App {
         } else {
             let _ = SetFocus(Some(self.debug));
         }
+        self.refresh_debug_hover();
         let _ = InvalidateRect(Some(self.debug), None, false);
     }
 
@@ -590,12 +685,7 @@ impl App {
         let _ = InvalidateRect(Some(self.debug), Some(&area), false);
     }
 
-    pub unsafe fn paint(&mut self) {
-        let mut ps = PAINTSTRUCT::default();
-        let dc = BeginPaint(self.debug, &mut ps);
-        let mut client = RECT::default();
-        let _ = GetClientRect(self.debug, &mut client);
-        ui::fill(dc, &ps.rcPaint, ui::BLACK);
+    pub unsafe fn paint(&mut self, dc: HDC, client: RECT) {
         let dpi = GetDpiForWindow(self.debug).max(96) as f64 / 96.0;
         let width = client.right as f64 / dpi;
         let left = 300.0_f64.min(width * 0.30);
@@ -609,13 +699,15 @@ impl App {
             self.fonts.heading,
             ui::WHITE,
         );
-        if self.debug_ui.focus == Some(SEARCH) {
+        if self.debug_ui.selected(SEARCH) {
             ui::heart(dc, dpi, 8.0, 94.0);
         }
         ui::border(
             dc,
             self.debug_regions[&SEARCH],
-            if self.debug_ui.focus == Some(SEARCH) {
+            if self.debug_ui.hot_control() == Some(SEARCH) {
+                ui::YELLOW
+            } else if self.debug_ui.selected(SEARCH) {
                 ui::CYAN
             } else {
                 ui::WHITE
@@ -663,15 +755,16 @@ impl App {
             self.paint_preview(dc);
         }
         let position = (self.player.tick / clip.duration() * 10000.0).round() as i32;
-        ui::slider(
-            dc,
-            &self.debug_ui,
-            dpi,
-            TIMELINE,
-            self.debug_regions[&TIMELINE],
-            position,
-            10000,
-        );
+        let timeline = self.debug_regions[&TIMELINE];
+        if self.debug_ui.selected(TIMELINE) {
+            ui::heart(
+                dc,
+                dpi,
+                timeline.left as f64 / dpi - 18.0,
+                timeline.top as f64 / dpi + 8.0,
+            );
+        }
+        ui::slider(dc, &self.debug_ui, dpi, TIMELINE, timeline, position, 10000);
         let index = self.player.index(clip);
         let state = if self.player.waiting.is_some() {
             "等待继续"
@@ -760,7 +853,6 @@ impl App {
         if let Some(popup) = self.debug_ui.popup {
             self.paint_popup(dc, dpi, popup);
         }
-        let _ = EndPaint(self.debug, &ps);
     }
 
     unsafe fn paint_preview(&self, dc: HDC) {
@@ -826,9 +918,7 @@ impl App {
             let position = self.debug_ui.list_top + row;
             let clip = &self.catalog.clips[self.visible[position]];
             let y = rect.top + row as i32 * row_height;
-            if self.debug_ui.list_hot == Some(position)
-                || (self.debug_ui.focus == Some(LIST) && selected == Some(position))
-            {
+            if self.debug_ui.selected(LIST) && selected == Some(position) {
                 ui::heart(dc, dpi, 30.0, y as f64 / dpi + 12.0);
             }
             let tag = if clip.kind == "resource" {
@@ -848,7 +938,7 @@ impl App {
                 },
                 &format!("{tag} {}", clip.label),
                 self.fonts.small,
-                if selected == Some(position) {
+                if self.debug_ui.hot == Some(ui::Hover::ActionRow(position)) {
                     ui::YELLOW
                 } else {
                     ui::WHITE
@@ -1033,7 +1123,7 @@ impl App {
                 right: rect.right - (6.0 * dpi) as i32,
                 bottom: rect.top + (2.0 * dpi) as i32 + (row + 1) as i32 * row_height,
             };
-            if self.debug_ui.popup_hot == Some(index) {
+            if self.choice_index(id) == index {
                 ui::heart(
                     dc,
                     dpi,
@@ -1046,7 +1136,7 @@ impl App {
                 item,
                 &items[index],
                 self.fonts.small,
-                if index == self.choice_index(id) {
+                if self.debug_ui.hot == Some(ui::Hover::PopupRow(index)) {
                     ui::YELLOW
                 } else {
                     ui::WHITE

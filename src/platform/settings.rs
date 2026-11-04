@@ -1,5 +1,10 @@
 use super::*;
 
+pub(super) struct Row {
+    bounds: RECT,
+    slider: RECT,
+}
+
 impl App {
     pub unsafe fn create_settings_panel(&mut self) {
         self.update_settings_font();
@@ -20,8 +25,13 @@ impl App {
         self.settings_regions.clear();
         for (index, id) in [WALK_CHANCE, DISTANCE_BIAS].iter().enumerate() {
             let y = 88.0 + index as f64 * row;
-            self.settings_regions
-                .insert(*id, ui::rect(dpi, 58.0, y + 50.0, width - 116.0, 32.0));
+            self.settings_regions.insert(
+                *id,
+                Row {
+                    bounds: ui::rect(dpi, 24.0, y, width - 48.0, row),
+                    slider: ui::rect(dpi, 58.0, y + 50.0, width - 116.0, 32.0),
+                },
+            );
         }
         let _ = InvalidateRect(Some(self.settings), None, false);
     }
@@ -42,19 +52,15 @@ impl App {
                 SWP_NOACTIVATE | SWP_NOZORDER,
             );
         }
-        self.layout_settings();
         let _ = ShowWindow(self.settings, SW_RESTORE);
         let _ = SetForegroundWindow(self.settings);
         let _ = SetFocus(Some(self.settings));
         self.settings_ui.focus = Some(WALK_CHANCE);
+        self.settings_ui.hot = None;
+        self.layout_settings();
     }
 
-    pub unsafe fn paint_settings(&self) {
-        let mut ps = PAINTSTRUCT::default();
-        let dc = BeginPaint(self.settings, &mut ps);
-        let mut client = RECT::default();
-        let _ = GetClientRect(self.settings, &mut client);
-        ui::fill(dc, &ps.rcPaint, ui::BLACK);
+    pub unsafe fn paint_settings(&self, dc: HDC, client: RECT) {
         let dpi = GetDpiForWindow(self.settings).max(96) as f64 / 96.0;
         let width = client.right as f64 / dpi;
         let height = client.bottom as f64 / dpi;
@@ -97,7 +103,7 @@ impl App {
                     ("短", "长"),
                 )
             };
-            if self.settings_ui.hot == Some(*id) || self.settings_ui.focus == Some(*id) {
+            if self.settings_ui.selected(*id) {
                 ui::heart(dc, dpi, 38.0, y + 19.0);
             }
             ui::label(
@@ -105,7 +111,7 @@ impl App {
                 ui::rect(dpi, 58.0, y + 10.0, width - 220.0, 32.0),
                 name,
                 self.settings_fonts.body,
-                if self.settings_ui.focus == Some(*id) {
+                if self.settings_ui.hot_control() == Some(*id) {
                     ui::YELLOW
                 } else {
                     ui::WHITE
@@ -130,7 +136,7 @@ impl App {
                 &self.settings_ui,
                 dpi,
                 *id,
-                self.settings_regions[id],
+                self.settings_regions[id].slider,
                 current as i32,
                 100,
             );
@@ -158,33 +164,53 @@ impl App {
             self.settings_fonts.small,
             ui::MUTED,
         );
-        let _ = EndPaint(self.settings, &ps);
     }
 
     fn setting_at(&self, point: POINT) -> Option<usize> {
         self.settings_regions
             .iter()
-            .find_map(|(&id, rect)| ui::contains(rect, point).then_some(id))
+            .find_map(|(&id, row)| ui::contains(&row.bounds, point).then_some(id))
+    }
+
+    unsafe fn set_settings_hover(&mut self, next: Option<usize>) {
+        let old = self.settings_ui.hot_control();
+        if old == next {
+            return;
+        }
+        self.settings_ui.hot = next.map(ui::Hover::Control);
+        for id in [old, next].into_iter().flatten() {
+            let _ = InvalidateRect(
+                Some(self.settings),
+                Some(&self.settings_regions[&id].bounds),
+                false,
+            );
+        }
     }
 
     fn set_setting(&mut self, id: usize, value: i32, save: bool) {
         let value = value.clamp(0, 100) as u8;
         match id {
-            WALK_CHANCE => self.wander.set_probability(value),
-            DISTANCE_BIAS => self.wander.set_distance_bias(value),
+            WALK_CHANCE if self.wander.probability() != value => self.wander.set_probability(value),
+            DISTANCE_BIAS if self.wander.distance_bias() != value => {
+                self.wander.set_distance_bias(value)
+            }
             _ => return,
         }
         if save {
             self.save_settings();
         }
         unsafe {
-            let _ = InvalidateRect(Some(self.settings), None, false);
+            let _ = InvalidateRect(
+                Some(self.settings),
+                Some(&self.settings_regions[&id].bounds),
+                false,
+            );
         }
     }
 
     fn set_setting_from_point(&mut self, id: usize, point: POINT) {
-        if let Some(rect) = self.settings_regions.get(&id) {
-            let value = ui::slider_value(rect, point.x, 100);
+        if let Some(row) = self.settings_regions.get(&id) {
+            let value = ui::slider_value(&row.slider, point.x, 100);
             self.set_setting(id, value, false);
         }
     }
@@ -193,34 +219,36 @@ impl App {
         let point = ui::point(lp);
         match msg {
             WM_MOUSEMOVE => {
-                let hot = self.setting_at(point);
-                if self.settings_ui.hot != hot {
-                    self.settings_ui.hot = hot;
-                    let _ = InvalidateRect(Some(self.settings), None, false);
-                }
+                self.settings_ui.track_pointer(self.settings);
+                self.set_settings_hover(self.setting_at(point));
                 if let Some(id) = self.settings_ui.active {
                     self.set_setting_from_point(id, point);
                 }
             }
+            WM_MOUSELEAVE if self.settings_ui.pointer_left(self.settings) => {
+                self.set_settings_hover(None)
+            }
             WM_LBUTTONDOWN => {
                 if let Some(id) = self.setting_at(point) {
-                    self.settings_ui.active = Some(id);
                     self.settings_ui.focus = Some(id);
                     let _ = SetFocus(Some(self.settings));
-                    SetCapture(self.settings);
-                    self.set_setting_from_point(id, point);
+                    if ui::contains(&self.settings_regions[&id].slider, point) {
+                        self.settings_ui.active = Some(id);
+                        SetCapture(self.settings);
+                        self.set_setting_from_point(id, point);
+                    }
+                    let _ = InvalidateRect(Some(self.settings), None, false);
                 }
             }
             WM_LBUTTONUP => {
                 if self.settings_ui.active.take().is_some() {
                     let _ = ReleaseCapture();
                     self.save_settings();
-                    let _ = InvalidateRect(Some(self.settings), None, false);
                 }
             }
             WM_MOUSEWHEEL => {
                 let delta = (wp.0 >> 16) as u16 as i16 as i32 / 120;
-                if let Some(id) = self.settings_ui.hot.or(self.settings_ui.focus) {
+                if let Some(id) = self.settings_ui.hot_control().or(self.settings_ui.focus) {
                     let current = if id == WALK_CHANCE {
                         self.wander.probability()
                     } else {
@@ -259,10 +287,11 @@ impl App {
         self.set_setting(id, value, true);
     }
 
-    pub unsafe fn settings_tab(&mut self, reverse: bool) {
-        let next = match (self.settings_ui.focus, reverse) {
-            (Some(WALK_CHANCE), false) | (Some(DISTANCE_BIAS), true) => DISTANCE_BIAS,
-            _ => WALK_CHANCE,
+    pub unsafe fn settings_tab(&mut self) {
+        let next = if self.settings_ui.focus == Some(WALK_CHANCE) {
+            DISTANCE_BIAS
+        } else {
+            WALK_CHANCE
         };
         self.settings_ui.focus = Some(next);
         let _ = SetFocus(Some(self.settings));

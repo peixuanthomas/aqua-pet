@@ -173,14 +173,14 @@ struct App {
     debug_ui: ui::State,
     settings_ui: ui::State,
     debug_regions: HashMap<usize, RECT>,
-    settings_regions: HashMap<usize, RECT>,
+    settings_regions: HashMap<usize, settings::Row>,
     kind_filter: usize,
     category_filter: usize,
     details_open: bool,
     details_scroll: i32,
     details_height: i32,
     visible: Vec<usize>,
-    categories: Vec<String>,
+    choices: HashMap<usize, Vec<String>>,
     bounds: Bounds,
     motion_bounds: Bounds,
     desktop: desktop::Desktop,
@@ -244,7 +244,7 @@ impl App {
             details_scroll: 0,
             details_height: 0,
             visible: vec![],
-            categories: vec![],
+            choices: HashMap::new(),
             bounds,
             motion_bounds: bounds,
             desktop: desktop::Desktop::default(),
@@ -723,11 +723,15 @@ impl App {
                 self.debug_command(wp);
                 Some(LRESULT(0))
             }
-            WM_MOUSEMOVE | WM_LBUTTONDOWN | WM_LBUTTONUP | WM_MOUSEWHEEL if debug => {
+            WM_MOUSEMOVE | WM_MOUSELEAVE | WM_LBUTTONDOWN | WM_LBUTTONUP | WM_MOUSEWHEEL
+                if debug =>
+            {
                 self.debug_mouse(msg, wp, lp);
                 Some(LRESULT(0))
             }
-            WM_MOUSEMOVE | WM_LBUTTONDOWN | WM_LBUTTONUP | WM_MOUSEWHEEL if settings => {
+            WM_MOUSEMOVE | WM_MOUSELEAVE | WM_LBUTTONDOWN | WM_LBUTTONUP | WM_MOUSEWHEEL
+                if settings =>
+            {
                 self.settings_mouse(msg, wp, lp);
                 Some(LRESULT(0))
             }
@@ -753,11 +757,11 @@ impl App {
                 Some(LRESULT(0))
             }
             WM_PAINT if debug => {
-                self.paint();
+                ui::paint_window(hwnd, |dc, client| self.paint(dc, client));
                 Some(LRESULT(0))
             }
             WM_PAINT if settings => {
-                self.paint_settings();
+                ui::paint_window(hwnd, |dc, client| self.paint_settings(dc, client));
                 Some(LRESULT(0))
             }
             WM_CLOSE => {
@@ -972,6 +976,7 @@ pub fn run(catalog: Catalog, debug: bool, smoke: bool) -> Result<(), String> {
         if let Err(error) = setup {
             return Err(error.to_string());
         }
+        let search = APP.with(|slot| slot.borrow().as_ref().unwrap().search);
         let mut message = MSG::default();
         loop {
             let result = GetMessageW(&mut message, None, 0, 0).0;
@@ -981,13 +986,24 @@ pub fn run(catalog: Catalog, debug: bool, smoke: bool) -> Result<(), String> {
             if result < 0 {
                 return Err(windows::core::Error::from_thread().to_string());
             }
+            if message.hwnd == search && matches!(message.message, WM_MOUSEMOVE | WM_MOUSELEAVE) {
+                let mut point = message.pt;
+                let _ = ScreenToClient(panel, &mut point);
+                APP.with(|slot| {
+                    slot.borrow_mut().as_mut().unwrap().debug_pointer(
+                        search,
+                        message.message,
+                        point,
+                    )
+                });
+            }
             if message.message == WM_KEYDOWN && message.wParam.0 == VK_TAB.0 as usize {
                 let reverse = GetKeyState(VK_SHIFT.0 as i32) < 0;
                 let handled = APP.with(|slot| {
                     let mut borrowed = slot.borrow_mut();
                     let app = borrowed.as_mut().unwrap();
                     if message.hwnd == settings {
-                        app.settings_tab(reverse);
+                        app.settings_tab();
                         true
                     } else if message.hwnd == panel || message.hwnd == app.search {
                         app.debug_tab(reverse);
