@@ -29,8 +29,8 @@ fn run() -> Result<(), String> {
     {
         return Ok(());
     }
-    let catalog = catalog::Catalog::load()?;
     if args.iter().any(|a| a == "--validate") {
+        let catalog = catalog::Catalog::load()?;
         let idle = &catalog.clips[catalog.idle_index()];
         if (idle.duration() - 48.0).abs() > 1e-8 {
             return Err("默认晃动必须为48个原作tick（1.6秒）".into());
@@ -47,14 +47,13 @@ fn run() -> Result<(), String> {
     #[cfg(windows)]
     {
         platform::run(
-            catalog,
+            catalog::Catalog::load_desktop()?,
             args.iter().any(|a| a == "--debug"),
             args.iter().any(|a| a == "--smoke-test"),
         )
     }
     #[cfg(not(windows))]
     {
-        let _ = catalog;
         Err("桌宠窗口目前支持Windows 10/11。素材与动画测试可跨平台运行。".into())
     }
 }

@@ -120,10 +120,17 @@ pub struct Catalog {
     pub clips: Vec<Clip>,
     pub source_hash: String,
     pub game_fps: f64,
+    composites: std::ops::Range<usize>,
 }
 
 impl Catalog {
     pub fn load() -> Result<Self, String> {
+        let mut catalog = Self::load_desktop()?;
+        catalog.load_composites()?;
+        Ok(catalog)
+    }
+
+    pub fn load_desktop() -> Result<Self, String> {
         let file: SpriteFile = serde_json::from_str(include_str!("../assets/sprites.json"))
             .map_err(|e| e.to_string())?;
         let mut images = HashMap::new();
@@ -138,10 +145,7 @@ impl Catalog {
         let mut clips: Vec<Clip> =
             serde_json::from_str(include_str!("../assets/character-actions.json"))
                 .map_err(|e| format!("角色动作: {e}"))?;
-        let composites: Vec<Clip> =
-            serde_json::from_str(include_str!("../assets/composite-actions.json"))
-                .map_err(|e| format!("组合动作: {e}"))?;
-        clips.extend(composites);
+        let composite_offset = clips.len();
         for sprite in &file.sprites {
             let unused = sprite.category.contains("Unused");
             let fps = if sprite.playback_speed_type == "FramesPerSecond" {
@@ -169,12 +173,32 @@ impl Catalog {
             clips,
             source_hash: file.source_sha256,
             game_fps: file.game_fps,
+            composites: composite_offset..composite_offset,
         };
-        catalog.validate()?;
+        catalog.validate(&[])?;
         Ok(catalog)
     }
 
-    pub fn validate(&self) -> Result<(), String> {
+    pub fn load_composites(&mut self) -> Result<(), String> {
+        if self.composites.is_empty() {
+            let composites: Vec<Clip> =
+                serde_json::from_str(include_str!("../assets/composite-actions.json"))
+                    .map_err(|e| format!("组合动作: {e}"))?;
+            self.validate(&composites)?;
+            let offset = self.composites.start;
+            let end = offset + composites.len();
+            self.clips.splice(offset..offset, composites);
+            self.composites.end = end;
+        }
+        Ok(())
+    }
+
+    pub fn unload_composites(&mut self) {
+        self.clips.drain(self.composites.clone());
+        self.composites.end = self.composites.start;
+    }
+
+    fn validate(&self, extra: &[Clip]) -> Result<(), String> {
         if self.sprites.len() != 94 || self.images.len() != 346 {
             return Err("素材数量不完整，应为94组346张。".into());
         }
@@ -190,7 +214,7 @@ impl Catalog {
             }
         }
         let mut ids = std::collections::HashSet::new();
-        for c in &self.clips {
+        for c in self.clips.iter().chain(extra) {
             if !ids.insert(&c.id) {
                 return Err(format!("重复动作 {}", c.id));
             }
@@ -252,5 +276,25 @@ impl Catalog {
                     })
                     .expect("Missing verified default idle")
             })
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn debug_composites_can_be_reopened_without_changing_the_desktop_indices() {
+        let mut catalog = Catalog::load_desktop().unwrap();
+        let idle = catalog.idle_index();
+        let desktop_ids: Vec<_> = catalog.clips.iter().map(|clip| clip.id.clone()).collect();
+        for _ in 0..2 {
+            catalog.load_composites().unwrap();
+            catalog.load_composites().unwrap();
+            assert_eq!(catalog.clips.len(), desktop_ids.len() + 25);
+            assert_eq!(catalog.idle_index(), idle);
+            catalog.unload_composites();
+            assert!(catalog.clips.iter().map(|clip| &clip.id).eq(&desktop_ids));
+        }
     }
 }

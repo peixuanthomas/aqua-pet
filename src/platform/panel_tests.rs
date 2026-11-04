@@ -109,7 +109,8 @@ fn hovering_keeps_one_selected_heart_and_only_repaints_changed_rows() {
             settings.0,
             true,
         );
-        app.create_controls().unwrap();
+        app.create_debug_controls().unwrap();
+        app.create_settings_panel();
         app.debug_open = true;
         app.select(app.visible[0]);
         let dpi = GetDpiForWindow(panel.0).max(96) as f64 / 96.0;
@@ -210,6 +211,11 @@ fn playback_only_repaints_progress_while_advancing() {
             panel.0,
             HWND::default(),
             true,
+        );
+        // Windows can request a paint before the user opens the Debug panel.
+        assert!(
+            app.handle(panel.0, WM_PAINT, WPARAM(0), LPARAM(0))
+                .is_none()
         );
         app.debug_open = true;
         app.layout();

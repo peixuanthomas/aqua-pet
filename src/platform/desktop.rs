@@ -3,11 +3,36 @@ use crate::{
     ledges::{Ledges, Window},
     wander::Footing,
 };
-use std::collections::HashSet;
+use std::{
+    cell::Cell,
+    sync::mpsc::{self, Receiver, Sender},
+};
 use windows::Win32::Graphics::Dwm::{
     DWMWA_CLOAKED, DWMWA_EXTENDED_FRAME_BOUNDS, DwmGetWindowAttribute,
 };
 use windows::Win32::System::SystemInformation::GetTickCount;
+use windows::Win32::UI::Accessibility::{HWINEVENTHOOK, SetWinEventHook, UnhookWinEvent};
+
+const SCAN_INTERVAL: Duration = Duration::from_millis(200);
+thread_local! { static WINDOWS_CHANGED: Cell<bool> = const { Cell::new(false) }; }
+
+unsafe extern "system" fn window_changed(
+    _: HWINEVENTHOOK,
+    event: u32,
+    hwnd: HWND,
+    object: i32,
+    child: i32,
+    _: u32,
+    _: u32,
+) {
+    if !WINDOWS_CHANGED.get()
+        && child == CHILDID_SELF as i32
+        && (object == OBJID_WINDOW.0 || (event == EVENT_OBJECT_REORDER && object == OBJID_CLIENT.0))
+        && (event == EVENT_OBJECT_DESTROY || GetAncestor(hwnd, GA_ROOT) == hwnd)
+    {
+        WINDOWS_CHANGED.set(true);
+    }
+}
 
 fn idle_for_two_minutes(now: u32, last_input: u32) -> bool {
     now.wrapping_sub(last_input) >= 120_000
@@ -59,74 +84,131 @@ unsafe fn visible_frame(hwnd: HWND) -> Option<Bounds> {
     })
 }
 
-unsafe fn read_windows(own: &[HWND]) -> Vec<Window> {
-    let mut windows = Vec::new();
-    let mut seen = HashSet::new();
-    let mut next = GetTopWindow(None);
-    while let Ok(hwnd) = next {
-        let id = hwnd.0 as usize;
-        // Another application may reorder or destroy a window during the walk.
-        if !seen.insert(id) {
-            break;
-        }
-        next = GetWindow(hwnd, GW_HWNDNEXT);
-        if own.contains(&hwnd) {
-            continue;
-        }
-        let Some(rect) = visible_frame(hwnd) else {
-            continue;
-        };
-        let style = GetWindowLongPtrW(hwnd, GWL_EXSTYLE) as u32;
-        if style & (WS_EX_LAYERED | WS_EX_TRANSPARENT).0 == (WS_EX_LAYERED | WS_EX_TRANSPARENT).0 {
-            continue;
-        }
-        let mut name = [0u16; 128];
-        let length = GetClassNameW(hwnd, &mut name) as usize;
-        let class = String::from_utf16_lossy(&name[..length]);
-        if matches!(
-            class.as_str(),
-            "Progman" | "WorkerW" | "Shell_TrayWnd" | "Shell_SecondaryTrayWnd"
-        ) {
-            continue;
-        }
-        let can_stand = style & (WS_EX_TOOLWINDOW | WS_EX_NOACTIVATE).0 == 0
-            && !matches!(class.as_str(), "#32768" | "tooltips_class32");
-        windows.push(Window {
-            id,
-            rect,
-            can_stand,
-        });
+unsafe fn window_info(hwnd: HWND) -> Option<Window> {
+    let rect = visible_frame(hwnd)?;
+    let style = GetWindowLongPtrW(hwnd, GWL_EXSTYLE) as u32;
+    if style & (WS_EX_LAYERED | WS_EX_TRANSPARENT).0 == (WS_EX_LAYERED | WS_EX_TRANSPARENT).0 {
+        return None;
     }
-    windows
+    let mut name = [0u16; 128];
+    let length = GetClassNameW(hwnd, &mut name) as usize;
+    let class = String::from_utf16_lossy(&name[..length]);
+    if matches!(
+        class.as_str(),
+        "Progman" | "WorkerW" | "Shell_TrayWnd" | "Shell_SecondaryTrayWnd"
+    ) {
+        return None;
+    }
+    let can_stand = style & (WS_EX_TOOLWINDOW | WS_EX_NOACTIVATE).0 == 0
+        && !matches!(class.as_str(), "#32768" | "tooltips_class32");
+    Some(Window {
+        id: hwnd.0 as usize,
+        rect,
+        can_stand,
+    })
 }
 
-#[derive(Default)]
+unsafe fn read_windows(own: &[usize]) -> windows::core::Result<Vec<Window>> {
+    unsafe extern "system" fn collect(hwnd: HWND, param: LPARAM) -> windows::core::BOOL {
+        let (own, windows) = &mut *(param.0 as *mut (&[usize], Vec<Window>));
+        if !own.contains(&(hwnd.0 as usize))
+            && let Some(window) = window_info(hwnd)
+        {
+            windows.push(window);
+        }
+        true.into()
+    }
+    let mut scan = (own, Vec::new());
+    EnumWindows(Some(collect), LPARAM((&raw mut scan) as isize))?;
+    Ok(scan.1)
+}
+
 pub(super) struct Desktop {
     windows: Vec<Window>,
-    last_scan: Option<Instant>,
+    hooks: [HWINEVENTHOOK; 5],
+    rescan_interval: Duration,
+    last_scan: Instant,
+    request: Sender<()>,
+    snapshots: Receiver<windows::core::Result<Vec<Window>>>,
+    scanning: bool,
     cached: Option<(Bounds, Bounds, Ledges)>,
 }
 
 impl Desktop {
-    pub unsafe fn refresh(
-        &mut self,
-        now: Instant,
-        own: &[HWND],
-        riding: Option<Footing>,
-    ) -> Option<(f64, f64)> {
-        if self
-            .last_scan
-            .is_none_or(|t| now.duration_since(t) >= Duration::from_millis(200))
-        {
-            let windows = read_windows(own);
-            if self.windows != windows {
+    pub fn new(own: &[HWND]) -> Self {
+        let own: Vec<_> = own.iter().map(|hwnd| hwnd.0 as usize).collect();
+        let hooks = [
+            (EVENT_SYSTEM_FOREGROUND, EVENT_SYSTEM_FOREGROUND),
+            (EVENT_SYSTEM_MINIMIZESTART, EVENT_SYSTEM_MINIMIZEEND),
+            (EVENT_OBJECT_DESTROY, EVENT_OBJECT_REORDER),
+            (EVENT_OBJECT_LOCATIONCHANGE, EVENT_OBJECT_LOCATIONCHANGE),
+            (EVENT_OBJECT_CLOAKED, EVENT_OBJECT_UNCLOAKED),
+        ]
+        .map(|(first, last)| unsafe {
+            SetWinEventHook(
+                first,
+                last,
+                None,
+                Some(window_changed),
+                0,
+                0,
+                WINEVENT_OUTOFCONTEXT | WINEVENT_SKIPOWNPROCESS,
+            )
+        });
+        // Some desktops restrict hooks. Keep polling there, and occasionally reconcile missed events elsewhere.
+        let rescan_interval = if hooks.iter().any(|hook| hook.is_invalid()) {
+            SCAN_INTERVAL
+        } else {
+            Duration::from_secs(5)
+        };
+        let windows = unsafe { read_windows(&own) }.unwrap_or_default();
+        let (request, requests) = mpsc::channel();
+        let (results, snapshots) = mpsc::channel();
+        std::thread::spawn(move || {
+            while requests.recv().is_ok() {
+                if results.send(unsafe { read_windows(&own) }).is_err() {
+                    break;
+                }
+            }
+        });
+        Self {
+            windows,
+            hooks,
+            rescan_interval,
+            last_scan: Instant::now(),
+            request,
+            snapshots,
+            scanning: false,
+            cached: None,
+        }
+    }
+
+    pub unsafe fn refresh(&mut self, now: Instant, riding: Option<Footing>) -> Option<(f64, f64)> {
+        let snapshot = self.snapshots.try_recv();
+        let received = snapshot.is_ok();
+        if let Ok(result) = snapshot {
+            self.scanning = false;
+            if let Ok(windows) = result
+                && self.windows != windows
+            {
                 self.windows = windows;
                 self.cached = None;
             }
-            self.last_scan = Some(now);
-        } else if let Some(s) = riding
-            && let Some(i) = self.windows.iter().position(|w| w.id == s.window)
+        }
+        let changed = WINDOWS_CHANGED.get();
+        let elapsed = now.duration_since(self.last_scan);
+        if !self.scanning
+            && elapsed >= SCAN_INTERVAL
+            && (changed || elapsed >= self.rescan_interval)
         {
+            WINDOWS_CHANGED.set(false);
+            self.scanning = self.request.send(()).is_ok();
+            self.last_scan = now;
+        }
+        let s = riding?;
+        let i = self.windows.iter().position(|w| w.id == s.window)?;
+        // A window can move again between the background read and this animation frame.
+        if changed || self.scanning || received || self.rescan_interval == SCAN_INTERVAL {
             match visible_frame(HWND(s.window as *mut c_void)) {
                 Some(rect) if self.windows[i].rect == rect => {}
                 Some(rect) => {
@@ -136,11 +218,11 @@ impl Desktop {
                 None => {
                     self.windows.remove(i);
                     self.cached = None;
+                    return None;
                 }
             }
         }
-        let s = riding?;
-        let rect = self.windows.iter().find(|w| w.id == s.window)?.rect;
+        let rect = self.windows[i].rect;
         Some((rect.left + s.offset, rect.top))
     }
 
@@ -153,6 +235,18 @@ impl Desktop {
             self.cached = Some((work, body, Ledges::new(work, body, &self.windows)));
         }
         &self.cached.as_ref().unwrap().2
+    }
+}
+
+impl Drop for Desktop {
+    fn drop(&mut self) {
+        for hook in self.hooks {
+            if !hook.is_invalid() {
+                unsafe {
+                    let _ = UnhookWinEvent(hook);
+                }
+            }
+        }
     }
 }
 
@@ -243,9 +337,9 @@ mod tests {
             "Checked work area {work:?} at {} DPI",
             GetDpiForWindow(back.0)
         );
-        let mut desktop = Desktop::default();
+        let mut desktop = Desktop::new(&[]);
         let now = Instant::now();
-        desktop.refresh(now, &[], None);
+        desktop.refresh(now, None);
         let body = Bounds {
             left: -18.0,
             top: -36.0,
@@ -300,12 +394,22 @@ mod tests {
         )
         .unwrap();
         DwmFlush().unwrap();
-        desktop.refresh(now + Duration::from_millis(16), &[], pet.riding());
+        // Production hooks skip windows belonging to the pet's process, including these fixtures.
+        window_changed(
+            HWINEVENTHOOK::default(),
+            EVENT_OBJECT_LOCATIONCHANGE,
+            back.0,
+            OBJID_WINDOW.0,
+            0,
+            0,
+            0,
+        );
+        desktop.refresh(now + Duration::from_millis(16), pet.riding());
         pet.advance(0.016, 30.0, 1, desktop.ledges(work, body));
         assert_eq!(pet.foot, (foot.0 + 30.0, foot.1 + 20.0));
         let _ = ShowWindow(back.0, SW_SHOWMINNOACTIVE);
         DwmFlush().unwrap();
-        desktop.refresh(now + Duration::from_millis(32), &[], pet.riding());
+        desktop.refresh(now + Duration::from_millis(32), pet.riding());
         pet.advance(0.1, 30.0, 1, desktop.ledges(work, body));
         assert!(pet.foot.1 > foot.1 + 20.0);
         assert!(pet.riding().is_none_or(|s| s.window != id));
@@ -316,5 +420,42 @@ mod tests {
         let last = u32::MAX - 10;
         assert!(!idle_for_two_minutes(last.wrapping_add(119_999), last));
         assert!(idle_for_two_minutes(last.wrapping_add(120_000), last));
+    }
+
+    #[test]
+    fn unchanged_desktop_waits_and_changes_during_a_scan_are_coalesced() {
+        let now = Instant::now();
+        let (request, requests) = mpsc::channel();
+        let (results, snapshots) = mpsc::channel();
+        let mut desktop = Desktop {
+            windows: Vec::new(),
+            hooks: [HWINEVENTHOOK::default(); 5],
+            rescan_interval: Duration::from_secs(5),
+            last_scan: now,
+            request,
+            snapshots,
+            scanning: false,
+            cached: None,
+        };
+        let refresh = |desktop: &mut Desktop, ms| unsafe {
+            desktop.refresh(now + Duration::from_millis(ms), None);
+        };
+        WINDOWS_CHANGED.set(false);
+        refresh(&mut desktop, 400);
+        assert!(requests.try_recv().is_err());
+        WINDOWS_CHANGED.set(true);
+        refresh(&mut desktop, 500);
+        requests.try_recv().unwrap();
+        WINDOWS_CHANGED.set(true);
+        refresh(&mut desktop, 900);
+        assert!(requests.try_recv().is_err());
+        results.send(Ok(Vec::new())).unwrap();
+        refresh(&mut desktop, 901);
+        requests.try_recv().unwrap();
+        results.send(Ok(Vec::new())).unwrap();
+        refresh(&mut desktop, 5_900);
+        assert!(requests.try_recv().is_err());
+        refresh(&mut desktop, 5_901);
+        requests.try_recv().unwrap();
     }
 }

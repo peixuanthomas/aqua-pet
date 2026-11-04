@@ -193,6 +193,7 @@ struct App {
     drag: Option<(POINT, POINT)>,
     surface: Option<Surface>,
     last_clock: Instant,
+    timer_ms: u32,
     last_status: Instant,
     last_frame: Option<(usize, usize, bool, u32)>,
     last_position: Option<(i32, i32)>,
@@ -247,7 +248,7 @@ impl App {
             choices: HashMap::new(),
             bounds,
             motion_bounds: bounds,
-            desktop: desktop::Desktop::default(),
+            desktop: desktop::Desktop::new(&[pet, debug, settings]),
             poses,
             auto_pose: Pose::Idle,
             wander,
@@ -257,6 +258,7 @@ impl App {
             drag: None,
             surface: None,
             last_clock: Instant::now(),
+            timer_ms: 0,
             last_status: Instant::now(),
             last_frame: None,
             last_position: None,
@@ -273,11 +275,6 @@ impl App {
             },
             smoke,
         }
-    }
-    unsafe fn create_controls(&mut self) -> windows::core::Result<()> {
-        self.create_debug_controls()?;
-        self.create_settings_panel();
-        Ok(())
     }
     unsafe fn work_area(&self) -> RECT {
         Self::work_area_at(self.anchor)
@@ -408,10 +405,20 @@ impl App {
         }
         self.bounds = clip.bounds;
     }
-    unsafe fn show_debug(&mut self) {
-        let was_open = self.debug_open;
-        self.debug_open = true;
-        if !was_open {
+    unsafe fn show_debug(&mut self) -> windows::core::Result<()> {
+        if !self.debug_open {
+            self.catalog
+                .load_composites()
+                .map_err(|error| windows::core::Error::new(E_FAIL, error))?;
+            if self.search.is_invalid() {
+                if let Err(error) = self.create_debug_controls() {
+                    self.catalog.unload_composites();
+                    return Err(error);
+                }
+            } else {
+                self.filter();
+            }
+            self.debug_open = true;
             self.select(self.catalog.idle_index());
         }
         self.preview_dirty = true;
@@ -423,6 +430,7 @@ impl App {
             let _ = SetFocus(Some(self.debug));
         }
         self.layout();
+        self.update()
     }
     unsafe fn close_debug(&mut self) {
         self.debug_open = false;
@@ -431,6 +439,9 @@ impl App {
         self.debug_ui.active = None;
         let _ = ShowWindow(self.debug, SW_HIDE);
         self.show_pose(Pose::Idle);
+        self.visible.clear();
+        self.preview = None;
+        self.catalog.unload_composites();
         self.fit();
         self.save_settings();
     }
@@ -477,7 +488,9 @@ impl App {
         if command == MENU_SETTINGS {
             self.show_settings();
         } else if command == MENU_DEBUG {
-            self.show_debug();
+            if let Err(error) = self.show_debug() {
+                show_error(&format!("无法打开 Debug：{error}"));
+            }
         } else if command == MENU_EXIT {
             self.exit();
         }
@@ -497,11 +510,7 @@ impl App {
         // Resuming from sleep or a suspended process should not jump across an entire scene.
         if dt < 2.0 {
             if !self.debug_open && self.drag.is_none() {
-                let carried = self.desktop.refresh(
-                    now,
-                    &[self.pet, self.debug, self.settings],
-                    self.wander.riding(),
-                );
+                let carried = self.desktop.refresh(now, self.wander.riding());
                 let (x, y) = carried.unwrap_or(self.wander.foot);
                 let work = Self::work_bounds_at(POINT {
                     x: x.round() as i32,
@@ -535,24 +544,37 @@ impl App {
         );
         let changed = self.last_frame != Some(key);
         if changed {
-            let frame = render::render(
-                &self.catalog,
-                &clip.steps[index],
-                self.bounds,
-                self.effective_scale as f64,
-                false,
-            );
+            let rendered;
+            let (frame, scale) = if self.debug_open {
+                rendered = render::render(
+                    &self.catalog,
+                    &clip.steps[index],
+                    self.bounds,
+                    self.effective_scale as f64,
+                    false,
+                );
+                (&rendered, 1)
+            } else {
+                (
+                    self.poses.get(self.auto_pose).frame(index),
+                    self.effective_scale as usize,
+                )
+            };
+            let width = (frame.width * scale) as i32;
+            let height = (frame.height * scale) as i32;
             if self
                 .surface
                 .as_ref()
-                .is_none_or(|s| s.width != frame.width as i32 || s.height != frame.height as i32)
+                .is_none_or(|s| s.width != width || s.height != height)
             {
-                self.surface = Some(Surface::new(frame.width as i32, frame.height as i32)?);
+                self.surface = Some(Surface::new(width, height)?);
             }
-            let pixels = frame.bgra_premultiplied();
-            let surface = self.surface.as_ref().unwrap();
-            std::ptr::copy_nonoverlapping(pixels.as_ptr(), surface.bits.cast::<u8>(), pixels.len());
-            self.last_frame = Some(key);
+            let surface = self.surface.as_mut().unwrap();
+            let pixels = std::slice::from_raw_parts_mut(
+                surface.bits.cast(),
+                width as usize * height as usize,
+            );
+            frame.write_bgra(pixels, scale);
             self.preview_dirty = true;
         }
         if let Some(surface) = &self.surface {
@@ -568,18 +590,18 @@ impl App {
                 x: self.anchor.x + ((self.bounds.left + rx) * s).round() as i32,
                 y: self.anchor.y + ((self.bounds.top + ry) * s).round() as i32,
             };
-            let size = SIZE {
-                cx: surface.width,
-                cy: surface.height,
-            };
-            let src = POINT { x: 0, y: 0 };
-            let blend = BLENDFUNCTION {
-                BlendOp: AC_SRC_OVER as u8,
-                BlendFlags: 0,
-                SourceConstantAlpha: 255,
-                AlphaFormat: AC_SRC_ALPHA as u8,
-            };
-            if changed || self.last_position != Some((dst.x, dst.y)) {
+            if changed {
+                let size = SIZE {
+                    cx: surface.width,
+                    cy: surface.height,
+                };
+                let src = POINT::default();
+                let blend = BLENDFUNCTION {
+                    BlendOp: AC_SRC_OVER as u8,
+                    BlendFlags: 0,
+                    SourceConstantAlpha: 255,
+                    AlphaFormat: AC_SRC_ALPHA as u8,
+                };
                 UpdateLayeredWindow(
                     self.pet,
                     None,
@@ -591,8 +613,21 @@ impl App {
                     Some(&blend),
                     ULW_ALPHA,
                 )?;
-                self.last_position = Some((dst.x, dst.y));
+                self.last_frame = Some(key);
+            } else if self.last_position != Some((dst.x, dst.y)) {
+                UpdateLayeredWindow(
+                    self.pet,
+                    None,
+                    Some(&dst),
+                    None,
+                    None,
+                    None,
+                    COLORREF(0),
+                    None,
+                    UPDATE_LAYERED_WINDOW_FLAGS(0),
+                )?;
             }
+            self.last_position = Some((dst.x, dst.y));
         }
         let preview_visible =
             self.debug_open && !self.details_open && !IsIconic(self.debug).as_bool();
@@ -629,6 +664,27 @@ impl App {
             self.invalidate_playback();
             self.last_status = now;
         }
+        let interval = if self.debug_open
+            || self.drag.is_some()
+            || self.wander.riding().is_some()
+            || matches!(
+                self.auto_pose,
+                Pose::Left | Pose::Right | Pose::Rise | Pose::Fall
+            ) {
+            16
+        } else {
+            // A stationary pet still needs to notice nearby input between animation frames.
+            let ticks_left = clip.step_start(index) + clip.steps[index].ticks - self.player.tick;
+            (ticks_left * 1000.0 / self.catalog.game_fps)
+                .ceil()
+                .clamp(16.0, 100.0) as u32
+        };
+        if interval != self.timer_ms {
+            if SetTimer(Some(self.pet), 1, interval, None) == 0 {
+                return Err(windows::core::Error::from_thread());
+            }
+            self.timer_ms = interval;
+        }
         Ok(())
     }
     unsafe fn handle(&mut self, hwnd: HWND, msg: u32, wp: WPARAM, lp: LPARAM) -> Option<LRESULT> {
@@ -637,7 +693,9 @@ impl App {
         let settings = hwnd == self.settings;
         match msg {
             SHOW_DEBUG if pet => {
-                self.show_debug();
+                if let Err(error) = self.show_debug() {
+                    show_error(&format!("无法打开 Debug：{error}"));
+                }
                 Some(LRESULT(0))
             }
             WM_TIMER if pet => {
@@ -683,6 +741,7 @@ impl App {
                 let _ = GetCursorPos(&mut p);
                 self.drag = Some((p, self.anchor));
                 SetCapture(self.pet);
+                let _ = self.update();
                 Some(LRESULT(0))
             }
             WM_MOUSEMOVE if pet => {
@@ -756,7 +815,7 @@ impl App {
                 self.layout_settings();
                 Some(LRESULT(0))
             }
-            WM_PAINT if debug => {
+            WM_PAINT if debug && self.debug_open => {
                 ui::paint_window(hwnd, |dc, client| self.paint(dc, client));
                 Some(LRESULT(0))
             }
@@ -963,20 +1022,18 @@ pub fn run(catalog: Catalog, debug: bool, smoke: bool) -> Result<(), String> {
             let mut borrowed = slot.borrow_mut();
             let app = borrowed.as_mut().unwrap();
             app.restore_settings();
-            app.create_controls()?;
+            app.create_settings_panel();
             app.update()?;
             app.tray = Some(tray::TrayIcon::new(pet)?);
             let _ = ShowWindow(pet, SW_SHOWNOACTIVATE);
             if debug || smoke {
-                app.show_debug();
+                app.show_debug()?;
             }
-            SetTimer(Some(pet), 1, 16, None);
             Ok::<(), windows::core::Error>(())
         });
         if let Err(error) = setup {
             return Err(error.to_string());
         }
-        let search = APP.with(|slot| slot.borrow().as_ref().unwrap().search);
         let mut message = MSG::default();
         loop {
             let result = GetMessageW(&mut message, None, 0, 0).0;
@@ -986,15 +1043,15 @@ pub fn run(catalog: Catalog, debug: bool, smoke: bool) -> Result<(), String> {
             if result < 0 {
                 return Err(windows::core::Error::from_thread().to_string());
             }
-            if message.hwnd == search && matches!(message.message, WM_MOUSEMOVE | WM_MOUSELEAVE) {
-                let mut point = message.pt;
-                let _ = ScreenToClient(panel, &mut point);
+            if matches!(message.message, WM_MOUSEMOVE | WM_MOUSELEAVE) {
                 APP.with(|slot| {
-                    slot.borrow_mut().as_mut().unwrap().debug_pointer(
-                        search,
-                        message.message,
-                        point,
-                    )
+                    let mut borrowed = slot.borrow_mut();
+                    let app = borrowed.as_mut().unwrap();
+                    if message.hwnd == app.search {
+                        let mut point = message.pt;
+                        let _ = ScreenToClient(panel, &mut point);
+                        app.debug_pointer(app.search, message.message, point);
+                    }
                 });
             }
             if message.message == WM_KEYDOWN && message.wParam.0 == VK_TAB.0 as usize {

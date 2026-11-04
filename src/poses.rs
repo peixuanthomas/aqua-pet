@@ -1,6 +1,6 @@
 use crate::{
     catalog::Catalog,
-    render::{self, Bounds},
+    render::{self, Bounds, Frame},
 };
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -58,12 +58,16 @@ pub struct PoseClip {
     pub index: usize,
     pub bounds: Bounds,
     pub foot_x: f64,
-    soles: Vec<f64>,
+    frames: Vec<(f64, Frame)>,
 }
 
 impl PoseClip {
     pub fn foot(&self, frame: usize) -> (f64, f64) {
-        (self.foot_x, self.soles[frame])
+        (self.foot_x, self.frames[frame].0)
+    }
+
+    pub fn frame(&self, index: usize) -> &Frame {
+        &self.frames[index].1
     }
 }
 
@@ -84,7 +88,7 @@ impl Poses {
                 .expect("Missing desktop pose");
             let clip = &catalog.clips[index];
             let bounds = render::clip_bounds(catalog, clip, false);
-            let soles = clip
+            let frames = clip
                 .steps
                 .iter()
                 .map(|step| {
@@ -100,14 +104,14 @@ impl Poses {
                     }
                     body.point(visible.left - foot_x, visible.top - visible.bottom);
                     body.point(visible.right - foot_x, 0.0);
-                    visible.bottom
+                    (visible.bottom, frame)
                 })
                 .collect();
             PoseClip {
                 index,
                 bounds,
                 foot_x,
-                soles,
+                frames,
             }
         });
         Self { clips, body }
@@ -145,8 +149,13 @@ mod tests {
         for pose in Pose::ALL {
             let p = poses.get(pose);
             for (index, step) in catalog.clips[p.index].steps.iter().enumerate() {
-                for scale in [1, 4, 8] {
+                for scale in 1..=8 {
                     let frame = render::render(&catalog, step, p.bounds, scale as f64, false);
+                    let mut expected = vec![[0; 4]; frame.width * frame.height];
+                    let mut scaled = vec![[255; 4]; expected.len()];
+                    frame.write_bgra(&mut expected, 1);
+                    p.frame(index).write_bgra(&mut scaled, scale);
+                    assert!(scaled == expected, "{pose:?} frame {index} at {scale}x");
                     let bottom = frame
                         .rgba
                         .as_chunks::<4>()

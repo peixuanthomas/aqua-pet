@@ -82,18 +82,25 @@ pub struct Frame {
     pub rgba: Vec<u8>,
 }
 impl Frame {
-    pub fn bgra_premultiplied(&self) -> Vec<u8> {
-        let mut pixels = Vec::with_capacity(self.rgba.len());
-        for p in self.rgba.as_chunks::<4>().0 {
-            let a = p[3] as u32;
-            pixels.extend_from_slice(&[
-                ((p[2] as u32 * a + 127) / 255) as u8,
-                ((p[1] as u32 * a + 127) / 255) as u8,
-                ((p[0] as u32 * a + 127) / 255) as u8,
-                p[3],
-            ]);
+    pub fn write_bgra(&self, pixels: &mut [[u8; 4]], scale: usize) {
+        let width = self.width * scale;
+        assert_eq!(pixels.len(), width * self.height * scale);
+        let rows = self.rgba.as_chunks::<4>().0.chunks_exact(self.width);
+        for (source, band) in rows.zip(pixels.chunks_exact_mut(width * scale)) {
+            let (row, copies) = band.split_at_mut(width);
+            for (p, run) in source.iter().zip(row.chunks_exact_mut(scale)) {
+                let a = p[3] as u32;
+                run.fill([
+                    ((p[2] as u32 * a + 127) / 255) as u8,
+                    ((p[1] as u32 * a + 127) / 255) as u8,
+                    ((p[0] as u32 * a + 127) / 255) as u8,
+                    p[3],
+                ]);
+            }
+            for copy in copies.chunks_exact_mut(width) {
+                copy.copy_from_slice(row);
+            }
         }
-        pixels
     }
     pub fn on_background(&self, kind: usize) -> Vec<u8> {
         let mut pixels = Vec::with_capacity(self.rgba.len());
@@ -354,7 +361,11 @@ mod tests {
             height: 1,
             rgba: vec![100, 200, 50, 128, 99, 44, 33, 0],
         };
-        assert_eq!(f.bgra_premultiplied(), vec![25, 100, 50, 128, 0, 0, 0, 0]);
+        let mut pixels = [[255; 4]; 8];
+        f.write_bgra(&mut pixels, 2);
+        let row = [[25, 100, 50, 128], [25, 100, 50, 128], [0; 4], [0; 4]];
+        assert_eq!(pixels[..4], row);
+        assert_eq!(pixels[4..], row);
         assert_eq!(&f.on_background(0)[4..], &[0, 0, 0, 255]);
     }
     #[test]
