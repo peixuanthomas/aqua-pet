@@ -151,6 +151,24 @@ fn original_horizontal_speed_is_independent_of_timer_and_distance_setting() {
 }
 
 #[test]
+fn every_walk_setting_waits_six_point_four_seconds_before_choosing() {
+    let world = desktop(&[]);
+    for probability in 0..=100 {
+        let mut pet = grounded(&world, 100.0);
+        pet.set_probability(probability);
+        for _ in 0..63 {
+            pet.advance(0.1, 30.0, 1, &world);
+            assert_eq!(pet.pose(), Pose::Idle, "switched early at {probability}%");
+            assert_eq!(pet.foot, (100.0, 900.0));
+        }
+        pet.advance(0.1, 30.0, 1, &world);
+        if probability == 100 {
+            assert!(matches!(pet.pose(), Pose::Left | Pose::Right));
+        }
+    }
+}
+
+#[test]
 fn distance_bias_preserves_variety_and_changes_the_average() {
     let mut means = Vec::new();
     for bias in [0, 50, 100] {

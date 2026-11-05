@@ -7,7 +7,7 @@ use crate::{
 const SOURCE_PIXELS_PER_TICK: f64 = 2.0;
 pub const DEFAULT_WALK_CHANCE: u8 = 25;
 pub const DEFAULT_DISTANCE_BIAS: u8 = 50;
-const IDLE_SECONDS: f64 = 1.6;
+const IDLE_SECONDS: f64 = 6.4;
 const MIN_DAILY_SECONDS: f64 = 6.0;
 
 #[derive(Clone, Copy, Debug)]
