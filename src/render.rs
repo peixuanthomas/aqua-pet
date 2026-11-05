@@ -28,6 +28,12 @@ impl Bounds {
     pub fn height(self) -> f64 {
         (self.bottom - self.top).max(1.0)
     }
+    pub fn center(self) -> (f64, f64) {
+        (
+            (self.left + self.right) / 2.0,
+            (self.top + self.bottom) / 2.0,
+        )
+    }
     fn round(self) -> Self {
         Self {
             left: self.left.floor() - 1.0,
@@ -82,6 +88,25 @@ pub struct Frame {
     pub rgba: Vec<u8>,
 }
 impl Frame {
+    pub fn visible_bounds(&self) -> Option<Bounds> {
+        let mut bounds = Bounds::empty();
+        for (i, pixel) in self.rgba.as_chunks::<4>().0.iter().enumerate() {
+            if pixel[3] != 0 {
+                let x = (i % self.width) as f64;
+                let y = (i / self.width) as f64;
+                bounds.point(x, y);
+                bounds.point(x + 1.0, y + 1.0);
+            }
+        }
+        bounds.left.is_finite().then_some(bounds)
+    }
+    pub fn center(&self) -> (f64, f64) {
+        // Some attack sequences contain fully transparent frames between visible effects.
+        self.visible_bounds().map_or(
+            (self.width as f64 / 2.0, self.height as f64 / 2.0),
+            Bounds::center,
+        )
+    }
     pub fn write_bgra(&self, pixels: &mut [[u8; 4]], scale: usize) {
         let width = self.width * scale;
         assert_eq!(pixels.len(), width * self.height * scale);
@@ -281,6 +306,29 @@ fn render_internal(
 mod tests {
     use super::*;
     use crate::player::Player;
+    #[test]
+    fn visible_center_ignores_transparent_padding_and_handles_empty_frames() {
+        let mut frame = Frame {
+            width: 8,
+            height: 6,
+            rgba: [255, 255, 255, 0].repeat(48),
+        };
+        assert_eq!(frame.visible_bounds(), None);
+        assert_eq!(frame.center(), (4.0, 3.0));
+        frame.rgba[(8 + 1) * 4 + 3] = 1;
+        frame.rgba[(2 * 8 + 3) * 4 + 3] = 255;
+        assert_eq!(
+            frame.visible_bounds(),
+            Some(Bounds {
+                left: 1.0,
+                top: 1.0,
+                right: 4.0,
+                bottom: 3.0,
+            })
+        );
+        assert_eq!(frame.center(), (2.5, 2.0));
+    }
+
     #[test]
     fn pet_and_preview_share_frame_and_motion_after_controls() {
         let c = Catalog::load().unwrap();
