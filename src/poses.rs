@@ -33,19 +33,20 @@ impl Pose {
         Self::Sit,
     ];
 
-    fn sprite(self) -> &'static str {
+    // Keep the planted foot centered when an arm or sleeve extends to one side.
+    fn sprite(self) -> (&'static str, f64) {
         match self {
-            Self::Idle => "idle",
-            Self::Left => "walk-left",
-            Self::Right => "walk-right",
-            Self::Rise => "grab-jump",
-            Self::Fall => "grab-jump-air",
-            Self::Wave => "wave-cliff",
-            Self::Sleeve => "sleeve-garden",
-            Self::Clap => "clap-cafe",
-            Self::Spin => "battle-spin",
-            Self::Bored => "battle-bored",
-            Self::Sit => "sit-smile",
+            Self::Idle => ("idle", 9.0),
+            Self::Left => ("walk-left", 10.0),
+            Self::Right => ("walk-right", 10.0),
+            Self::Rise => ("grab-jump", 9.0),
+            Self::Fall => ("grab-jump-air", 9.0),
+            Self::Wave => ("wave-cliff", 12.0),
+            Self::Sleeve => ("sleeve-garden", 7.0),
+            Self::Clap => ("clap-cafe", 10.0),
+            Self::Spin => ("battle-spin", 10.0),
+            Self::Bored => ("battle-bored", 9.0),
+            Self::Sit => ("sit-smile", -2.0),
         }
     }
 }
@@ -53,12 +54,13 @@ impl Pose {
 pub struct PoseClip {
     pub index: usize,
     pub bounds: Bounds,
-    frames: Vec<((f64, f64), Frame)>,
+    pub foot_x: f64,
+    frames: Vec<(f64, Frame)>,
 }
 
 impl PoseClip {
     pub fn foot(&self, frame: usize) -> (f64, f64) {
-        self.frames[frame].0
+        (self.foot_x, self.frames[frame].0)
     }
 
     pub fn frame(&self, index: usize) -> &Frame {
@@ -75,7 +77,7 @@ impl Poses {
     pub fn new(catalog: &Catalog) -> Self {
         let mut body = Bounds::empty();
         let clips = Pose::ALL.map(|pose| {
-            let id = pose.sprite();
+            let (id, foot_x) = pose.sprite();
             let index = catalog
                 .clips
                 .iter()
@@ -88,18 +90,24 @@ impl Poses {
                 .iter()
                 .map(|step| {
                     let frame = render::render(catalog, step, bounds, 1.0, false);
-                    let visible = frame
-                        .visible_bounds()
-                        .expect("Missing visible desktop pose");
-                    let center_x = visible.center().0;
-                    body.point(visible.left - center_x, visible.top - visible.bottom);
-                    body.point(visible.right - center_x, 0.0);
-                    ((bounds.left + center_x, bounds.top + visible.bottom), frame)
+                    let mut visible = Bounds::empty();
+                    for (i, pixel) in frame.rgba.as_chunks::<4>().0.iter().enumerate() {
+                        if pixel[3] != 0 {
+                            let x = bounds.left + (i % frame.width) as f64;
+                            let y = bounds.top + (i / frame.width) as f64;
+                            visible.point(x, y);
+                            visible.point(x + 1.0, y + 1.0);
+                        }
+                    }
+                    body.point(visible.left - foot_x, visible.top - visible.bottom);
+                    body.point(visible.right - foot_x, 0.0);
+                    (visible.bottom, frame)
                 })
                 .collect();
             PoseClip {
                 index,
                 bounds,
+                foot_x,
                 frames,
             }
         });
@@ -132,7 +140,7 @@ mod tests {
     use super::*;
 
     #[test]
-    fn every_automatic_frame_is_centered_and_plants_its_last_pixel_above_the_ledge() {
+    fn every_automatic_frame_plants_its_last_visible_pixel_above_the_ledge() {
         let catalog = Catalog::load().unwrap();
         let poses = Poses::new(&catalog);
         for pose in Pose::ALL {
@@ -153,25 +161,7 @@ mod tests {
                         .position(|row| row.iter().any(|px| px[3] != 0))
                         .unwrap();
                     let painted = frame.height - bottom;
-                    let columns: Vec<_> = frame
-                        .rgba
-                        .as_chunks::<4>()
-                        .0
-                        .iter()
-                        .enumerate()
-                        .filter(|(_, pixel)| pixel[3] != 0)
-                        .map(|(i, _)| i % frame.width)
-                        .collect();
-                    let center = (*columns.iter().min().unwrap()
-                        + *columns.iter().max().unwrap()
-                        + 1) as f64
-                        / 2.0;
-                    let (foot_x, sole) = p.foot(index);
-                    assert_eq!(
-                        center + (p.bounds.left - foot_x) * scale as f64,
-                        0.0,
-                        "{pose:?} frame {index} is off-center"
-                    );
+                    let (_, sole) = p.foot(index);
                     assert_eq!(
                         painted as f64 + (p.bounds.top - sole) * scale as f64,
                         0.0,

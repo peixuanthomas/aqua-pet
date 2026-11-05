@@ -53,8 +53,8 @@ fn mouse_point(rect: RECT) -> LPARAM {
 }
 
 #[test]
-#[ignore = "checks drag animation, visible pixels and release positions in a real Win32 window"]
-fn dragging_uses_centered_sleeve_frames_and_releases_in_place() {
+#[ignore = "checks drag animation and release positions in a real Win32 window"]
+fn dragging_uses_sleeve_frames_and_releases_in_place() {
     unsafe {
         let pet = Window::new(WS_EX_LAYERED);
         let mut app = App::new(
@@ -66,12 +66,12 @@ fn dragging_uses_centered_sleeve_frames_and_releases_in_place() {
         );
         app.auto_exit = None;
         let work = App::work_bounds_at(POINT::default());
-        let (x, y) = work.center();
-        let cursor = POINT {
-            x: x as i32,
-            y: y as i32,
+        let anchor = POINT {
+            x: ((work.left + work.right) / 2.0) as i32,
+            y: ((work.top + work.bottom) / 2.0) as i32,
         };
         for release in [WM_LBUTTONUP, WM_CAPTURECHANGED] {
+            app.anchor = anchor;
             app.handle(pet.0, WM_LBUTTONDOWN, WPARAM(0), LPARAM(0));
             assert_eq!(app.auto_pose, Pose::Sleeve);
             assert_eq!(app.catalog.clips[app.player.selected].id, "sleeve-garden");
@@ -83,26 +83,14 @@ fn dragging_uses_centered_sleeve_frames_and_releases_in_place() {
                 for index in 0..count {
                     let clip = &app.catalog.clips[app.player.selected];
                     app.player.seek(clip, clip.step_start(index));
-                    app.drag = Some(cursor);
                     app.update().unwrap();
-                    let surface = app.surface.as_ref().unwrap();
-                    let pixels = std::slice::from_raw_parts(
-                        surface.bits.cast::<u8>(),
-                        (surface.width * surface.height * 4) as usize,
-                    );
-                    let visible = render::Frame {
-                        width: surface.width as usize,
-                        height: surface.height as usize,
-                        rgba: pixels.to_vec(),
-                    }
-                    .visible_bounds()
-                    .unwrap();
                     let mut rect = RECT::default();
                     GetWindowRect(pet.0, &mut rect).unwrap();
-                    let (cx, cy) = visible.center();
-                    assert!((rect.left as f64 + cx - cursor.x as f64).abs() <= 0.5);
-                    assert!((rect.top as f64 + cy - cursor.y as f64).abs() <= 0.5);
-                    expected_foot = (rect.left as f64 + cx, rect.top as f64 + visible.bottom);
+                    let (fx, fy) = app.poses.get(Pose::Sleeve).foot(index);
+                    expected_foot = (
+                        rect.left as f64 + (fx - app.bounds.left) * scale as f64,
+                        rect.top as f64 + (fy - app.bounds.top) * scale as f64,
+                    );
                 }
             }
             app.handle(pet.0, release, WPARAM(0), LPARAM(0));

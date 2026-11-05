@@ -5,8 +5,6 @@
 mod debug;
 mod desktop;
 #[cfg(test)]
-mod drag_tests;
-#[cfg(test)]
 mod panel_tests;
 mod settings;
 mod tray;
@@ -192,8 +190,7 @@ struct App {
     scale: u32,
     effective_scale: u32,
     anchor: POINT,
-    drag: Option<POINT>,
-    frame_center: (f64, f64),
+    drag: Option<(POINT, POINT)>,
     surface: Option<Surface>,
     last_clock: Instant,
     timer_ms: u32,
@@ -259,7 +256,6 @@ impl App {
             effective_scale: 4,
             anchor: POINT { x: 0, y: 0 },
             drag: None,
-            frame_center: (0.0, 0.0),
             surface: None,
             last_clock: Instant::now(),
             timer_ms: 0,
@@ -345,37 +341,6 @@ impl App {
             x: (self.wander.foot.0 - fx * scale).round() as i32,
             y: (self.wander.foot.1 - fy * scale).round() as i32,
         };
-    }
-    fn pet_position(&mut self, index: usize) -> POINT {
-        let (rx, ry) = if self.debug_open {
-            self.player.root(&self.catalog.clips[self.player.selected])
-        } else {
-            let (ix, iy) = self.poses.get(Pose::Idle).foot(0);
-            let (fx, fy) = self.poses.get(self.auto_pose).foot(index);
-            (ix - fx, iy - fy)
-        };
-        let scale = self.effective_scale as f64;
-        let offset = POINT {
-            x: ((self.bounds.left + rx) * scale).round() as i32,
-            y: ((self.bounds.top + ry) * scale).round() as i32,
-        };
-        if let Some(cursor) = self.drag {
-            let position = POINT {
-                x: (cursor.x as f64 - self.frame_center.0).round() as i32,
-                y: (cursor.y as f64 - self.frame_center.1).round() as i32,
-            };
-            // Save the centered position too, so releasing capture cannot restore the old offset.
-            self.anchor = POINT {
-                x: position.x - offset.x,
-                y: position.y - offset.y,
-            };
-            position
-        } else {
-            POINT {
-                x: self.anchor.x + offset.x,
-                y: self.anchor.y + offset.y,
-            }
-        }
     }
     unsafe fn restore_settings(&mut self) {
         let settings = std::fs::read(settings_path())
@@ -597,8 +562,6 @@ impl App {
             };
             let width = (frame.width * scale) as i32;
             let height = (frame.height * scale) as i32;
-            let (cx, cy) = frame.center();
-            self.frame_center = (cx * scale as f64, cy * scale as f64);
             if self
                 .surface
                 .as_ref()
@@ -614,9 +577,19 @@ impl App {
             frame.write_bgra(pixels, scale);
             self.preview_dirty = true;
         }
-        let dst = self.pet_position(index);
-        let clip = &self.catalog.clips[self.player.selected];
         if let Some(surface) = &self.surface {
+            let (rx, ry) = if self.debug_open {
+                self.player.root(clip)
+            } else {
+                let (ix, iy) = self.poses.get(Pose::Idle).foot(0);
+                let (fx, fy) = self.poses.get(self.auto_pose).foot(index);
+                (ix - fx, iy - fy)
+            };
+            let s = self.effective_scale as f64;
+            let dst = POINT {
+                x: self.anchor.x + ((self.bounds.left + rx) * s).round() as i32,
+                y: self.anchor.y + ((self.bounds.top + ry) * s).round() as i32,
+            };
             if changed {
                 let size = SIZE {
                     cx: surface.width,
@@ -766,16 +739,19 @@ impl App {
                 }
                 let mut p = POINT::default();
                 let _ = GetCursorPos(&mut p);
-                self.drag = Some(p);
+                self.drag = Some((p, self.anchor));
                 SetCapture(self.pet);
                 let _ = self.update();
                 Some(LRESULT(0))
             }
             WM_MOUSEMOVE if pet => {
-                if self.drag.is_some() {
+                if let Some((start, anchor)) = self.drag {
                     let mut p = POINT::default();
                     let _ = GetCursorPos(&mut p);
-                    self.drag = Some(p);
+                    self.anchor = POINT {
+                        x: anchor.x + p.x - start.x,
+                        y: anchor.y + p.y - start.y,
+                    };
                     let _ = self.update();
                 }
                 Some(LRESULT(0))
