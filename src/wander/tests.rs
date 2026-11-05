@@ -204,6 +204,26 @@ fn airborne_pet_lands_before_resting_and_wakes_on_input() {
 }
 
 #[test]
+fn daily_actions_last_six_seconds_and_finish_on_a_complete_loop() {
+    let world = desktop(&[]);
+    for (pose, seconds) in [(Pose::Sleeve, 6.4), (Pose::Clap, 6.0), (Pose::Spin, 6.0)] {
+        for rate in [10, 60, 144] {
+            let mut pet = grounded(&world, 100.0);
+            pet.set_probability(100);
+            pet.start(Motion::Action(pose));
+            let frames = (seconds * rate as f64).ceil() as usize;
+            for _ in 1..frames {
+                pet.advance(1.0 / rate as f64, 30.0, 1, &world);
+                assert_eq!(pet.pose(), pose, "{pose:?} ended early at {rate} updates/s");
+                assert_eq!(pet.foot, (100.0, 900.0));
+            }
+            pet.advance(1.0 / rate as f64, 30.0, 1, &world);
+            assert_eq!(pet.pose(), Pose::Idle);
+        }
+    }
+}
+
+#[test]
 fn spontaneous_actions_finish_and_do_not_repeat_even_at_zero_walk_chance() {
     let world = desktop(&[]);
     let mut pet = grounded(&world, 100.0);

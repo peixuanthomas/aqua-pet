@@ -8,6 +8,7 @@ const SOURCE_PIXELS_PER_TICK: f64 = 2.0;
 pub const DEFAULT_WALK_CHANCE: u8 = 25;
 pub const DEFAULT_DISTANCE_BIAS: u8 = 50;
 const IDLE_SECONDS: f64 = 1.6;
+const MIN_DAILY_SECONDS: f64 = 6.0;
 
 #[derive(Clone, Copy, Debug)]
 pub struct Footing {
@@ -57,7 +58,12 @@ pub struct Wander {
 }
 
 impl Wander {
-    pub fn new(seed: u64, pose_seconds: [f64; Pose::ALL.len()]) -> Self {
+    pub fn new(seed: u64, mut pose_seconds: [f64; Pose::ALL.len()]) -> Self {
+        // Repeat whole loops so short daily actions stay visible without slowing their animation.
+        for pose in [Pose::Sleeve, Pose::Clap, Pose::Spin] {
+            let seconds = &mut pose_seconds[pose as usize];
+            *seconds *= (MIN_DAILY_SECONDS / *seconds).ceil();
+        }
         Self {
             rng: seed.max(1),
             foot: (0.0, 0.0),
