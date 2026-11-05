@@ -52,6 +52,68 @@ fn mouse_point(rect: RECT) -> LPARAM {
     LPARAM(((y << 16) | (x & 0xffff)) as isize)
 }
 
+#[test]
+#[ignore = "checks drag animation, visible pixels and release positions in a real Win32 window"]
+fn dragging_uses_centered_sleeve_frames_and_releases_in_place() {
+    unsafe {
+        let pet = Window::new(WS_EX_LAYERED);
+        let mut app = App::new(
+            Catalog::load_desktop().unwrap(),
+            pet.0,
+            HWND::default(),
+            HWND::default(),
+            true,
+        );
+        app.auto_exit = None;
+        let work = App::work_bounds_at(POINT::default());
+        let (x, y) = work.center();
+        let cursor = POINT {
+            x: x as i32,
+            y: y as i32,
+        };
+        for release in [WM_LBUTTONUP, WM_CAPTURECHANGED] {
+            app.handle(pet.0, WM_LBUTTONDOWN, WPARAM(0), LPARAM(0));
+            assert_eq!(app.auto_pose, Pose::Sleeve);
+            assert_eq!(app.catalog.clips[app.player.selected].id, "sleeve-garden");
+            let mut expected_foot = (0.0, 0.0);
+            for scale in 1..=8 {
+                app.scale = scale;
+                app.effective_scale = scale;
+                let count = app.catalog.clips[app.player.selected].steps.len();
+                for index in 0..count {
+                    let clip = &app.catalog.clips[app.player.selected];
+                    app.player.seek(clip, clip.step_start(index));
+                    app.drag = Some(cursor);
+                    app.update().unwrap();
+                    let surface = app.surface.as_ref().unwrap();
+                    let pixels = std::slice::from_raw_parts(
+                        surface.bits.cast::<u8>(),
+                        (surface.width * surface.height * 4) as usize,
+                    );
+                    let visible = render::Frame {
+                        width: surface.width as usize,
+                        height: surface.height as usize,
+                        rgba: pixels.to_vec(),
+                    }
+                    .visible_bounds()
+                    .unwrap();
+                    let mut rect = RECT::default();
+                    GetWindowRect(pet.0, &mut rect).unwrap();
+                    let (cx, cy) = visible.center();
+                    assert!((rect.left as f64 + cx - cursor.x as f64).abs() <= 0.5);
+                    assert!((rect.top as f64 + cy - cursor.y as f64).abs() <= 0.5);
+                    expected_foot = (rect.left as f64 + cx, rect.top as f64 + visible.bottom);
+                }
+            }
+            app.handle(pet.0, release, WPARAM(0), LPARAM(0));
+            assert!(app.drag.is_none());
+            assert!(app.wander.support.is_none());
+            assert!((app.wander.foot.0 - expected_foot.0).abs() <= 0.5);
+            assert!((app.wander.foot.1 - expected_foot.1).abs() <= 0.5);
+        }
+    }
+}
+
 unsafe fn check_markers(
     hwnd: HWND,
     heart_row: RECT,

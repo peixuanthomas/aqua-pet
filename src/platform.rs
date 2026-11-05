@@ -762,7 +762,7 @@ impl App {
             WM_MOUSEACTIVATE if pet => Some(LRESULT(MA_NOACTIVATE as isize)),
             WM_LBUTTONDOWN if pet => {
                 if !self.debug_open {
-                    self.show_pose(Pose::Held);
+                    self.show_pose(Pose::Sleeve);
                 }
                 let mut p = POINT::default();
                 let _ = GetCursorPos(&mut p);
