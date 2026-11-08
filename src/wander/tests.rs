@@ -466,6 +466,106 @@ fn wave_needs_a_fresh_approach_and_fifteen_seconds_between_greetings() {
 }
 
 #[test]
+fn forced_sitting_interrupts_walking_or_dancing_for_twelve_seconds() {
+    for top in [350.0, 896.0, 900.0] {
+        let world = desktop(&[window(1, 100.0, top, 800.0, 950.0)]);
+        for music in [false, true] {
+            let mut pet = Wander::for_test(42);
+            pet.place((300.0, top));
+            pet.advance(0.01, 30.0, 1, &world);
+            pet.set_music_playing(music);
+            pet.advance(0.2, 30.0, 1, &world);
+            if !music {
+                let standing = pet.support.unwrap();
+                let edge = world.at_offset(standing.window, standing.offset).unwrap();
+                pet.walk_to(edge, 500.0, None);
+                assert_eq!(pet.pose(), Pose::Right);
+            }
+            let rng = pet.rng;
+            let dance = pet.dance;
+            pet.sit(&world, 1);
+            let seated = if top == 350.0 { Pose::Perch } else { Pose::Sit };
+            assert_eq!(pet.pose(), seated);
+            assert_eq!(pet.animation_seconds(), 0.0);
+            // The menu click itself must not replace the requested seat with a wave.
+            pet.observe(true, false, 0.01);
+            pet.set_probability(0);
+            for _ in 0..119 {
+                pet.advance(0.1, 30.0, 1, &world);
+                assert_eq!(pet.pose(), seated);
+                assert_eq!(pet.foot, (300.0, top));
+            }
+            pet.advance(0.09, 30.0, 1, &world);
+            assert_eq!(pet.pose(), seated);
+            assert_eq!(pet.rng, rng);
+            if let Some(dance) = dance {
+                assert_eq!(pet.dance.unwrap().seconds, dance.seconds);
+            }
+            pet.advance(0.01, 30.0, 1, &world);
+            assert_eq!(pet.pose(), dance.map_or(Pose::Idle, |dance| dance.pose));
+            pet.set_probability(100);
+            for _ in 0..64 {
+                pet.advance(0.1, 30.0, 1, &world);
+            }
+            assert!(matches!(
+                pet.motion,
+                Motion::Walk { .. } | Motion::Air { .. }
+            ));
+        }
+    }
+}
+
+#[test]
+fn forced_sitting_keeps_greetings_window_tracking_and_falling() {
+    let world = desktop(&[window(1, 100.0, 350.0, 800.0, 800.0)]);
+    let mut pet = Wander::for_test(42);
+    pet.set_probability(0);
+    pet.place((300.0, 350.0));
+    pet.advance(0.01, 30.0, 1, &world);
+    pet.sit(&world, 1);
+    pet.observe(false, false, 0.01);
+    pet.observe(true, false, 0.01);
+    assert_eq!(pet.pose(), Pose::PerchWave);
+    pet.advance(1.99, 30.0, 1, &world);
+    pet.advance(0.01, 30.0, 1, &world);
+    assert_eq!(pet.pose(), Pose::Perch);
+
+    let moved = desktop(&[window(1, 130.0, 380.0, 830.0, 830.0)]);
+    pet.advance(0.01, 30.0, 1, &moved);
+    assert_eq!(pet.foot, (330.0, 380.0));
+    assert_eq!(pet.pose(), Pose::Perch);
+
+    let floor = desktop(&[]);
+    pet.advance(0.1, 30.0, 1, &floor);
+    assert_eq!(pet.pose(), Pose::Fall);
+    pet.sit(&floor, 1);
+    assert_eq!(pet.pose(), Pose::Fall);
+    pet.advance(1.0, 30.0, 1, &floor);
+    assert_eq!(pet.support.unwrap().window, FLOOR);
+    pet.sit(&floor, 1);
+    assert_eq!(pet.pose(), Pose::Sit);
+    pet.place((500.0, 300.0));
+    assert_eq!(pet.pose(), Pose::Fall);
+}
+
+#[test]
+fn stopping_music_during_forced_sitting_does_not_restart_the_dance() {
+    let world = desktop(&[]);
+    let mut pet = grounded(&world, 300.0);
+    pet.set_probability(0);
+    pet.set_music_playing(true);
+    pet.sit(&world, 1);
+    pet.set_music_playing(false);
+    for _ in 0..119 {
+        pet.observe(false, false, 0.1);
+        pet.advance(0.1, 30.0, 1, &world);
+        assert_eq!(pet.pose(), Pose::Sit);
+    }
+    pet.advance(0.1, 30.0, 1, &world);
+    assert_eq!(pet.pose(), Pose::Idle);
+}
+
+#[test]
 fn sitting_is_random_and_requires_a_window_with_room_for_the_feet() {
     let mut sitting = 0;
     for (top, expected) in [(350.0, true), (896.0, false), (900.0, false)] {
