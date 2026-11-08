@@ -224,41 +224,69 @@ fn airborne_pet_lands_before_resting_and_wakes_on_input() {
 }
 
 #[test]
+fn music_keeps_the_original_random_walks_jumps_and_daily_actions() {
+    let world = desktop(&[window(1, 550.0, 125.0, 900.0, 500.0)]);
+    let mut ordinary = grounded(&world, 100.0);
+    let mut musical = grounded(&world, 100.0);
+    musical.set_music_playing(true);
+
+    let (mut walked, mut jumped, mut acted) = (false, false, false);
+    for _ in 0..60 * 240 {
+        ordinary.advance(1.0 / 60.0, 30.0, 1, &world);
+        musical.advance(1.0 / 60.0, 30.0, 1, &world);
+        let pose = ordinary.pose();
+        if pose == Pose::Idle {
+            assert!(matches!(musical.pose(), Pose::Dance | Pose::CliffSpin));
+        } else {
+            assert_eq!(musical.pose(), pose);
+        }
+        assert_eq!(musical.foot, ordinary.foot);
+        walked |= matches!(pose, Pose::Left | Pose::Right);
+        jumped |= pose == Pose::Rise;
+        acted |= matches!(pose, Pose::Sleeve | Pose::Clap | Pose::Spin);
+    }
+    assert!(walked && jumped && acted);
+}
+
+#[test]
 fn music_dances_stay_in_place_and_switch_after_at_least_one_minute() {
     let world = desktop(&[]);
     let mut pet = Wander::for_test(42);
-    pet.set_probability(100);
+    pet.set_probability(0);
     pet.place((200.0, 550.0));
     pet.set_music_playing(true);
-    pet.observe(false, true, 0.1);
     pet.advance(0.1, 30.0, 1, &world);
     assert_eq!(pet.pose(), Pose::Fall);
     pet.advance(1.0, 30.0, 1, &world);
+    assert!(matches!(pet.pose(), Pose::Dance | Pose::CliffSpin));
 
     let mut intervals = Vec::new();
     for _ in 0..4 {
-        let Motion::Dance(dance) = pet.motion else {
-            panic!("AQUA should be dancing after landing");
-        };
+        let dance = pet.dance.unwrap();
         let cycle = pet.pose_seconds[dance.pose as usize];
         assert!((60.0..=120.0 + cycle).contains(&dance.switch_after));
         let loops = dance.switch_after / cycle;
         assert!((loops - loops.round()).abs() < 1e-9);
         intervals.push(dance.switch_after);
-        while pet.animation_seconds + 0.1 + 1e-9 < dance.switch_after {
+        for _ in 0..2000 {
+            let seconds = pet.dance.unwrap().seconds;
             pet.advance(0.1, 30.0, 1, &world);
-            assert_eq!(pet.pose(), dance.pose);
             assert_eq!(pet.foot, (200.0, 900.0));
+            if pet.dance.unwrap().pose != dance.pose {
+                assert!(seconds + 0.1 + 1e-9 >= dance.switch_after);
+                break;
+            }
         }
-        pet.advance(0.1, 30.0, 1, &world);
-        assert_ne!(pet.pose(), dance.pose);
-        assert!(matches!(pet.pose(), Pose::Dance | Pose::CliffSpin));
+        assert_ne!(pet.dance.unwrap().pose, dance.pose);
     }
     assert!(intervals.iter().any(|&seconds| seconds != intervals[0]));
-    pet.set_music_playing(false);
-    assert_eq!(pet.pose(), Pose::Idle);
+    pet.observe(false, true, 0.1);
     pet.advance(0.1, 30.0, 1, &world);
     assert!(matches!(pet.pose(), Pose::Sit | Pose::Bored));
+    pet.observe(false, false, 0.1);
+    assert!(matches!(pet.pose(), Pose::Dance | Pose::CliffSpin));
+    pet.set_music_playing(false);
+    assert_eq!(pet.pose(), Pose::Idle);
 }
 
 #[test]
@@ -268,14 +296,14 @@ fn a_greeting_pauses_the_current_dance_and_music_can_stop_during_the_wave() {
     pet.set_music_playing(true);
     pet.advance(0.9, 30.0, 1, &world);
     let pose = pet.pose();
-    let seconds = pet.animation_seconds;
+    let seconds = pet.animation_seconds();
     pet.observe(true, false, 0.01);
     assert_eq!(pet.pose(), Pose::Wave);
     pet.advance(1.99, 30.0, 1, &world);
     assert_eq!(pet.pose(), Pose::Wave);
     pet.advance(0.01, 30.0, 1, &world);
     assert_eq!(pet.pose(), pose);
-    assert_eq!(pet.animation_seconds, seconds);
+    assert_eq!(pet.animation_seconds(), seconds);
 
     pet.observe(false, false, 15.0);
     pet.observe(true, false, 0.01);

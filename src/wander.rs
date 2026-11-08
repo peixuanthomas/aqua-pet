@@ -31,6 +31,7 @@ impl Footing {
 #[derive(Clone, Copy, Debug)]
 struct Dance {
     pose: Pose,
+    seconds: f64,
     switch_after: f64,
 }
 
@@ -39,10 +40,7 @@ enum Motion {
     Idle,
     Action(Pose),
     Rest(Pose),
-    Dance(Dance),
-    Wave {
-        resume: Option<(Dance, f64)>,
-    },
+    Wave,
     Walk {
         right: bool,
         end: f64,
@@ -60,7 +58,7 @@ pub struct Wander {
     pub foot: (f64, f64),
     pub support: Option<Footing>,
     motion: Motion,
-    pub animation_seconds: f64,
+    motion_seconds: f64,
     probability: u8,
     distance_bias: u8,
     pose_seconds: [f64; Pose::ALL.len()],
@@ -68,7 +66,8 @@ pub struct Wander {
     mouse_near: bool,
     wave_cooldown: f64,
     computer_idle: bool,
-    music_playing: bool,
+    dance: Option<Dance>,
+    dance_rng: u64,
 }
 
 impl Wander {
@@ -83,7 +82,7 @@ impl Wander {
             foot: (0.0, 0.0),
             support: None,
             motion: Motion::Idle,
-            animation_seconds: 0.0,
+            motion_seconds: 0.0,
             probability: DEFAULT_WALK_CHANCE,
             distance_bias: DEFAULT_DISTANCE_BIAS,
             pose_seconds,
@@ -91,21 +90,26 @@ impl Wander {
             mouse_near: false,
             wave_cooldown: 0.0,
             computer_idle: false,
-            music_playing: false,
+            dance: None,
+            dance_rng: (!seed).max(1),
         }
     }
 
     fn random(&mut self) -> f64 {
-        self.rng ^= self.rng >> 12;
-        self.rng ^= self.rng << 25;
-        self.rng ^= self.rng >> 27;
-        let bits = self.rng.wrapping_mul(0x2545_f491_4f6c_dd1d);
+        Self::random_sample(&mut self.rng)
+    }
+
+    fn random_sample(rng: &mut u64) -> f64 {
+        *rng ^= *rng >> 12;
+        *rng ^= *rng << 25;
+        *rng ^= *rng >> 27;
+        let bits = rng.wrapping_mul(0x2545_f491_4f6c_dd1d);
         (bits >> 11) as f64 / ((1u64 << 53) as f64)
     }
 
     fn start(&mut self, motion: Motion) {
         self.motion = motion;
-        self.animation_seconds = 0.0;
+        self.motion_seconds = 0.0;
     }
 
     pub fn place(&mut self, foot: (f64, f64)) {
@@ -120,14 +124,20 @@ impl Wander {
 
     pub fn pose(&self) -> Pose {
         match self.motion {
-            Motion::Idle => Pose::Idle,
+            Motion::Idle => self.dance.map_or(Pose::Idle, |dance| dance.pose),
             Motion::Action(pose) | Motion::Rest(pose) => pose,
-            Motion::Dance(dance) => dance.pose,
-            Motion::Wave { .. } => Pose::Wave,
+            Motion::Wave => Pose::Wave,
             Motion::Walk { right: true, .. } => Pose::Right,
             Motion::Walk { right: false, .. } => Pose::Left,
             Motion::Air { vy, .. } if vy < 0.0 => Pose::Rise,
             Motion::Air { .. } => Pose::Fall,
+        }
+    }
+
+    pub fn animation_seconds(&self) -> f64 {
+        match (self.motion, self.dance) {
+            (Motion::Idle, Some(dance)) => dance.seconds,
+            _ => self.motion_seconds,
         }
     }
 
@@ -143,29 +153,36 @@ impl Wander {
         }
         if near && !self.mouse_near && !idle && self.wave_cooldown == 0.0 && self.support.is_some()
         {
-            let resume = match self.motion {
-                Motion::Dance(dance) => Some((dance, self.animation_seconds)),
-                _ => None,
-            };
-            self.start(Motion::Wave { resume });
+            self.start(Motion::Wave);
             self.wave_cooldown = 15.0;
         }
         self.mouse_near = near;
     }
 
     pub fn set_music_playing(&mut self, playing: bool) {
-        self.music_playing = playing;
-        if !playing && matches!(self.motion, Motion::Dance(_)) {
-            self.start(Motion::Idle);
+        if !playing {
+            self.dance = None;
+        } else if self.dance.is_none() {
+            let pose = if Self::random_sample(&mut self.dance_rng) < 0.5 {
+                Pose::Dance
+            } else {
+                Pose::CliffSpin
+            };
+            self.dance = Some(self.new_dance(pose));
         }
     }
 
-    fn start_dance(&mut self, pose: Pose) {
-        let seconds = MIN_DANCE_SECONDS + self.random() * (MAX_DANCE_SECONDS - MIN_DANCE_SECONDS);
+    fn new_dance(&mut self, pose: Pose) -> Dance {
+        // Dance choices must not consume the random numbers used for movement.
+        let seconds = MIN_DANCE_SECONDS
+            + Self::random_sample(&mut self.dance_rng) * (MAX_DANCE_SECONDS - MIN_DANCE_SECONDS);
         let cycle = self.pose_seconds[pose as usize];
         // Finish the last loop before changing steps.
-        let switch_after = (seconds / cycle).ceil() * cycle;
-        self.start(Motion::Dance(Dance { pose, switch_after }));
+        Dance {
+            pose,
+            seconds: 0.0,
+            switch_after: (seconds / cycle).ceil() * cycle,
+        }
     }
 
     pub fn riding(&self) -> Option<Footing> {
@@ -353,38 +370,15 @@ impl Wander {
         while remaining > 1e-9 {
             let dt = remaining.min(1.0 / 60.0);
             remaining -= dt;
-            self.animation_seconds += dt;
+            self.motion_seconds += dt;
             if let Motion::Air { vx, vy, skip } = self.motion {
                 self.fly(dt, scale, world, vx, vy, skip);
                 continue;
             }
-            if let Motion::Wave { resume } = self.motion {
-                if self.animation_seconds + 1e-9 >= MOUSE_WAVE_SECONDS {
-                    if let Some((dance, seconds)) = resume.filter(|_| self.music_playing) {
-                        self.motion = Motion::Dance(dance);
-                        self.animation_seconds = seconds;
-                    } else {
-                        self.start(Motion::Idle);
-                    }
+            if matches!(self.motion, Motion::Wave) {
+                if self.motion_seconds + 1e-9 >= MOUSE_WAVE_SECONDS {
+                    self.start(Motion::Idle);
                 }
-                continue;
-            }
-            if self.music_playing {
-                let next = match self.motion {
-                    Motion::Dance(dance) if self.animation_seconds + 1e-9 < dance.switch_after => {
-                        continue;
-                    }
-                    Motion::Dance(dance) if dance.pose == Pose::Dance => Pose::CliffSpin,
-                    Motion::Dance(_) => Pose::Dance,
-                    _ => {
-                        if self.random() < 0.5 {
-                            Pose::Dance
-                        } else {
-                            Pose::CliffSpin
-                        }
-                    }
-                };
-                self.start_dance(next);
                 continue;
             }
             let standing = self.support.expect("ground motion requires a ledge");
@@ -401,12 +395,25 @@ impl Wander {
             }
             match self.motion {
                 Motion::Action(pose)
-                    if self.animation_seconds + 1e-9 >= self.pose_seconds[pose as usize] =>
+                    if self.motion_seconds + 1e-9 >= self.pose_seconds[pose as usize] =>
                 {
                     self.start(Motion::Idle)
                 }
-                Motion::Idle if self.animation_seconds + 1e-9 >= IDLE_SECONDS => {
-                    self.choose(edge, world, speed, scale)
+                Motion::Idle => {
+                    if let Some(dance) = &mut self.dance {
+                        dance.seconds += dt;
+                        if dance.seconds + 1e-9 >= dance.switch_after {
+                            let next = if dance.pose == Pose::Dance {
+                                Pose::CliffSpin
+                            } else {
+                                Pose::Dance
+                            };
+                            self.dance = Some(self.new_dance(next));
+                        }
+                    }
+                    if self.motion_seconds + 1e-9 >= IDLE_SECONDS {
+                        self.choose(edge, world, speed, scale);
+                    }
                 }
                 Motion::Walk { end, jump_to, .. } => {
                     let end = (edge.origin_x + end).clamp(edge.left, edge.right);

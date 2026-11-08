@@ -549,7 +549,7 @@ impl App {
                 self.show_pose(self.wander.pose());
                 let clip = &self.catalog.clips[self.player.selected];
                 self.player.tick =
-                    (self.wander.animation_seconds * self.catalog.game_fps) % clip.duration();
+                    (self.wander.animation_seconds() * self.catalog.game_fps) % clip.duration();
             } else {
                 let clip = &self.catalog.clips[self.player.selected];
                 self.player.advance(dt, self.catalog.game_fps, clip);
