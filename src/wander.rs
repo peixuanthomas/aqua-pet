@@ -9,6 +9,8 @@ pub const DEFAULT_WALK_CHANCE: u8 = 25;
 pub const DEFAULT_DISTANCE_BIAS: u8 = 50;
 const IDLE_SECONDS: f64 = 6.4;
 const MIN_DAILY_SECONDS: f64 = 6.0;
+const MIN_DANCE_SECONDS: f64 = 60.0;
+const MAX_DANCE_SECONDS: f64 = 120.0;
 
 #[derive(Clone, Copy, Debug)]
 pub struct Footing {
@@ -26,10 +28,20 @@ impl Footing {
 }
 
 #[derive(Clone, Copy, Debug)]
+struct Dance {
+    pose: Pose,
+    switch_after: f64,
+}
+
+#[derive(Clone, Copy, Debug)]
 enum Motion {
     Idle,
     Action(Pose),
     Rest(Pose),
+    Dance(Dance),
+    Wave {
+        resume: Option<(Dance, f64)>,
+    },
     Walk {
         right: bool,
         end: f64,
@@ -55,6 +67,7 @@ pub struct Wander {
     mouse_near: bool,
     wave_cooldown: f64,
     computer_idle: bool,
+    music_playing: bool,
 }
 
 impl Wander {
@@ -77,6 +90,7 @@ impl Wander {
             mouse_near: false,
             wave_cooldown: 0.0,
             computer_idle: false,
+            music_playing: false,
         }
     }
 
@@ -107,6 +121,8 @@ impl Wander {
         match self.motion {
             Motion::Idle => Pose::Idle,
             Motion::Action(pose) | Motion::Rest(pose) => pose,
+            Motion::Dance(dance) => dance.pose,
+            Motion::Wave { .. } => Pose::Wave,
             Motion::Walk { right: true, .. } => Pose::Right,
             Motion::Walk { right: false, .. } => Pose::Left,
             Motion::Air { vy, .. } if vy < 0.0 => Pose::Rise,
@@ -126,10 +142,29 @@ impl Wander {
         }
         if near && !self.mouse_near && !idle && self.wave_cooldown == 0.0 && self.support.is_some()
         {
-            self.start(Motion::Action(Pose::Wave));
+            let resume = match self.motion {
+                Motion::Dance(dance) => Some((dance, self.animation_seconds)),
+                _ => None,
+            };
+            self.start(Motion::Wave { resume });
             self.wave_cooldown = 15.0;
         }
         self.mouse_near = near;
+    }
+
+    pub fn set_music_playing(&mut self, playing: bool) {
+        self.music_playing = playing;
+        if !playing && matches!(self.motion, Motion::Dance(_)) {
+            self.start(Motion::Idle);
+        }
+    }
+
+    fn start_dance(&mut self, pose: Pose) {
+        let seconds = MIN_DANCE_SECONDS + self.random() * (MAX_DANCE_SECONDS - MIN_DANCE_SECONDS);
+        let cycle = self.pose_seconds[pose as usize];
+        // Finish the last loop before changing steps.
+        let switch_after = (seconds / cycle).ceil() * cycle;
+        self.start(Motion::Dance(Dance { pose, switch_after }));
     }
 
     pub fn riding(&self) -> Option<Footing> {
@@ -320,6 +355,35 @@ impl Wander {
             self.animation_seconds += dt;
             if let Motion::Air { vx, vy, skip } = self.motion {
                 self.fly(dt, scale, world, vx, vy, skip);
+                continue;
+            }
+            if let Motion::Wave { resume } = self.motion {
+                if self.animation_seconds + 1e-9 >= self.pose_seconds[Pose::Wave as usize] {
+                    if let Some((dance, seconds)) = resume.filter(|_| self.music_playing) {
+                        self.motion = Motion::Dance(dance);
+                        self.animation_seconds = seconds;
+                    } else {
+                        self.start(Motion::Idle);
+                    }
+                }
+                continue;
+            }
+            if self.music_playing {
+                let next = match self.motion {
+                    Motion::Dance(dance) if self.animation_seconds + 1e-9 < dance.switch_after => {
+                        continue;
+                    }
+                    Motion::Dance(dance) if dance.pose == Pose::Dance => Pose::CliffSpin,
+                    Motion::Dance(_) => Pose::Dance,
+                    _ => {
+                        if self.random() < 0.5 {
+                            Pose::Dance
+                        } else {
+                            Pose::CliffSpin
+                        }
+                    }
+                };
+                self.start_dance(next);
                 continue;
             }
             let standing = self.support.expect("ground motion requires a ledge");

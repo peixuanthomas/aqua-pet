@@ -14,12 +14,14 @@ pub enum Pose {
     Sleeve,
     Clap,
     Spin,
+    Dance,
+    CliffSpin,
     Bored,
     Sit,
 }
 
 impl Pose {
-    pub const ALL: [Self; 11] = [
+    pub const ALL: [Self; 13] = [
         Self::Idle,
         Self::Left,
         Self::Right,
@@ -29,6 +31,8 @@ impl Pose {
         Self::Sleeve,
         Self::Clap,
         Self::Spin,
+        Self::Dance,
+        Self::CliffSpin,
         Self::Bored,
         Self::Sit,
     ];
@@ -45,6 +49,8 @@ impl Pose {
             Self::Sleeve => ("sleeve-garden", 7.0),
             Self::Clap => ("clap-cafe", 10.0),
             Self::Spin => ("battle-spin", 10.0),
+            Self::Dance => ("battle-dance", 9.0),
+            Self::CliffSpin => ("spin-cliff", 10.0),
             Self::Bored => ("battle-bored", 9.0),
             Self::Sit => ("sit-smile", -2.0),
         }

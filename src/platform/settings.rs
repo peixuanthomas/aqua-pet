@@ -1,8 +1,11 @@
 use super::*;
 
+const ORDER: [usize; 3] = [WALK_CHANCE, DISTANCE_BIAS, DANCE_TO_MUSIC];
+const DANCE_ROW_HEIGHT: f64 = 48.0;
+
 pub(super) struct Row {
-    bounds: RECT,
-    slider: RECT,
+    pub(super) bounds: RECT,
+    slider: Option<RECT>,
 }
 
 impl App {
@@ -21,15 +24,22 @@ impl App {
         let dpi = GetDpiForWindow(self.settings).max(96) as f64 / 96.0;
         let width = client.right as f64 / dpi;
         let height = client.bottom as f64 / dpi;
-        let row = ((height - 144.0) / 2.0).max(112.0);
+        let row = ((height - 144.0 - DANCE_ROW_HEIGHT) / 2.0).max(112.0);
         self.settings_regions.clear();
-        for (index, id) in [WALK_CHANCE, DISTANCE_BIAS].iter().enumerate() {
+        for (index, id) in ORDER.into_iter().enumerate() {
             let y = 88.0 + index as f64 * row;
+            let is_slider = id != DANCE_TO_MUSIC;
             self.settings_regions.insert(
-                *id,
+                id,
                 Row {
-                    bounds: ui::rect(dpi, 24.0, y, width - 48.0, row),
-                    slider: ui::rect(dpi, 58.0, y + 50.0, width - 116.0, 32.0),
+                    bounds: ui::rect(
+                        dpi,
+                        24.0,
+                        y,
+                        width - 48.0,
+                        if is_slider { row } else { DANCE_ROW_HEIGHT },
+                    ),
+                    slider: is_slider.then(|| ui::rect(dpi, 58.0, y + 50.0, width - 116.0, 32.0)),
                 },
             );
         }
@@ -41,7 +51,7 @@ impl App {
             let work = self.work_area();
             let dpi = GetDpiForWindow(self.settings).max(96) as i32;
             let width = 500 * dpi / 96;
-            let height = 440 * dpi / 96;
+            let height = SETTINGS_HEIGHT * dpi / 96;
             let _ = SetWindowPos(
                 self.settings,
                 None,
@@ -64,7 +74,6 @@ impl App {
         let dpi = GetDpiForWindow(self.settings).max(96) as f64 / 96.0;
         let width = client.right as f64 / dpi;
         let height = client.bottom as f64 / dpi;
-        let row = ((height - 144.0) / 2.0).max(112.0);
         ui::logo(dc, dpi, 28.0, 28.0);
         ui::label(
             dc,
@@ -79,14 +88,13 @@ impl App {
             ui::WHITE,
             (2.0 * dpi).round() as i32,
         );
-        ui::fill(
-            dc,
-            &ui::rect(dpi, 42.0, 88.0 + row, width - 84.0, 2.0),
-            ui::DIM,
-        );
-        for (index, id) in [WALK_CHANCE, DISTANCE_BIAS].iter().enumerate() {
-            let y = 88.0 + index as f64 * row;
-            let (name, value, ends) = if *id == WALK_CHANCE {
+        for id in [DISTANCE_BIAS, DANCE_TO_MUSIC] {
+            let y = self.settings_regions[&id].bounds.top as f64 / dpi;
+            ui::fill(dc, &ui::rect(dpi, 42.0, y, width - 84.0, 2.0), ui::DIM);
+        }
+        for id in [WALK_CHANCE, DISTANCE_BIAS] {
+            let y = self.settings_regions[&id].bounds.top as f64 / dpi;
+            let (name, value, ends) = if id == WALK_CHANCE {
                 (
                     "主动走跳",
                     format!("{}%", self.wander.probability()),
@@ -103,7 +111,7 @@ impl App {
                     ("短", "长"),
                 )
             };
-            if self.settings_ui.selected(*id) {
+            if self.settings_ui.selected(id) {
                 ui::heart(dc, dpi, 38.0, y + 19.0);
             }
             ui::label(
@@ -111,7 +119,7 @@ impl App {
                 ui::rect(dpi, 58.0, y + 10.0, width - 220.0, 32.0),
                 name,
                 self.settings_fonts.body,
-                if self.settings_ui.hot_control() == Some(*id) {
+                if self.settings_ui.hot_control() == Some(id) {
                     ui::YELLOW
                 } else {
                     ui::WHITE
@@ -126,18 +134,13 @@ impl App {
                 ui::CYAN,
                 DT_SINGLELINE | DT_VCENTER | DT_RIGHT | DT_NOPREFIX,
             );
-            let current = if *id == WALK_CHANCE {
-                self.wander.probability()
-            } else {
-                self.wander.distance_bias()
-            };
             ui::slider(
                 dc,
                 &self.settings_ui,
                 dpi,
-                *id,
-                self.settings_regions[id].slider,
-                current as i32,
+                id,
+                self.settings_regions[&id].slider.unwrap(),
+                self.slider_setting(id).unwrap(),
                 100,
             );
             ui::label(
@@ -157,12 +160,73 @@ impl App {
                 DT_SINGLELINE | DT_VCENTER | DT_RIGHT | DT_NOPREFIX,
             );
         }
+        let y = self.settings_regions[&DANCE_TO_MUSIC].bounds.top as f64 / dpi;
+        let color = if self.settings_ui.hot_control() == Some(DANCE_TO_MUSIC) {
+            ui::YELLOW
+        } else {
+            ui::WHITE
+        };
+        if self.settings_ui.selected(DANCE_TO_MUSIC) {
+            ui::heart(dc, dpi, 38.0, y + 18.0);
+        }
+        ui::label(
+            dc,
+            ui::rect(dpi, 58.0, y + 8.0, width - 154.0, 32.0),
+            "随音乐舞动",
+            self.settings_fonts.body,
+            color,
+        );
+        let box_x = width - 78.0;
+        let box_y = y + 14.0;
+        ui::border(
+            dc,
+            ui::rect(dpi, box_x, box_y, 20.0, 20.0),
+            color,
+            (2.0 * dpi).round() as i32,
+        );
+        if self.dance_to_music {
+            for (dx, dy) in [
+                (4.0, 9.0),
+                (6.0, 11.0),
+                (8.0, 13.0),
+                (10.0, 11.0),
+                (12.0, 9.0),
+                (14.0, 7.0),
+            ] {
+                ui::fill(
+                    dc,
+                    &ui::rect(dpi, box_x + dx, box_y + dy, 3.0, 3.0),
+                    ui::CYAN,
+                );
+            }
+        }
         ui::label(
             dc,
             ui::rect(dpi, 32.0, height - 42.0, width - 64.0, 24.0),
             "更改自动保存",
             self.settings_fonts.small,
             ui::MUTED,
+        );
+    }
+
+    fn slider_setting(&self, id: usize) -> Option<i32> {
+        match id {
+            WALK_CHANCE => Some(self.wander.probability() as i32),
+            DISTANCE_BIAS => Some(self.wander.distance_bias() as i32),
+            _ => None,
+        }
+    }
+
+    unsafe fn toggle_music_dance(&mut self) {
+        self.dance_to_music = !self.dance_to_music;
+        if !self.dance_to_music {
+            self.music = None;
+        }
+        self.save_settings();
+        let _ = InvalidateRect(
+            Some(self.settings),
+            Some(&self.settings_regions[&DANCE_TO_MUSIC].bounds),
+            false,
         );
     }
 
@@ -209,8 +273,8 @@ impl App {
     }
 
     fn set_setting_from_point(&mut self, id: usize, point: POINT) {
-        if let Some(row) = self.settings_regions.get(&id) {
-            let value = ui::slider_value(&row.slider, point.x, 100);
+        if let Some(slider) = self.settings_regions[&id].slider {
+            let value = ui::slider_value(&slider, point.x, 100);
             self.set_setting(id, value, false);
         }
     }
@@ -232,7 +296,10 @@ impl App {
                 if let Some(id) = self.setting_at(point) {
                     self.settings_ui.focus = Some(id);
                     let _ = SetFocus(Some(self.settings));
-                    if ui::contains(&self.settings_regions[&id].slider, point) {
+                    if self.settings_regions[&id]
+                        .slider
+                        .is_none_or(|slider| ui::contains(&slider, point))
+                    {
                         self.settings_ui.active = Some(id);
                         SetCapture(self.settings);
                         self.set_setting_from_point(id, point);
@@ -241,20 +308,23 @@ impl App {
                 }
             }
             WM_LBUTTONUP => {
-                if self.settings_ui.active.take().is_some() {
+                if let Some(id) = self.settings_ui.active.take() {
                     let _ = ReleaseCapture();
-                    self.save_settings();
+                    if id == DANCE_TO_MUSIC {
+                        if self.setting_at(point) == Some(id) {
+                            self.toggle_music_dance();
+                        }
+                    } else {
+                        self.save_settings();
+                    }
                 }
             }
             WM_MOUSEWHEEL => {
                 let delta = (wp.0 >> 16) as u16 as i16 as i32 / 120;
-                if let Some(id) = self.settings_ui.hot_control().or(self.settings_ui.focus) {
-                    let current = if id == WALK_CHANCE {
-                        self.wander.probability()
-                    } else {
-                        self.wander.distance_bias()
-                    };
-                    self.set_setting(id, current as i32 + delta, true);
+                if let Some(id) = self.settings_ui.hot_control().or(self.settings_ui.focus)
+                    && let Some(current) = self.slider_setting(id)
+                {
+                    self.set_setting(id, current + delta, true);
                 }
             }
             _ => {}
@@ -270,10 +340,12 @@ impl App {
         let Some(id) = self.settings_ui.focus else {
             return;
         };
-        let current = if id == WALK_CHANCE {
-            self.wander.probability() as i32
-        } else {
-            self.wander.distance_bias() as i32
+        if id == DANCE_TO_MUSIC && key == VK_SPACE {
+            self.toggle_music_dance();
+            return;
+        }
+        let Some(current) = self.slider_setting(id) else {
+            return;
         };
         let value = match key {
             key if key == VK_LEFT || key == VK_DOWN => current - 1,
@@ -287,13 +359,13 @@ impl App {
         self.set_setting(id, value, true);
     }
 
-    pub unsafe fn settings_tab(&mut self) {
-        let next = if self.settings_ui.focus == Some(WALK_CHANCE) {
-            DISTANCE_BIAS
-        } else {
-            WALK_CHANCE
-        };
-        self.settings_ui.focus = Some(next);
+    pub unsafe fn settings_tab(&mut self, reverse: bool) {
+        let current = ORDER
+            .iter()
+            .position(|id| Some(*id) == self.settings_ui.focus)
+            .unwrap_or(0) as i32;
+        let next = (current + if reverse { -1 } else { 1 }).rem_euclid(ORDER.len() as i32);
+        self.settings_ui.focus = Some(ORDER[next as usize]);
         let _ = SetFocus(Some(self.settings));
         let _ = InvalidateRect(Some(self.settings), None, false);
     }

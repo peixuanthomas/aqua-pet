@@ -230,13 +230,9 @@ fn hovering_keeps_one_selected_heart_and_only_repaints_changed_rows() {
             app.paint(dc, client)
         });
 
-        let mut client = RECT::default();
-        GetClientRect(settings.0, &mut client).unwrap();
-        let dpi = GetDpiForWindow(settings.0).max(96) as f64 / 96.0;
-        let height = ((client.bottom as f64 / dpi - 144.0) / 2.0).max(112.0);
-        let width = client.right as f64 / dpi - 48.0;
-        let walk = ui::rect(dpi, 24.0, 88.0, width, height);
-        let distance = ui::rect(dpi, 24.0, 88.0 + height, width, height);
+        let walk = app.settings_regions[&WALK_CHANCE].bounds;
+        let distance = app.settings_regions[&DISTANCE_BIAS].bounds;
+        let dance = app.settings_regions[&DANCE_TO_MUSIC].bounds;
         app.settings_mouse(WM_MOUSEMOVE, WPARAM(0), mouse_point(distance));
         check_markers(settings.0, walk, distance, true, |dc, client| {
             app.paint_settings(dc, client)
@@ -245,6 +241,29 @@ fn hovering_keeps_one_selected_heart_and_only_repaints_changed_rows() {
         check_markers(settings.0, walk, distance, false, |dc, client| {
             app.paint_settings(dc, client)
         });
+
+        app.settings_tab(true);
+        assert_eq!(app.settings_ui.focus, Some(DANCE_TO_MUSIC));
+        app.settings_tab(false);
+        assert_eq!(app.settings_ui.focus, Some(WALK_CHANCE));
+        app.settings_mouse(WM_MOUSEMOVE, WPARAM(0), mouse_point(dance));
+        check_markers(settings.0, walk, dance, true, |dc, client| {
+            app.paint_settings(dc, client)
+        });
+        app.settings_mouse(WM_LBUTTONDOWN, WPARAM(0), mouse_point(dance));
+        app.settings_mouse(WM_LBUTTONUP, WPARAM(0), mouse_point(walk));
+        assert!(app.dance_to_music);
+        app.settings_mouse(WM_LBUTTONDOWN, WPARAM(0), mouse_point(dance));
+        app.settings_mouse(WM_LBUTTONUP, WPARAM(0), mouse_point(dance));
+        assert!(!app.dance_to_music);
+        check_markers(settings.0, dance, dance, true, |dc, client| {
+            app.paint_settings(dc, client)
+        });
+        let space = WPARAM(VK_SPACE.0 as usize);
+        app.handle(settings.0, WM_KEYDOWN, space, LPARAM(0));
+        assert!(app.dance_to_music);
+        app.handle(settings.0, WM_KEYDOWN, space, LPARAM(1 << 30));
+        assert!(app.dance_to_music);
     }
 }
 

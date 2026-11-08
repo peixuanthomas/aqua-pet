@@ -4,6 +4,7 @@
 
 mod debug;
 mod desktop;
+mod music;
 #[cfg(test)]
 mod panel_tests;
 mod settings;
@@ -61,6 +62,8 @@ const MENU_EXIT: u32 = 401;
 const MENU_SETTINGS: u32 = 402;
 const WALK_CHANCE: usize = 500;
 const DISTANCE_BIAS: usize = 506;
+const DANCE_TO_MUSIC: usize = 507;
+const SETTINGS_HEIGHT: i32 = 480;
 const SHOW_DEBUG: u32 = WM_APP + 1;
 const RATES: [f64; 7] = [0.25, 0.5, 0.75, 1.0, 1.5, 2.0, 4.0];
 
@@ -90,12 +93,17 @@ struct Settings {
     walk_probability: u8,
     #[serde(default = "default_distance_bias")]
     walk_distance_bias: u8,
+    #[serde(default = "default_dance_to_music")]
+    dance_to_music: bool,
 }
 fn default_walk_chance() -> u8 {
     DEFAULT_WALK_CHANCE
 }
 fn default_distance_bias() -> u8 {
     DEFAULT_DISTANCE_BIAS
+}
+fn default_dance_to_music() -> bool {
+    true
 }
 fn settings_path() -> PathBuf {
     PathBuf::from(std::env::var_os("LOCALAPPDATA").unwrap_or_default())
@@ -184,6 +192,8 @@ struct App {
     bounds: Bounds,
     motion_bounds: Bounds,
     desktop: desktop::Desktop,
+    music: Option<music::Monitor>,
+    dance_to_music: bool,
     poses: Poses,
     auto_pose: Pose,
     wander: Wander,
@@ -249,6 +259,8 @@ impl App {
             bounds,
             motion_bounds: bounds,
             desktop: desktop::Desktop::new(&[pet, debug, settings]),
+            music: None,
+            dance_to_music: default_dance_to_music(),
             poses,
             auto_pose: Pose::Idle,
             wander,
@@ -350,6 +362,7 @@ impl App {
             self.scale = s.scale.clamp(1, 8);
             self.wander.set_probability(s.walk_probability);
             self.wander.set_distance_bias(s.walk_distance_bias);
+            self.dance_to_music = s.dance_to_music;
             self.anchor = POINT {
                 x: s.anchor_x,
                 y: s.anchor_y,
@@ -374,6 +387,7 @@ impl App {
             scale: self.scale,
             walk_probability: self.wander.probability(),
             walk_distance_bias: self.wander.distance_bias(),
+            dance_to_music: self.dance_to_music,
         };
         if let (Some(parent), Ok(bytes)) = (path.parent(), serde_json::to_vec_pretty(&data))
             && std::fs::create_dir_all(parent).is_ok()
@@ -519,6 +533,13 @@ impl App {
                 self.effective_scale =
                     crate::placement::fit_scale(self.scale, self.poses.body(1), work);
                 let body = self.poses.body(self.effective_scale);
+                let music_playing = self.dance_to_music
+                    && !self.smoke
+                    && self
+                        .music
+                        .get_or_insert_with(music::Monitor::new)
+                        .playing(now);
+                self.wander.set_music_playing(music_playing);
                 let (near, idle) = desktop::activity((x, y), body);
                 self.wander.observe(near, idle, dt);
                 let world = self.desktop.ledges(work, body);
@@ -799,7 +820,10 @@ impl App {
                 Some(LRESULT(0))
             }
             WM_KEYDOWN if settings => {
-                self.settings_key(VIRTUAL_KEY(wp.0 as u16));
+                let key = VIRTUAL_KEY(wp.0 as u16);
+                if key != VK_SPACE || lp.0 & (1 << 30) == 0 {
+                    self.settings_key(key);
+                }
                 Some(LRESULT(0))
             }
             WM_CAPTURECHANGED if debug || settings => {
@@ -989,7 +1013,7 @@ pub fn run(catalog: Catalog, debug: bool, smoke: bool) -> Result<(), String> {
             CW_USEDEFAULT,
             CW_USEDEFAULT,
             480,
-            420,
+            SETTINGS_HEIGHT,
             None,
             None,
             Some(module.into()),
@@ -1060,7 +1084,7 @@ pub fn run(catalog: Catalog, debug: bool, smoke: bool) -> Result<(), String> {
                     let mut borrowed = slot.borrow_mut();
                     let app = borrowed.as_mut().unwrap();
                     if message.hwnd == settings {
-                        app.settings_tab();
+                        app.settings_tab(reverse);
                         true
                     } else if message.hwnd == panel || message.hwnd == app.search {
                         app.debug_tab(reverse);
@@ -1109,6 +1133,7 @@ mod settings_tests {
         );
         assert_eq!(settings.walk_probability, DEFAULT_WALK_CHANCE);
         assert_eq!(settings.walk_distance_bias, DEFAULT_DISTANCE_BIAS);
+        assert!(settings.dance_to_music);
     }
 
     #[test]
@@ -1120,6 +1145,7 @@ mod settings_tests {
                 scale: 4,
                 walk_probability: probability,
                 walk_distance_bias: DEFAULT_DISTANCE_BIAS,
+                dance_to_music: default_dance_to_music(),
             };
             let bytes = serde_json::to_vec(&settings).unwrap();
             let restored: Settings = serde_json::from_slice(&bytes).unwrap();
@@ -1149,6 +1175,21 @@ mod settings_tests {
             wander.set_distance_bias(restored.walk_distance_bias);
             assert_eq!(wander.distance_bias(), bias);
             assert_eq!(wander.probability(), 0);
+        }
+    }
+
+    #[test]
+    fn music_dance_preference_round_trips() {
+        let old: Settings =
+            serde_json::from_str(r#"{"anchor_x":100,"anchor_y":200,"scale":4}"#).unwrap();
+        for dance_to_music in [false, true] {
+            let settings = Settings {
+                dance_to_music,
+                ..old
+            };
+            let restored: Settings =
+                serde_json::from_slice(&serde_json::to_vec(&settings).unwrap()).unwrap();
+            assert_eq!(restored.dance_to_music, dance_to_music);
         }
     }
 }

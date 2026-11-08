@@ -222,6 +222,67 @@ fn airborne_pet_lands_before_resting_and_wakes_on_input() {
 }
 
 #[test]
+fn music_dances_stay_in_place_and_switch_after_at_least_one_minute() {
+    let world = desktop(&[]);
+    let mut pet = Wander::for_test(42);
+    pet.set_probability(100);
+    pet.place((200.0, 550.0));
+    pet.set_music_playing(true);
+    pet.observe(false, true, 0.1);
+    pet.advance(0.1, 30.0, 1, &world);
+    assert_eq!(pet.pose(), Pose::Fall);
+    pet.advance(1.0, 30.0, 1, &world);
+
+    let mut intervals = Vec::new();
+    for _ in 0..4 {
+        let Motion::Dance(dance) = pet.motion else {
+            panic!("AQUA should be dancing after landing");
+        };
+        let cycle = pet.pose_seconds[dance.pose as usize];
+        assert!((60.0..=120.0 + cycle).contains(&dance.switch_after));
+        let loops = dance.switch_after / cycle;
+        assert!((loops - loops.round()).abs() < 1e-9);
+        intervals.push(dance.switch_after);
+        while pet.animation_seconds + 0.1 + 1e-9 < dance.switch_after {
+            pet.advance(0.1, 30.0, 1, &world);
+            assert_eq!(pet.pose(), dance.pose);
+            assert_eq!(pet.foot, (200.0, 900.0));
+        }
+        pet.advance(0.1, 30.0, 1, &world);
+        assert_ne!(pet.pose(), dance.pose);
+        assert!(matches!(pet.pose(), Pose::Dance | Pose::CliffSpin));
+    }
+    assert!(intervals.iter().any(|&seconds| seconds != intervals[0]));
+    pet.set_music_playing(false);
+    assert_eq!(pet.pose(), Pose::Idle);
+    pet.advance(0.1, 30.0, 1, &world);
+    assert!(matches!(pet.pose(), Pose::Sit | Pose::Bored));
+}
+
+#[test]
+fn a_greeting_pauses_the_current_dance_and_music_can_stop_during_the_wave() {
+    let world = desktop(&[]);
+    let mut pet = grounded(&world, 100.0);
+    pet.set_music_playing(true);
+    pet.advance(0.9, 30.0, 1, &world);
+    let pose = pet.pose();
+    let seconds = pet.animation_seconds;
+    let greeting = pet.pose_seconds[Pose::Wave as usize];
+    pet.observe(true, false, 0.01);
+    assert_eq!(pet.pose(), Pose::Wave);
+    pet.advance(greeting, 30.0, 1, &world);
+    assert_eq!(pet.pose(), pose);
+    assert_eq!(pet.animation_seconds, seconds);
+
+    pet.observe(false, false, 15.0);
+    pet.observe(true, false, 0.01);
+    assert_eq!(pet.pose(), Pose::Wave);
+    pet.set_music_playing(false);
+    pet.advance(greeting, 30.0, 1, &world);
+    assert_eq!(pet.pose(), Pose::Idle);
+}
+
+#[test]
 fn daily_actions_last_six_seconds_and_finish_on_a_complete_loop() {
     let world = desktop(&[]);
     for (pose, seconds) in [(Pose::Sleeve, 6.4), (Pose::Clap, 6.0), (Pose::Spin, 6.0)] {
