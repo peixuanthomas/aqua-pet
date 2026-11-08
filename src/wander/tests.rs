@@ -189,7 +189,9 @@ fn wave_needs_a_fresh_approach_and_fifteen_seconds_between_greetings() {
     pet.set_probability(0);
     pet.observe(true, false, 0.01);
     assert_eq!(pet.pose(), Pose::Wave);
-    pet.advance(pet.pose_seconds[Pose::Wave as usize], 30.0, 1, &world);
+    pet.advance(1.99, 30.0, 1, &world);
+    assert_eq!(pet.pose(), Pose::Wave);
+    pet.advance(0.01, 30.0, 1, &world);
     assert_eq!(pet.pose(), Pose::Idle);
     pet.observe(false, false, 5.0);
     pet.observe(true, false, 5.0);
@@ -267,10 +269,11 @@ fn a_greeting_pauses_the_current_dance_and_music_can_stop_during_the_wave() {
     pet.advance(0.9, 30.0, 1, &world);
     let pose = pet.pose();
     let seconds = pet.animation_seconds;
-    let greeting = pet.pose_seconds[Pose::Wave as usize];
     pet.observe(true, false, 0.01);
     assert_eq!(pet.pose(), Pose::Wave);
-    pet.advance(greeting, 30.0, 1, &world);
+    pet.advance(1.99, 30.0, 1, &world);
+    assert_eq!(pet.pose(), Pose::Wave);
+    pet.advance(0.01, 30.0, 1, &world);
     assert_eq!(pet.pose(), pose);
     assert_eq!(pet.animation_seconds, seconds);
 
@@ -278,7 +281,9 @@ fn a_greeting_pauses_the_current_dance_and_music_can_stop_during_the_wave() {
     pet.observe(true, false, 0.01);
     assert_eq!(pet.pose(), Pose::Wave);
     pet.set_music_playing(false);
-    pet.advance(greeting, 30.0, 1, &world);
+    pet.advance(1.99, 30.0, 1, &world);
+    assert_eq!(pet.pose(), Pose::Wave);
+    pet.advance(0.01, 30.0, 1, &world);
     assert_eq!(pet.pose(), Pose::Idle);
 }
 

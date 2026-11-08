@@ -9,6 +9,7 @@ pub const DEFAULT_WALK_CHANCE: u8 = 25;
 pub const DEFAULT_DISTANCE_BIAS: u8 = 50;
 const IDLE_SECONDS: f64 = 6.4;
 const MIN_DAILY_SECONDS: f64 = 6.0;
+const MOUSE_WAVE_SECONDS: f64 = 2.0;
 const MIN_DANCE_SECONDS: f64 = 60.0;
 const MAX_DANCE_SECONDS: f64 = 120.0;
 
@@ -358,7 +359,7 @@ impl Wander {
                 continue;
             }
             if let Motion::Wave { resume } = self.motion {
-                if self.animation_seconds + 1e-9 >= self.pose_seconds[Pose::Wave as usize] {
+                if self.animation_seconds + 1e-9 >= MOUSE_WAVE_SECONDS {
                     if let Some((dance, seconds)) = resume.filter(|_| self.music_playing) {
                         self.motion = Motion::Dance(dance);
                         self.animation_seconds = seconds;
