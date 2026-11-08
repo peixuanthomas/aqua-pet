@@ -25,11 +25,11 @@ cargo clippy --all-targets -- -D warnings
 cargo build --release
 ```
 
-构建完成后，运行 `target/release/aqua-pet.exe`，即可显示无边框的桌宠角色。
+构建完成后，运行 `target/release/aqua-pet.exe`，即可显示无边框的桌宠角色。AQUA 会显示在普通应用窗口上方。置顶被取消时，它会在下次刷新时恢复，键盘焦点留在当前应用。
 
 日常动作复用原尺寸的动画帧。AQUA 在地面站定时按下一帧的时间刷新，走跳、拖动或跟随窗口时会更频繁地更新位置。其他窗口的位置在后台检查。组合动作只在打开 Debug 时加载，关闭面板后释放。
 
-在 Windows 桌面运行 `cargo test -- --ignored`，可以验证拖动挥袖动画和松手落点、桌宠跟随窗口边沿、Debug 播放和暂停时的重画范围，以及设置和 Debug 面板的红心和悬停颜色。测试结束后会自动关闭临时窗口。
+在 Windows 桌面运行 `cargo test -- --ignored`，可以验证桌宠的置顶恢复、拖动挥袖动画和松手落点、桌宠跟随窗口边沿、Debug 播放和暂停时的重画范围，以及设置和 Debug 面板的红心和悬停颜色。测试结束后会自动关闭临时窗口。
 
 Windows 构建会自动将 `assets/sprites/spr_aqua_sleevewave_0.png` 转为多尺寸图标并写入 EXE，设置和 Debug 窗口的标题栏也使用该图标。图标保留透明背景和角色比例，无需额外携带图标文件。
 

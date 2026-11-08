@@ -53,6 +53,63 @@ fn mouse_point(rect: RECT) -> LPARAM {
 }
 
 #[test]
+#[ignore = "changes the stacking order of two real Win32 windows"]
+fn pet_recovers_topmost_when_an_ordinary_window_covers_it() {
+    unsafe {
+        let pet = Window::new(WS_EX_LAYERED);
+        let ordinary = Window::new(WINDOW_EX_STYLE(0));
+        let mut app = App::new(
+            Catalog::load_desktop().unwrap(),
+            pet.0,
+            HWND::default(),
+            HWND::default(),
+            true,
+        );
+        app.auto_exit = None;
+        let work = App::work_bounds_at(POINT::default());
+        app.anchor = POINT {
+            x: ((work.left + work.right) / 2.0) as i32,
+            y: ((work.top + work.bottom) / 2.0) as i32,
+        };
+        app.last_clock = Instant::now() - Duration::from_secs(3);
+        app.update().unwrap();
+        let _ = ShowWindow(pet.0, SW_SHOWNOACTIVATE);
+        let mut rect = RECT::default();
+        GetWindowRect(pet.0, &mut rect).unwrap();
+        SetWindowPos(
+            ordinary.0,
+            Some(HWND_TOP),
+            rect.left,
+            rect.top,
+            rect.right - rect.left,
+            rect.bottom - rect.top,
+            SWP_SHOWWINDOW | SWP_NOACTIVATE,
+        )
+        .unwrap();
+        let pet_is_above = || {
+            std::iter::successors(Some(ordinary.0), |hwnd| GetWindow(*hwnd, GW_HWNDPREV).ok())
+                .take(1024)
+                .any(|hwnd| hwnd == pet.0)
+        };
+        assert!(pet_is_above());
+
+        let flags = SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE;
+        SetWindowPos(pet.0, Some(HWND_NOTOPMOST), 0, 0, 0, 0, flags).unwrap();
+        SetWindowPos(ordinary.0, Some(HWND_TOP), 0, 0, 0, 0, flags).unwrap();
+        assert!(!pet_is_above());
+
+        let foreground = GetForegroundWindow();
+        app.last_clock = Instant::now() - Duration::from_secs(3);
+        app.update().unwrap();
+        assert!(pet_is_above(), "the pet stayed behind the ordinary window");
+        assert_eq!(GetForegroundWindow(), foreground);
+        let mut after = RECT::default();
+        GetWindowRect(pet.0, &mut after).unwrap();
+        assert_eq!(after, rect);
+    }
+}
+
+#[test]
 #[ignore = "checks drag animation and release positions in a real Win32 window"]
 fn dragging_uses_sleeve_frames_and_releases_in_place() {
     unsafe {

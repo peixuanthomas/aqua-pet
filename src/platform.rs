@@ -650,6 +650,18 @@ impl App {
             }
             self.last_position = Some((dst.x, dst.y));
         }
+        // Restore the window's order even when the animation hasn't changed.
+        if GetWindowLongPtrW(self.pet, GWL_EXSTYLE) as u32 & WS_EX_TOPMOST.0 == 0 {
+            SetWindowPos(
+                self.pet,
+                Some(HWND_TOPMOST),
+                0,
+                0,
+                0,
+                0,
+                SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE,
+            )?;
+        }
         let preview_visible =
             self.debug_open && !self.details_open && !IsIconic(self.debug).as_bool();
         if preview_visible && self.preview_dirty {
@@ -975,7 +987,7 @@ pub fn run(catalog: Catalog, debug: bool, smoke: bool) -> Result<(), String> {
             }
         }
         let pet = CreateWindowExW(
-            WS_EX_LAYERED | WS_EX_TOPMOST | WS_EX_TOOLWINDOW | WS_EX_NOACTIVATE,
+            WS_EX_LAYERED | WS_EX_TOOLWINDOW | WS_EX_NOACTIVATE,
             w!("AquaPetOverlay"),
             w!("AQUA"),
             WS_POPUP,
