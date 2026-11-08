@@ -127,8 +127,14 @@ fn dragging_uses_sleeve_frames_and_releases_in_place() {
             x: ((work.left + work.right) / 2.0) as i32,
             y: ((work.top + work.bottom) / 2.0) as i32,
         };
-        for release in [WM_LBUTTONUP, WM_CAPTURECHANGED] {
+        for (release, pose) in [
+            (WM_LBUTTONUP, Pose::Idle),
+            (WM_CAPTURECHANGED, Pose::Idle),
+            (WM_LBUTTONUP, Pose::Perch),
+            (WM_CAPTURECHANGED, Pose::PerchWave),
+        ] {
             app.anchor = anchor;
+            app.show_pose(pose);
             app.handle(pet.0, WM_LBUTTONDOWN, WPARAM(0), LPARAM(0));
             assert_eq!(app.auto_pose, Pose::Sleeve);
             assert_eq!(app.catalog.clips[app.player.selected].id, "sleeve-garden");
@@ -155,6 +161,81 @@ fn dragging_uses_sleeve_frames_and_releases_in_place() {
             assert!(app.wander.support.is_none());
             assert!((app.wander.foot.0 - expected_foot.0).abs() <= 0.5);
             assert!((app.wander.foot.1 - expected_foot.1).abs() <= 0.5);
+        }
+    }
+}
+
+#[test]
+#[ignore = "checks seated animation alignment against a real window frame"]
+fn seated_frames_keep_their_seat_on_a_real_window_edge() {
+    use windows::Win32::Graphics::Dwm::{DWMWA_EXTENDED_FRAME_BOUNDS, DwmGetWindowAttribute};
+    unsafe {
+        let _ = SetProcessDpiAwarenessContext(DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2);
+        let work = App::work_bounds_at(POINT::default());
+        let x = work.left as i32 + 160;
+        let y = work.top as i32 + 360;
+        let ledge = Window(
+            CreateWindowExW(
+                WS_EX_TOPMOST,
+                w!("STATIC"),
+                w!("AQUA 坐姿对齐测试"),
+                WS_OVERLAPPEDWINDOW | WS_VISIBLE,
+                x,
+                y,
+                600,
+                240,
+                None,
+                None,
+                None,
+                None,
+            )
+            .unwrap(),
+        );
+        let pet = Window::new(WS_EX_LAYERED | WS_EX_TOPMOST);
+        text(pet.0, "AQUA 边沿坐姿");
+        let mut app = App::new(
+            Catalog::load_desktop().unwrap(),
+            pet.0,
+            HWND::default(),
+            HWND::default(),
+            true,
+        );
+        app.auto_exit = None;
+        let _ = ShowWindow(pet.0, SW_SHOWNOACTIVATE);
+        let mut edge = RECT::default();
+        DwmGetWindowAttribute(
+            ledge.0,
+            DWMWA_EXTENDED_FRAME_BOUNDS,
+            (&raw mut edge).cast(),
+            size_of::<RECT>() as u32,
+        )
+        .unwrap();
+        app.wander.foot = (edge.left as f64 + 220.0, edge.top as f64);
+        for scale in 1..=8 {
+            app.effective_scale = scale;
+            app.sync_anchor();
+            for pose in [Pose::Perch, Pose::PerchWave] {
+                app.show_pose(pose);
+                let count = app.catalog.clips[app.player.selected].steps.len();
+                for index in 0..count {
+                    let clip = &app.catalog.clips[app.player.selected];
+                    app.player.seek(clip, clip.step_start(index));
+                    app.last_clock = Instant::now() - Duration::from_secs(3);
+                    app.update().unwrap();
+                    let mut rect = RECT::default();
+                    GetWindowRect(pet.0, &mut rect).unwrap();
+                    let (sx, sy) = app.poses.get(pose).foot(index);
+                    assert_eq!(
+                        rect.top + ((sy - app.bounds.top) * scale as f64) as i32,
+                        edge.top,
+                        "{pose:?} frame {index} at {scale}x"
+                    );
+                    assert_eq!(
+                        rect.left as f64 + (sx - app.bounds.left) * scale as f64,
+                        app.wander.foot.0
+                    );
+                }
+            }
         }
     }
 }

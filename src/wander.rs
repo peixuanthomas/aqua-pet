@@ -1,6 +1,6 @@
 use crate::{
     ledges::{FLOOR, Ledge, Ledges},
-    poses::Pose,
+    poses::{PERCH_DEPTH, Pose},
 };
 
 // The original walk moves 240 world pixels in 60 game ticks, at 2x sprite scale.
@@ -10,6 +10,7 @@ pub const DEFAULT_DISTANCE_BIAS: u8 = 50;
 const IDLE_SECONDS: f64 = 6.4;
 const MIN_DAILY_SECONDS: f64 = 6.0;
 const MOUSE_WAVE_SECONDS: f64 = 2.0;
+const PERCH_SECONDS: f64 = 12.0;
 const MIN_DANCE_SECONDS: f64 = 60.0;
 const MAX_DANCE_SECONDS: f64 = 120.0;
 
@@ -40,7 +41,10 @@ enum Motion {
     Idle,
     Action(Pose),
     Rest(Pose),
-    Wave,
+    Perch,
+    Wave {
+        seated: bool,
+    },
     Walk {
         right: bool,
         end: f64,
@@ -126,7 +130,9 @@ impl Wander {
         match self.motion {
             Motion::Idle => self.dance.map_or(Pose::Idle, |dance| dance.pose),
             Motion::Action(pose) | Motion::Rest(pose) => pose,
-            Motion::Wave => Pose::Wave,
+            Motion::Perch => Pose::Perch,
+            Motion::Wave { seated: true } => Pose::PerchWave,
+            Motion::Wave { seated: false } => Pose::Wave,
             Motion::Walk { right: true, .. } => Pose::Right,
             Motion::Walk { right: false, .. } => Pose::Left,
             Motion::Air { vy, .. } if vy < 0.0 => Pose::Rise,
@@ -148,12 +154,13 @@ impl Wander {
     pub fn observe(&mut self, near: bool, idle: bool, elapsed: f64) {
         self.wave_cooldown = (self.wave_cooldown - elapsed).max(0.0);
         self.computer_idle = idle;
+        let seated = self.pose() == Pose::Perch;
         if !idle && matches!(self.motion, Motion::Rest(_)) {
             self.start(Motion::Idle);
         }
         if near && !self.mouse_near && !idle && self.wave_cooldown == 0.0 && self.support.is_some()
         {
-            self.start(Motion::Wave);
+            self.start(Motion::Wave { seated });
             self.wave_cooldown = 15.0;
         }
         self.mouse_near = near;
@@ -187,6 +194,10 @@ impl Wander {
 
     pub fn riding(&self) -> Option<Footing> {
         self.support.filter(|s| s.window != FLOOR)
+    }
+
+    fn can_perch(&self, world: &Ledges, scale: f64) -> bool {
+        self.riding().is_some() && self.foot.1 + PERCH_DEPTH * scale <= world.limits.bottom
     }
 
     pub fn set_probability(&mut self, probability: u8) {
@@ -226,6 +237,10 @@ impl Wander {
     fn choose(&mut self, edge: Ledge, world: &Ledges, speed: f64, scale: f64) {
         self.start(Motion::Idle);
         if self.random() * 100.0 >= self.probability as f64 {
+            if self.can_perch(world, scale) && self.random() < 0.25 {
+                self.start(Motion::Perch);
+                return;
+            }
             if self.random() < 0.15 {
                 let daily = [Pose::Sleeve, Pose::Clap, Pose::Spin];
                 let choices: Vec<_> = daily
@@ -365,6 +380,10 @@ impl Wander {
         self.foot.0 = self.foot.0.clamp(world.limits.left, world.limits.right);
         self.foot.1 = self.foot.1.clamp(world.limits.top, world.limits.bottom);
         let scale = scale.max(1) as f64;
+        let can_perch = self.can_perch(world, scale);
+        if !can_perch && matches!(self.pose(), Pose::Perch | Pose::PerchWave) {
+            self.start(Motion::Idle);
+        }
         let speed = SOURCE_PIXELS_PER_TICK * game_fps * scale;
         let mut remaining = seconds;
         while remaining > 1e-9 {
@@ -375,9 +394,9 @@ impl Wander {
                 self.fly(dt, scale, world, vx, vy, skip);
                 continue;
             }
-            if matches!(self.motion, Motion::Wave) {
+            if let Motion::Wave { seated } = self.motion {
                 if self.motion_seconds + 1e-9 >= MOUSE_WAVE_SECONDS {
-                    self.start(Motion::Idle);
+                    self.start(if seated { Motion::Perch } else { Motion::Idle });
                 }
                 continue;
             }
@@ -385,8 +404,10 @@ impl Wander {
             let edge = world
                 .at_offset(standing.window, standing.offset)
                 .expect("standing on visible ledge");
-            if self.computer_idle && !matches!(self.motion, Motion::Rest(_)) {
-                let pose = if self.random() < 0.5 {
+            if self.computer_idle && !matches!(self.motion, Motion::Rest(_) | Motion::Perch) {
+                let pose = if self.can_perch(world, scale) {
+                    Pose::Perch
+                } else if self.random() < 0.5 {
                     Pose::Sit
                 } else {
                     Pose::Bored
@@ -394,6 +415,9 @@ impl Wander {
                 self.start(Motion::Rest(pose));
             }
             match self.motion {
+                Motion::Perch if self.motion_seconds + 1e-9 >= PERCH_SECONDS => {
+                    self.start(Motion::Idle)
+                }
                 Motion::Action(pose)
                     if self.motion_seconds + 1e-9 >= self.pose_seconds[pose as usize] =>
                 {

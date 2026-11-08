@@ -324,12 +324,14 @@ mod tests {
             );
             assert!(!centers.is_empty());
             for center in centers {
-                check_windows(App::work_bounds_at(center));
+                for seated in [false, true] {
+                    check_windows(App::work_bounds_at(center), seated);
+                }
             }
         }
     }
 
-    unsafe fn check_windows(work: Bounds) {
+    unsafe fn check_windows(work: Bounds, seated: bool) {
         let x = work.left as i32 + 40;
         let y = work.top as i32 + 240;
         let back = Fixture::new(w!("AQUA 测试 · 后窗"), x, y, 580, 200);
@@ -383,6 +385,13 @@ mod tests {
         assert_eq!(pet.foot, foot);
         assert_eq!(pet.riding().unwrap().window, id);
         assert!(matches!(pet.pose(), Pose::Dance | Pose::CliffSpin));
+        if seated {
+            pet.observe(false, true, 0.01);
+            pet.advance(0.016, 30.0, 1, world);
+            assert_eq!(pet.pose(), Pose::Perch);
+            pet.observe(true, false, 0.01);
+            assert_eq!(pet.pose(), Pose::PerchWave);
+        }
         SetWindowPos(
             back.0,
             None,
@@ -407,6 +416,9 @@ mod tests {
         desktop.refresh(now + Duration::from_millis(16), pet.riding());
         pet.advance(0.016, 30.0, 1, desktop.ledges(work, body));
         assert_eq!(pet.foot, (foot.0 + 30.0, foot.1 + 20.0));
+        if seated {
+            assert_eq!(pet.pose(), Pose::PerchWave);
+        }
         let _ = ShowWindow(back.0, SW_SHOWMINNOACTIVE);
         DwmFlush().unwrap();
         assert!(IsIconic(back.0).as_bool());

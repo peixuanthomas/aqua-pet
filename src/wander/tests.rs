@@ -205,6 +205,119 @@ fn wave_needs_a_fresh_approach_and_fifteen_seconds_between_greetings() {
 }
 
 #[test]
+fn sitting_is_random_and_requires_a_window_with_room_for_the_feet() {
+    let mut sitting = 0;
+    for (top, expected) in [(350.0, true), (896.0, false), (900.0, false)] {
+        let world = desktop(&[window(1, 100.0, top, 800.0, 900.0)]);
+        for seed in 1..=200 {
+            let mut pet = Wander::for_test(seed);
+            pet.set_probability(0);
+            pet.place((200.0, top));
+            pet.advance(0.01, 30.0, 1, &world);
+            for _ in 0..64 {
+                pet.advance(0.1, 30.0, 1, &world);
+            }
+            if pet.pose() == Pose::Perch {
+                assert!(expected);
+                assert_eq!(pet.riding().unwrap().window, 1);
+                sitting += 1;
+            }
+        }
+    }
+    assert!(
+        (25..75).contains(&sitting),
+        "sat on {sitting} of 200 choices"
+    );
+}
+
+#[test]
+fn sitting_greets_for_two_seconds_then_sits_again_before_resuming_activity() {
+    let world = desktop(&[window(1, 100.0, 350.0, 800.0, 900.0)]);
+    let mut pet = Wander::for_test(42);
+    pet.place((200.0, 350.0));
+    pet.advance(0.01, 30.0, 1, &world);
+    pet.start(Motion::Perch);
+    pet.set_music_playing(true);
+    pet.observe(true, false, 0.01);
+    assert_eq!(pet.pose(), Pose::PerchWave);
+    pet.advance(1.99, 30.0, 1, &world);
+    assert_eq!(pet.pose(), Pose::PerchWave);
+    pet.advance(0.01, 30.0, 1, &world);
+    assert_eq!(pet.pose(), Pose::Perch);
+    pet.observe(false, false, 1.0);
+    pet.observe(true, false, 1.0);
+    assert_eq!(pet.pose(), Pose::Perch);
+    for _ in 0..119 {
+        pet.advance(0.1, 30.0, 1, &world);
+        assert_eq!(pet.pose(), Pose::Perch);
+        assert_eq!(pet.foot, (200.0, 350.0));
+    }
+    pet.advance(0.1, 30.0, 1, &world);
+    assert!(matches!(pet.pose(), Pose::Dance | Pose::CliffSpin));
+}
+
+#[test]
+fn seated_and_waving_pets_follow_windows_and_fall_when_the_seat_disappears() {
+    let high = window(1, 100.0, 350.0, 800.0, 600.0);
+    let low = window(2, 50.0, 650.0, 900.0, 900.0);
+    let moved = window(1, 130.0, 380.0, 830.0, 630.0);
+    let cover = window(3, 100.0, 200.0, 400.0, 500.0);
+    for waving in [false, true] {
+        for windows in [vec![low], vec![cover, moved, low]] {
+            let mut pet = Wander::for_test(42);
+            pet.set_probability(0);
+            pet.place((200.0, 350.0));
+            pet.advance(0.01, 30.0, 1, &desktop(&[high, low]));
+            pet.start(Motion::Perch);
+            pet.observe(waving, false, 0.01);
+            let pose = pet.pose();
+            pet.advance(0.1, 30.0, 1, &desktop(&[moved, low]));
+            assert_eq!(pet.pose(), pose);
+            assert_eq!(pet.foot, (230.0, 380.0));
+            pet.advance(0.1, 30.0, 1, &desktop(&windows));
+            assert_eq!(pet.pose(), Pose::Fall);
+            assert!(pet.foot.1 > 380.0);
+            pet.advance(1.0, 30.0, 1, &desktop(&windows));
+            assert_eq!(pet.foot, (230.0, 650.0));
+            assert_eq!(pet.riding().unwrap().window, 2);
+        }
+    }
+}
+
+#[test]
+fn sitting_releases_when_dragged_or_when_the_feet_would_leave_the_screen() {
+    let world = desktop(&[window(1, 100.0, 350.0, 800.0, 900.0)]);
+    let mut pet = Wander::for_test(42);
+    pet.place((200.0, 350.0));
+    pet.advance(0.01, 30.0, 1, &world);
+    pet.start(Motion::Perch);
+    pet.advance(
+        0.01,
+        30.0,
+        1,
+        &desktop(&[window(1, 100.0, 896.0, 800.0, 950.0)]),
+    );
+    assert_eq!(pet.pose(), Pose::Idle);
+    assert_eq!(pet.foot, (200.0, 896.0));
+    pet.start(Motion::Perch);
+    pet.place((400.0, 250.0));
+    assert_eq!(pet.pose(), Pose::Fall);
+    assert!(pet.riding().is_none());
+}
+
+#[test]
+fn an_inactive_pet_uses_the_window_seat_and_greets_without_standing_up() {
+    let world = desktop(&[window(1, 100.0, 350.0, 800.0, 900.0)]);
+    let mut pet = Wander::for_test(42);
+    pet.place((200.0, 350.0));
+    pet.observe(false, true, 0.01);
+    pet.advance(0.1, 30.0, 1, &world);
+    assert_eq!(pet.pose(), Pose::Perch);
+    pet.observe(true, false, 0.01);
+    assert_eq!(pet.pose(), Pose::PerchWave);
+}
+
+#[test]
 fn airborne_pet_lands_before_resting_and_wakes_on_input() {
     let world = desktop(&[]);
     let mut pet = Wander::for_test(7);
@@ -231,7 +344,7 @@ fn music_keeps_the_original_random_walks_jumps_and_daily_actions() {
     musical.set_music_playing(true);
 
     let (mut walked, mut jumped, mut acted) = (false, false, false);
-    for _ in 0..60 * 240 {
+    for _ in 0..60 * 600 {
         ordinary.advance(1.0 / 60.0, 30.0, 1, &world);
         musical.advance(1.0 / 60.0, 30.0, 1, &world);
         let pose = ordinary.pose();
