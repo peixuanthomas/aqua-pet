@@ -207,22 +207,26 @@ impl Desktop {
         }
         let s = riding?;
         let i = self.windows.iter().position(|w| w.id == s.window)?;
+        let hwnd = HWND(s.window as *mut c_void);
         // A window can move again between the background read and this animation frame.
-        if changed || self.scanning || received || self.rescan_interval == SCAN_INTERVAL {
-            match visible_frame(HWND(s.window as *mut c_void)) {
-                Some(rect) if self.windows[i].rect == rect => {}
-                Some(rect) => {
-                    self.windows[i].rect = rect;
-                    self.cached = None;
-                }
-                None => {
-                    self.windows.remove(i);
-                    self.cached = None;
-                    return None;
-                }
-            }
+        let rect = if changed || self.scanning || received || self.rescan_interval == SCAN_INTERVAL
+        {
+            visible_frame(hwnd)
+        } else {
+            Some(self.windows[i].rect)
+        };
+        // Minimize can happen before the notification or while the frame is being read.
+        let Some(rect) =
+            rect.filter(|_| IsWindowVisible(hwnd).as_bool() && !IsIconic(hwnd).as_bool())
+        else {
+            self.windows.remove(i);
+            self.cached = None;
+            return None;
+        };
+        if self.windows[i].rect != rect {
+            self.windows[i].rect = rect;
+            self.cached = None;
         }
-        let rect = self.windows[i].rect;
         Some((rect.left + s.offset, rect.top))
     }
 
@@ -338,6 +342,11 @@ mod tests {
             GetDpiForWindow(back.0)
         );
         let mut desktop = Desktop::new(&[]);
+        let id = back.0.0 as usize;
+        // The user's other open apps should not decide which test window wins.
+        desktop
+            .windows
+            .retain(|w| [id, front.0.0 as usize].contains(&w.id));
         let now = Instant::now();
         desktop.refresh(now, None);
         let body = Bounds {
@@ -347,27 +356,16 @@ mod tests {
             bottom: 0.0,
         };
         let world = desktop.ledges(work, body);
-        let id = back.0.0 as usize;
         let back_edges: Vec<_> = world.edges.iter().filter(|e| e.window == id).collect();
         assert_eq!(back_edges.len(), 2);
         assert!(back_edges[0].right < front_rect.left && back_edges[1].left > front_rect.right);
-        // The user's other open apps should not decide which of the two test windows wins.
-        let fixture_world = Ledges {
-            limits: world.limits,
-            edges: world
-                .edges
-                .iter()
-                .copied()
-                .filter(|e| [crate::ledges::FLOOR, id, front.0.0 as usize].contains(&e.window))
-                .collect(),
-        };
         let mut roaming = Wander::for_test(42);
         roaming.set_probability(100);
         roaming.place((world.limits.right, world.limits.bottom));
         let mut jumped = false;
         let mut paced = false;
         for _ in 0..60 * 300 {
-            roaming.advance(1.0 / 60.0, 30.0, 1, &fixture_world);
+            roaming.advance(1.0 / 60.0, 30.0, 1, world);
             jumped |= roaming.pose() == Pose::Rise;
             paced |=
                 roaming.riding().is_some() && matches!(roaming.pose(), Pose::Left | Pose::Right);
@@ -379,10 +377,12 @@ mod tests {
         let foot = (back_rect.left + 60.0, back_rect.top);
         let mut pet = Wander::for_test(42);
         pet.set_probability(0);
+        pet.set_music_playing(true);
         pet.place((foot.0, foot.1 - 50.0));
         pet.advance(0.7, 30.0, 1, world);
         assert_eq!(pet.foot, foot);
         assert_eq!(pet.riding().unwrap().window, id);
+        assert!(matches!(pet.pose(), Pose::Dance | Pose::CliffSpin));
         SetWindowPos(
             back.0,
             None,
@@ -409,10 +409,24 @@ mod tests {
         assert_eq!(pet.foot, (foot.0 + 30.0, foot.1 + 20.0));
         let _ = ShowWindow(back.0, SW_SHOWMINNOACTIVE);
         DwmFlush().unwrap();
+        assert!(IsIconic(back.0).as_bool());
+        // The pet should fall even if Windows has not delivered the minimize event yet.
+        WINDOWS_CHANGED.set(false);
+        desktop.rescan_interval = Duration::from_secs(5);
         desktop.refresh(now + Duration::from_millis(32), pet.riding());
-        pet.advance(0.1, 30.0, 1, desktop.ledges(work, body));
+        let world = desktop.ledges(work, body);
+        pet.advance(0.1, 30.0, 1, world);
+        assert_eq!(pet.pose(), Pose::Fall);
         assert!(pet.foot.1 > foot.1 + 20.0);
-        assert!(pet.riding().is_none_or(|s| s.window != id));
+        for _ in 0..60 {
+            pet.advance(0.1, 30.0, 1, world);
+            if pet.foot.1 == work.bottom {
+                break;
+            }
+        }
+        assert_eq!(pet.foot, (foot.0 + 30.0, work.bottom));
+        pet.advance(0.016, 30.0, 1, world);
+        assert!(matches!(pet.pose(), Pose::Dance | Pose::CliffSpin));
     }
 
     #[test]
