@@ -287,12 +287,20 @@ mod tests {
     fn debug_composites_can_be_reopened_without_changing_the_desktop_indices() {
         let mut catalog = Catalog::load_desktop().unwrap();
         let idle = catalog.idle_index();
+        let roll = catalog
+            .clips
+            .iter()
+            .position(|clip| clip.id == "composite.blur_jump")
+            .unwrap();
+        assert!(!catalog.clips[roll].looped);
+        assert_eq!(catalog.clips[roll].duration(), 13.0);
         let desktop_ids: Vec<_> = catalog.clips.iter().map(|clip| clip.id.clone()).collect();
         for _ in 0..2 {
             catalog.load_composites().unwrap();
             catalog.load_composites().unwrap();
-            assert_eq!(catalog.clips.len(), desktop_ids.len() + 25);
+            assert_eq!(catalog.clips.len(), desktop_ids.len() + 24);
             assert_eq!(catalog.idle_index(), idle);
+            assert_eq!(catalog.clips[roll].id, "composite.blur_jump");
             catalog.unload_composites();
             assert!(catalog.clips.iter().map(|clip| &clip.id).eq(&desktop_ids));
         }

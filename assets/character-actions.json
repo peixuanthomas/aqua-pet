@@ -17857,5 +17857,163 @@
         "root_y": 0.0
       }
     ]
+  },
+  {
+    "id": "composite.blur_jump",
+    "label": "模糊旋转 · 跃向同伴片段",
+    "category": "组合与攻击",
+    "kind": "action",
+    "verified": true,
+    "evidence": [
+      "gml_Object_obj_dw_cliff_seth_miniboss_Step_0.gml:693",
+      "gml_Object_obj_dw_cliff_seth_miniboss_Step_0.gml:697",
+      "gml_Object_obj_jump_to_point_Other_10.gml:6",
+      "gml_Object_obj_jump_to_point_Other_10.gml:147"
+    ],
+    "notes": "原作12 tick、jumpspeed18的跳跃，marker默认image_speed1；NPC上的.5不误套到新marker。目标取相对(100,-70)，替代场景Seth的当前位置；只显示跃起片段，不包含Seth或后续碰撞。 坐标和位移按原作场景÷2保存；30 tick/秒。",
+    "looped": false,
+    "steps": [
+      {
+        "ticks": 1,
+        "layers": [
+          {
+            "sprite": "spr_enemy_aqua_blur",
+            "frame": 0
+          }
+        ]
+      },
+      {
+        "ticks": 1,
+        "layers": [
+          {
+            "sprite": "spr_enemy_aqua_blur",
+            "frame": 1
+          }
+        ],
+        "root_x": 4.166667,
+        "root_y": -10.416667
+      },
+      {
+        "ticks": 1,
+        "layers": [
+          {
+            "sprite": "spr_enemy_aqua_blur",
+            "frame": 2
+          }
+        ],
+        "root_x": 8.333333,
+        "root_y": -19.333333
+      },
+      {
+        "ticks": 1,
+        "layers": [
+          {
+            "sprite": "spr_enemy_aqua_blur",
+            "frame": 0
+          }
+        ],
+        "root_x": 12.5,
+        "root_y": -26.75
+      },
+      {
+        "ticks": 1,
+        "layers": [
+          {
+            "sprite": "spr_enemy_aqua_blur",
+            "frame": 1
+          }
+        ],
+        "root_x": 16.666667,
+        "root_y": -32.666667
+      },
+      {
+        "ticks": 1,
+        "layers": [
+          {
+            "sprite": "spr_enemy_aqua_blur",
+            "frame": 2
+          }
+        ],
+        "root_x": 20.833333,
+        "root_y": -37.083333
+      },
+      {
+        "ticks": 1,
+        "layers": [
+          {
+            "sprite": "spr_enemy_aqua_blur",
+            "frame": 0
+          }
+        ],
+        "root_x": 25.0,
+        "root_y": -40.0
+      },
+      {
+        "ticks": 1,
+        "layers": [
+          {
+            "sprite": "spr_enemy_aqua_blur",
+            "frame": 1
+          }
+        ],
+        "root_x": 29.166667,
+        "root_y": -41.416667
+      },
+      {
+        "ticks": 1,
+        "layers": [
+          {
+            "sprite": "spr_enemy_aqua_blur",
+            "frame": 2
+          }
+        ],
+        "root_x": 33.333333,
+        "root_y": -41.333333
+      },
+      {
+        "ticks": 1,
+        "layers": [
+          {
+            "sprite": "spr_enemy_aqua_blur",
+            "frame": 0
+          }
+        ],
+        "root_x": 37.5,
+        "root_y": -39.75
+      },
+      {
+        "ticks": 1,
+        "layers": [
+          {
+            "sprite": "spr_enemy_aqua_blur",
+            "frame": 1
+          }
+        ],
+        "root_x": 41.666667,
+        "root_y": -36.666667
+      },
+      {
+        "ticks": 1,
+        "layers": [
+          {
+            "sprite": "spr_enemy_aqua_blur",
+            "frame": 2
+          }
+        ],
+        "root_x": 45.833333,
+        "root_y": -32.083333
+      },
+      {
+        "ticks": 1,
+        "layers": [
+          {
+            "sprite": "spr_enemy_aqua_blur",
+            "frame": 0
+          }
+        ],
+        "root_x": 50.0,
+        "root_y": -35.0
+      }
+    ]
   }
 ]

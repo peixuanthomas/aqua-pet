@@ -702,7 +702,7 @@ impl App {
             || self.wander.riding().is_some()
             || matches!(
                 self.auto_pose,
-                Pose::Left | Pose::Right | Pose::Rise | Pose::Fall
+                Pose::Left | Pose::Right | Pose::Rise | Pose::Fall | Pose::Roll
             ) {
             16
         } else {

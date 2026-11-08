@@ -12,6 +12,7 @@ pub enum Pose {
     Right,
     Rise,
     Fall,
+    Roll,
     Wave,
     Sleeve,
     Clap,
@@ -25,12 +26,13 @@ pub enum Pose {
 }
 
 impl Pose {
-    pub const ALL: [Self; 15] = [
+    pub const ALL: [Self; 16] = [
         Self::Idle,
         Self::Left,
         Self::Right,
         Self::Rise,
         Self::Fall,
+        Self::Roll,
         Self::Wave,
         Self::Sleeve,
         Self::Clap,
@@ -51,6 +53,7 @@ impl Pose {
             Self::Right => ("walk-right", 10.0),
             Self::Rise => ("grab-jump", 9.0),
             Self::Fall => ("grab-jump-air", 9.0),
+            Self::Roll => ("composite.blur_jump", 10.0),
             Self::Wave => ("wave-cliff", 12.0),
             Self::Sleeve => ("sleeve-garden", 7.0),
             Self::Clap => ("clap-cafe", 10.0),
