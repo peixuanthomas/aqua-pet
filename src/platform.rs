@@ -184,6 +184,8 @@ fn bitmap_info(width: i32, height: i32) -> BITMAPINFO {
 }
 
 const DRAG_MOTION_MS: u32 = 60;
+const THROW_MIN_DISTANCE: f64 = 40.0;
+const THROW_VELOCITY_FACTOR: f64 = 0.5;
 
 struct Drag {
     start: POINT,
@@ -232,11 +234,14 @@ impl Drag {
             return (0.0, 0.0);
         }
         let (first, first_at) = self.samples[0];
+        let dx = f64::from(last.x - first.x);
+        let dy = f64::from(last.y - first.y);
+        if dx.hypot(dy) < THROW_MIN_DISTANCE {
+            return (0.0, 0.0);
+        }
         let seconds = last_at.wrapping_sub(first_at).clamp(10, DRAG_MOTION_MS) as f64 / 1000.0;
-        (
-            (last.x - first.x) as f64 / seconds,
-            (last.y - first.y) as f64 / seconds,
-        )
+        let factor = THROW_VELOCITY_FACTOR / seconds;
+        (dx * factor, dy * factor)
     }
 }
 
