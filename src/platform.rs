@@ -92,22 +92,28 @@ struct Settings {
     anchor_x: i32,
     anchor_y: i32,
     scale: u32,
-    #[serde(default = "default_walk_chance")]
+    #[serde(flatten)]
+    preferences: Preferences,
+}
+
+#[derive(Clone, Copy, Serialize, Deserialize)]
+#[serde(default)]
+struct Preferences {
     walk_probability: u8,
-    #[serde(default = "default_distance_bias")]
     walk_distance_bias: u8,
-    #[serde(default = "default_dance_to_music")]
     dance_to_music: bool,
 }
-fn default_walk_chance() -> u8 {
-    DEFAULT_WALK_CHANCE
+
+impl Default for Preferences {
+    fn default() -> Self {
+        Self {
+            walk_probability: DEFAULT_WALK_CHANCE,
+            walk_distance_bias: DEFAULT_DISTANCE_BIAS,
+            dance_to_music: true,
+        }
+    }
 }
-fn default_distance_bias() -> u8 {
-    DEFAULT_DISTANCE_BIAS
-}
-fn default_dance_to_music() -> bool {
-    true
-}
+
 fn settings_path() -> PathBuf {
     PathBuf::from(std::env::var_os("LOCALAPPDATA").unwrap_or_default())
         .join("AquaPet/settings.json")
@@ -252,6 +258,8 @@ struct App {
     settings_fonts: ui::PixelFonts,
     debug_ui: ui::State,
     settings_ui: ui::State,
+    settings_draft: Preferences,
+    settings_save: settings::SaveState,
     debug_regions: HashMap<usize, RECT>,
     settings_regions: HashMap<usize, settings::Row>,
     kind_filter: usize,
@@ -301,6 +309,7 @@ impl App {
             ^ std::process::id() as u64;
         let player = Player::new(idle, &catalog.clips[idle]);
         let wander = Wander::new(seed, poses.durations(&catalog));
+        let preferences = Preferences::default();
         Self {
             catalog,
             player,
@@ -319,6 +328,8 @@ impl App {
                 focus: Some(WALK_CHANCE),
                 ..Default::default()
             },
+            settings_draft: preferences,
+            settings_save: settings::SaveState::Editing,
             debug_regions: HashMap::new(),
             settings_regions: HashMap::new(),
             kind_filter: 0,
@@ -332,7 +343,7 @@ impl App {
             motion_bounds: bounds,
             desktop: desktop::Desktop::new(&[pet, debug, settings]),
             music: None,
-            dance_to_music: default_dance_to_music(),
+            dance_to_music: preferences.dance_to_music,
             poses,
             auto_pose: Pose::Idle,
             wander,
@@ -436,9 +447,7 @@ impl App {
             .and_then(|b| serde_json::from_slice::<Settings>(&b).ok());
         if let Some(s) = settings {
             self.scale = s.scale.clamp(1, 8);
-            self.wander.set_probability(s.walk_probability);
-            self.wander.set_distance_bias(s.walk_distance_bias);
-            self.dance_to_music = s.dance_to_music;
+            self.apply_preferences(s.preferences);
             self.anchor = POINT {
                 x: s.anchor_x,
                 y: s.anchor_y,
@@ -452,23 +461,47 @@ impl App {
         }
         self.fit(None);
     }
-    fn save_settings(&self) {
-        if self.smoke {
-            return;
+
+    fn preferences(&self) -> Preferences {
+        Preferences {
+            walk_probability: self.wander.probability(),
+            walk_distance_bias: self.wander.distance_bias(),
+            dance_to_music: self.dance_to_music,
         }
+    }
+
+    fn apply_preferences(&mut self, preferences: Preferences) {
+        self.wander.set_probability(preferences.walk_probability);
+        self.wander
+            .set_distance_bias(preferences.walk_distance_bias);
+        self.dance_to_music = preferences.dance_to_music;
+        if !self.dance_to_music {
+            self.music = None;
+        }
+    }
+
+    fn write_settings(&self, preferences: Preferences) -> std::io::Result<()> {
         let path = settings_path();
         let data = Settings {
             anchor_x: self.anchor.x,
             anchor_y: self.anchor.y,
             scale: self.scale,
-            walk_probability: self.wander.probability(),
-            walk_distance_bias: self.wander.distance_bias(),
-            dance_to_music: self.dance_to_music,
+            preferences,
         };
-        if let (Some(parent), Ok(bytes)) = (path.parent(), serde_json::to_vec_pretty(&data))
-            && std::fs::create_dir_all(parent).is_ok()
-        {
-            let _ = std::fs::write(path, bytes);
+        std::fs::create_dir_all(path.parent().unwrap())?;
+        let bytes = serde_json::to_vec_pretty(&data)?;
+        let temporary = path.with_extension(format!("{}.tmp", std::process::id()));
+        let result =
+            std::fs::write(&temporary, bytes).and_then(|()| std::fs::rename(&temporary, path));
+        if result.is_err() {
+            let _ = std::fs::remove_file(&temporary);
+        }
+        result
+    }
+
+    fn save_settings(&self) {
+        if !self.smoke {
+            let _ = self.write_settings(self.preferences());
         }
     }
     fn select(&mut self, index: usize) {
@@ -949,8 +982,7 @@ impl App {
                 if debug {
                     self.close_debug();
                 } else if settings {
-                    self.save_settings();
-                    let _ = ShowWindow(self.settings, SW_HIDE);
+                    self.close_settings();
                 } else {
                     self.exit();
                 }
@@ -1229,9 +1261,12 @@ mod settings_tests {
             (settings.anchor_x, settings.anchor_y, settings.scale),
             (-400, 240, 2)
         );
-        assert_eq!(settings.walk_probability, DEFAULT_WALK_CHANCE);
-        assert_eq!(settings.walk_distance_bias, DEFAULT_DISTANCE_BIAS);
-        assert!(settings.dance_to_music);
+        assert_eq!(settings.preferences.walk_probability, DEFAULT_WALK_CHANCE);
+        assert_eq!(
+            settings.preferences.walk_distance_bias,
+            DEFAULT_DISTANCE_BIAS
+        );
+        assert!(settings.preferences.dance_to_music);
     }
 
     #[test]
@@ -1241,14 +1276,15 @@ mod settings_tests {
                 anchor_x: 100,
                 anchor_y: 200,
                 scale: 4,
-                walk_probability: probability,
-                walk_distance_bias: DEFAULT_DISTANCE_BIAS,
-                dance_to_music: default_dance_to_music(),
+                preferences: Preferences {
+                    walk_probability: probability,
+                    ..Preferences::default()
+                },
             };
             let bytes = serde_json::to_vec(&settings).unwrap();
             let restored: Settings = serde_json::from_slice(&bytes).unwrap();
             let mut wander = Wander::for_test(1);
-            wander.set_probability(restored.walk_probability);
+            wander.set_probability(restored.preferences.walk_probability);
             assert_eq!(wander.probability(), probability);
         }
     }
@@ -1259,18 +1295,21 @@ mod settings_tests {
             r#"{"anchor_x":100,"anchor_y":200,"scale":4,"walk_probability":0}"#,
         )
         .unwrap();
-        assert_eq!(old.walk_probability, 0);
-        assert_eq!(old.walk_distance_bias, 50);
+        assert_eq!(old.preferences.walk_probability, 0);
+        assert_eq!(old.preferences.walk_distance_bias, 50);
         for bias in [0, 50, 100] {
             let settings = Settings {
-                walk_distance_bias: bias,
+                preferences: Preferences {
+                    walk_distance_bias: bias,
+                    ..old.preferences
+                },
                 ..old
             };
             let restored: Settings =
                 serde_json::from_slice(&serde_json::to_vec(&settings).unwrap()).unwrap();
             let mut wander = Wander::for_test(1);
-            wander.set_probability(restored.walk_probability);
-            wander.set_distance_bias(restored.walk_distance_bias);
+            wander.set_probability(restored.preferences.walk_probability);
+            wander.set_distance_bias(restored.preferences.walk_distance_bias);
             assert_eq!(wander.distance_bias(), bias);
             assert_eq!(wander.probability(), 0);
         }
@@ -1282,12 +1321,15 @@ mod settings_tests {
             serde_json::from_str(r#"{"anchor_x":100,"anchor_y":200,"scale":4}"#).unwrap();
         for dance_to_music in [false, true] {
             let settings = Settings {
-                dance_to_music,
+                preferences: Preferences {
+                    dance_to_music,
+                    ..old.preferences
+                },
                 ..old
             };
             let restored: Settings =
                 serde_json::from_slice(&serde_json::to_vec(&settings).unwrap()).unwrap();
-            assert_eq!(restored.dance_to_music, dance_to_music);
+            assert_eq!(restored.preferences.dance_to_music, dance_to_music);
         }
     }
 }

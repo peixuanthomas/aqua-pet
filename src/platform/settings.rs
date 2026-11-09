@@ -1,13 +1,21 @@
 use super::*;
 
-const ORDER: [usize; 4] = [WALK_CHANCE, DISTANCE_BIAS, DANCE_TO_MUSIC, BACK];
+const ORDER: [usize; 5] = [WALK_CHANCE, DISTANCE_BIAS, DANCE_TO_MUSIC, SAVE, BACK];
 const CLOSE: usize = 509;
+pub(super) const SAVE: usize = 510;
 const PANEL_MARGIN: f64 = 16.0;
 const PANEL_TOP: f64 = 40.0;
 const TITLE_TOP: f64 = 16.0;
 const FIRST_ROW_TOP: f64 = 69.0;
 const ROW_HEIGHT: f64 = 34.0;
 const STEP: i32 = 5;
+
+#[derive(PartialEq, Eq)]
+pub(super) enum SaveState {
+    Editing,
+    Saved,
+    Failed,
+}
 
 pub(super) struct Row {
     pub(super) bounds: RECT,
@@ -25,6 +33,7 @@ fn panel_rect(dpi: f64, width: f64, height: f64) -> RECT {
 
 impl App {
     pub unsafe fn create_settings_panel(&mut self) {
+        self.settings_draft = self.preferences();
         self.update_settings_font();
         self.layout_settings();
     }
@@ -65,6 +74,9 @@ impl App {
 
     pub unsafe fn show_settings(&mut self) {
         if !IsWindowVisible(self.settings).as_bool() {
+            self.settings_ui.focus = Some(WALK_CHANCE);
+            self.settings_ui.hot = None;
+            self.settings_ui.active = None;
             let work = self.work_area();
             let dpi = GetDpiForWindow(self.settings).max(96) as i32;
             let width = SETTINGS_WIDTH * dpi / 96;
@@ -82,9 +94,6 @@ impl App {
         let _ = ShowWindow(self.settings, SW_RESTORE);
         let _ = SetForegroundWindow(self.settings);
         let _ = SetFocus(Some(self.settings));
-        self.settings_ui.focus = Some(WALK_CHANCE);
-        self.settings_ui.hot = None;
-        self.settings_ui.active = None;
         self.layout_settings();
     }
 
@@ -92,6 +101,24 @@ impl App {
         let dpi = GetDpiForWindow(self.settings).max(96) as f64 / 96.0;
         let width = client.right as f64 / dpi;
         let height = client.bottom as f64 / dpi;
+        if self.settings_save == SaveState::Saved {
+            self.paint_save_result(dc, dpi, width, height);
+        } else {
+            self.paint_setting_rows(dc, dpi, width, height);
+        }
+        ui::close(
+            dc,
+            dpi,
+            self.settings_regions[&CLOSE].bounds,
+            if self.settings_ui.hot_control() == Some(CLOSE) {
+                ui::YELLOW
+            } else {
+                ui::WHITE
+            },
+        );
+    }
+
+    unsafe fn paint_setting_rows(&self, dc: HDC, dpi: f64, width: f64, height: f64) {
         let panel = panel_rect(dpi, width, height);
         ui::border(dc, panel, ui::WHITE, (4.0 * dpi).round() as i32);
         for (x, y) in [
@@ -134,6 +161,7 @@ impl App {
                 WALK_CHANCE => "主动走跳",
                 DISTANCE_BIAS => "散步距离",
                 DANCE_TO_MUSIC => "随音乐舞动",
+                SAVE => "保存",
                 _ => "返回",
             };
             ui::label(
@@ -163,42 +191,78 @@ impl App {
                 );
             }
         }
-        ui::close(
+    }
+
+    unsafe fn paint_save_result(&self, dc: HDC, dpi: f64, width: f64, height: f64) {
+        static FRAME: std::sync::OnceLock<(BITMAPINFO, Vec<u8>)> = std::sync::OnceLock::new();
+        let (bitmap, pixels) = FRAME.get_or_init(|| {
+            let mut frame =
+                image::load_from_memory(include_bytes!("../../assets/ui/save-frame.png"))
+                    .expect("embedded save frame")
+                    .into_rgba8();
+            let bitmap = bitmap_info(frame.width() as i32, frame.height() as i32);
+            for pixel in frame.pixels_mut() {
+                pixel.0.swap(0, 2);
+            }
+            (bitmap, frame.into_raw())
+        });
+        let frame_width = f64::from(bitmap.bmiHeader.biWidth * 2);
+        let frame_height = f64::from(-bitmap.bmiHeader.biHeight * 2);
+        let x = (width - frame_width) / 2.0;
+        let y = (PANEL_TOP + height - PANEL_MARGIN - frame_height) / 2.0;
+        let rect = ui::rect(dpi, x, y, frame_width, frame_height);
+        SetStretchBltMode(dc, COLORONCOLOR);
+        StretchDIBits(
             dc,
-            dpi,
-            self.settings_regions[&CLOSE].bounds,
-            if self.settings_ui.hot_control() == Some(CLOSE) {
-                ui::YELLOW
-            } else {
-                ui::WHITE
-            },
+            rect.left,
+            rect.top,
+            rect.right - rect.left,
+            rect.bottom - rect.top,
+            0,
+            0,
+            bitmap.bmiHeader.biWidth,
+            -bitmap.bmiHeader.biHeight,
+            Some(pixels.as_ptr().cast()),
+            bitmap,
+            DIB_RGB_COLORS,
+            SRCCOPY,
         );
+        let slot_top = 96.0;
+        for (label, top, height) in [
+            ("设置", 0.0, 88.0),
+            ("已保存存档", slot_top, frame_height - slot_top),
+        ] {
+            ui::centered_label(
+                dc,
+                ui::rect(dpi, x, y + top, frame_width, height),
+                label,
+                self.settings_fonts.font,
+                ui::YELLOW,
+            );
+        }
     }
 
     fn setting_amount(&self, id: usize) -> Option<i32> {
         match id {
-            WALK_CHANCE => Some(self.wander.probability() as i32),
-            DISTANCE_BIAS => Some(self.wander.distance_bias() as i32),
+            WALK_CHANCE => Some(self.settings_draft.walk_probability as i32),
+            DISTANCE_BIAS => Some(self.settings_draft.walk_distance_bias as i32),
             _ => None,
         }
     }
 
     fn setting_text(&self, id: usize) -> Option<String> {
         Some(match id {
-            WALK_CHANCE => format!("{}%", self.wander.probability()),
-            DISTANCE_BIAS => format!("{}%", self.wander.distance_bias()),
-            DANCE_TO_MUSIC if self.dance_to_music => "开".into(),
+            WALK_CHANCE => format!("{}%", self.settings_draft.walk_probability),
+            DISTANCE_BIAS => format!("{}%", self.settings_draft.walk_distance_bias),
+            DANCE_TO_MUSIC if self.settings_draft.dance_to_music => "开".into(),
             DANCE_TO_MUSIC => "关".into(),
+            SAVE if self.settings_save == SaveState::Failed => "保存失败".into(),
             _ => return None,
         })
     }
 
     unsafe fn toggle_music_dance(&mut self) {
-        self.dance_to_music = !self.dance_to_music;
-        if !self.dance_to_music {
-            self.music = None;
-        }
-        self.save_settings();
+        self.settings_draft.dance_to_music = !self.settings_draft.dance_to_music;
         let _ = InvalidateRect(
             Some(self.settings),
             Some(&self.settings_regions[&DANCE_TO_MUSIC].bounds),
@@ -212,6 +276,18 @@ impl App {
                 sound::menu_confirm();
                 self.toggle_music_dance();
             }
+            SAVE => {
+                sound::menu_confirm();
+                let draft = self.settings_draft;
+                self.settings_save = if self.smoke || self.write_settings(draft).is_ok() {
+                    self.apply_preferences(draft);
+                    self.settings_ui.hot = None;
+                    SaveState::Saved
+                } else {
+                    SaveState::Failed
+                };
+                let _ = InvalidateRect(Some(self.settings), None, false);
+            }
             BACK => {
                 sound::menu_confirm();
                 self.close_settings();
@@ -222,6 +298,9 @@ impl App {
     }
 
     fn setting_at(&self, point: POINT) -> Option<usize> {
+        if self.settings_save == SaveState::Saved {
+            return ui::contains(&self.settings_regions[&CLOSE].bounds, point).then_some(CLOSE);
+        }
         self.settings_regions
             .iter()
             .find_map(|(&id, row)| ui::contains(&row.bounds, point).then_some(id))
@@ -252,19 +331,18 @@ impl App {
         }
     }
 
-    fn set_setting(&mut self, id: usize, value: i32, save: bool) {
+    fn set_setting(&mut self, id: usize, value: i32) {
         let value = value.clamp(0, 100) as u8;
-        match id {
-            WALK_CHANCE if self.wander.probability() != value => self.wander.set_probability(value),
-            DISTANCE_BIAS if self.wander.distance_bias() != value => {
-                self.wander.set_distance_bias(value)
-            }
+        let current = match id {
+            WALK_CHANCE => &mut self.settings_draft.walk_probability,
+            DISTANCE_BIAS => &mut self.settings_draft.walk_distance_bias,
             _ => return,
+        };
+        if *current == value {
+            return;
         }
+        *current = value;
         sound::menu_move();
-        if save {
-            self.save_settings();
-        }
         unsafe {
             let _ = InvalidateRect(
                 Some(self.settings),
@@ -276,11 +354,14 @@ impl App {
 
     unsafe fn adjust_setting(&mut self, id: usize, delta: i32) {
         if let Some(current) = self.setting_amount(id) {
-            self.set_setting(id, current + delta, true);
+            self.set_setting(id, current + delta);
         }
     }
 
     unsafe fn move_focus(&mut self, delta: i32) {
+        if self.settings_save == SaveState::Saved {
+            return;
+        }
         let current = ORDER
             .iter()
             .position(|id| Some(*id) == self.settings_ui.focus)
@@ -293,9 +374,18 @@ impl App {
         let _ = InvalidateRect(Some(self.settings), None, false);
     }
 
-    unsafe fn close_settings(&mut self) {
-        self.save_settings();
+    pub(super) unsafe fn close_settings(&mut self) {
+        self.settings_draft = self.preferences();
+        self.settings_save = SaveState::Editing;
+        if self.settings_ui.active.take().is_some() {
+            let _ = ReleaseCapture();
+        }
         let _ = ShowWindow(self.settings, SW_HIDE);
+    }
+
+    unsafe fn dismiss_save_result(&mut self) {
+        self.settings_save = SaveState::Editing;
+        let _ = InvalidateRect(Some(self.settings), None, false);
     }
 
     pub unsafe fn settings_hit_test(&self, lp: LPARAM) -> LRESULT {
@@ -342,7 +432,7 @@ impl App {
                         } else {
                             STEP
                         };
-                        self.set_setting(id, current + delta, false);
+                        self.set_setting(id, current + delta);
                     }
                     let _ = InvalidateRect(Some(self.settings), None, false);
                 }
@@ -351,20 +441,13 @@ impl App {
                 if let Some(id) = self.settings_ui.active.take() {
                     let _ = ReleaseCapture();
                     if self.setting_at(point) == Some(id) {
-                        if self.setting_amount(id).is_some() {
-                            self.save_settings();
-                        } else {
-                            self.activate_setting(id);
-                        }
-                    } else if self.setting_amount(id).is_some() {
-                        self.save_settings();
+                        self.activate_setting(id);
                     }
-                    if id != BACK && id != CLOSE {
-                        let _ = InvalidateRect(Some(self.settings), None, false);
-                    }
+                } else if self.settings_save == SaveState::Saved {
+                    self.dismiss_save_result();
                 }
             }
-            WM_MOUSEWHEEL => {
+            WM_MOUSEWHEEL if self.settings_save != SaveState::Saved => {
                 let delta = (wp.0 >> 16) as u16 as i16 as i32 / 120;
                 if let Some(id) = self.settings_ui.hot_control().or(self.settings_ui.focus) {
                     self.adjust_setting(id, delta * STEP);
@@ -375,6 +458,12 @@ impl App {
     }
 
     pub unsafe fn settings_key(&mut self, key: VIRTUAL_KEY) {
+        if self.settings_save == SaveState::Saved {
+            if matches!(key, VK_RETURN | VK_SPACE | VK_ESCAPE) {
+                self.dismiss_save_result();
+            }
+            return;
+        }
         if key == VK_ESCAPE {
             self.close_settings();
             return;
@@ -393,7 +482,7 @@ impl App {
         if id == DANCE_TO_MUSIC {
             if key == VK_LEFT || key == VK_RIGHT {
                 let on = key == VK_RIGHT;
-                if self.dance_to_music != on {
+                if self.settings_draft.dance_to_music != on {
                     sound::menu_move();
                     self.toggle_music_dance();
                 }
@@ -412,7 +501,7 @@ impl App {
             key if key == VK_END => 100,
             _ => return,
         };
-        self.set_setting(id, value, true);
+        self.set_setting(id, value);
     }
 
     pub unsafe fn settings_tab(&mut self, reverse: bool) {

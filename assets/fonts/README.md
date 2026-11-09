@@ -9,7 +9,7 @@
 子集包含：
 
 ```
-设置主动走跳散步距离随音乐舞动返回开关
+设置主动走跳散步距离随音乐舞动返回开关保存已档失败
 0123456789% ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz:/·-
 ```
 
@@ -17,7 +17,7 @@
 
 ```powershell
 pyftsubset fusion-pixel-12px-proportional-zh_hans.ttf `
-  --text="设置主动走跳散步距离随音乐舞动返回开关0123456789% ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz:/·-" `
+  --text="设置主动走跳散步距离随音乐舞动返回开关保存已档失败0123456789% ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz:/·-" `
   --output-file=fusion-pixel-12px-proportional-zh_hans-subset.ttf `
   --name-IDs='*' --name-legacy --name-languages='*' --glyph-names `
   --notdef-glyph --notdef-outline --recommended-glyphs `

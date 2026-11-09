@@ -472,26 +472,51 @@ fn hovering_keeps_one_selected_heart_and_only_repaints_changed_rows() {
         });
         app.settings_mouse(WM_LBUTTONDOWN, WPARAM(0), mouse_point(dance));
         app.settings_mouse(WM_LBUTTONUP, WPARAM(0), mouse_point(walk));
-        assert!(app.dance_to_music);
+        assert!(app.settings_draft.dance_to_music);
         app.settings_mouse(WM_LBUTTONDOWN, WPARAM(0), mouse_point(dance));
         app.settings_mouse(WM_LBUTTONUP, WPARAM(0), mouse_point(dance));
-        assert!(!app.dance_to_music);
+        assert!(!app.settings_draft.dance_to_music);
+        assert!(app.dance_to_music);
         check_markers(settings.0, dance, dance, true, |dc, client| {
             app.paint_settings(dc, client)
         });
         let space = WPARAM(VK_SPACE.0 as usize);
         app.handle(settings.0, WM_KEYDOWN, space, LPARAM(0));
-        assert!(app.dance_to_music);
+        assert!(app.settings_draft.dance_to_music);
         app.handle(settings.0, WM_KEYDOWN, space, LPARAM(1 << 30));
-        assert!(app.dance_to_music);
+        assert!(app.settings_draft.dance_to_music);
 
         app.settings_ui.focus = Some(WALK_CHANCE);
         let before = app.wander.probability();
         app.settings_key(VK_RIGHT);
-        assert_eq!(app.wander.probability(), (before + 5).min(100));
+        assert_eq!(app.settings_draft.walk_probability, (before + 5).min(100));
         app.settings_mouse(WM_LBUTTONDOWN, WPARAM(0), mouse_point(walk));
         app.settings_mouse(WM_LBUTTONUP, WPARAM(0), mouse_point(walk));
+        assert_eq!(app.settings_draft.walk_probability, (before + 10).min(100));
+        assert_eq!(app.wander.probability(), before);
+        app.handle(settings.0, WM_CLOSE, WPARAM(0), LPARAM(0));
+        assert_eq!(app.settings_draft.walk_probability, before);
+
+        app.settings_key(VK_RIGHT);
+        app.settings_mouse(WM_LBUTTONDOWN, WPARAM(0), mouse_point(walk));
+        app.settings_mouse(WM_LBUTTONUP, WPARAM(0), mouse_point(walk));
+        app.settings_mouse(WM_LBUTTONDOWN, WPARAM(0), mouse_point(dance));
+        app.settings_mouse(WM_LBUTTONUP, WPARAM(0), mouse_point(dance));
+        app.settings_key(VK_DOWN);
+        assert_eq!(app.settings_ui.focus, Some(settings::SAVE));
+        app.settings_key(VK_RETURN);
+        assert!(app.settings_save == settings::SaveState::Saved);
         assert_eq!(app.wander.probability(), (before + 10).min(100));
+        assert!(!app.dance_to_music);
+        app.handle(
+            settings.0,
+            WM_KEYDOWN,
+            WPARAM(VK_RETURN.0 as usize),
+            LPARAM(1 << 30),
+        );
+        assert!(app.settings_save == settings::SaveState::Saved);
+        app.settings_key(VK_ESCAPE);
+        assert!(app.settings_save == settings::SaveState::Editing);
     }
 }
 
