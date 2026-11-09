@@ -1,6 +1,13 @@
 use super::*;
 
-const ORDER: [usize; 5] = [WALK_CHANCE, DISTANCE_BIAS, DANCE_TO_MUSIC, SAVE, BACK];
+const ORDER: [usize; 6] = [
+    WALK_CHANCE,
+    DISTANCE_BIAS,
+    DANCE_TO_MUSIC,
+    DEBUG_MODE,
+    SAVE,
+    BACK,
+];
 const CLOSE: usize = 509;
 pub(super) const SAVE: usize = 510;
 const PANEL_MARGIN: f64 = 16.0;
@@ -161,6 +168,7 @@ impl App {
                 WALK_CHANCE => "主动走跳",
                 DISTANCE_BIAS => "散步距离",
                 DANCE_TO_MUSIC => "随音乐舞动",
+                DEBUG_MODE => "Debug",
                 SAVE => "保存",
                 _ => "返回",
             };
@@ -254,27 +262,42 @@ impl App {
         Some(match id {
             WALK_CHANCE => format!("{}%", self.settings_draft.walk_probability),
             DISTANCE_BIAS => format!("{}%", self.settings_draft.walk_distance_bias),
-            DANCE_TO_MUSIC if self.settings_draft.dance_to_music => "开".into(),
-            DANCE_TO_MUSIC => "关".into(),
+            DANCE_TO_MUSIC | DEBUG_MODE => {
+                let enabled = if id == DANCE_TO_MUSIC {
+                    self.settings_draft.dance_to_music
+                } else {
+                    self.settings_draft.debug_mode
+                };
+                if enabled { "开" } else { "关" }.into()
+            }
             SAVE if self.settings_save == SaveState::Failed => "保存失败".into(),
             _ => return None,
         })
     }
 
-    unsafe fn toggle_music_dance(&mut self) {
-        self.settings_draft.dance_to_music = !self.settings_draft.dance_to_music;
+    fn setting_switch(&mut self, id: usize) -> Option<&mut bool> {
+        match id {
+            DANCE_TO_MUSIC => Some(&mut self.settings_draft.dance_to_music),
+            DEBUG_MODE => Some(&mut self.settings_draft.debug_mode),
+            _ => None,
+        }
+    }
+
+    unsafe fn invalidate_setting(&self, id: usize) {
         let _ = InvalidateRect(
             Some(self.settings),
-            Some(&self.settings_regions[&DANCE_TO_MUSIC].bounds),
+            Some(&self.settings_regions[&id].bounds),
             false,
         );
     }
 
     unsafe fn activate_setting(&mut self, id: usize) {
         match id {
-            DANCE_TO_MUSIC => {
+            DANCE_TO_MUSIC | DEBUG_MODE => {
                 sound::menu_confirm();
-                self.toggle_music_dance();
+                let enabled = self.setting_switch(id).unwrap();
+                *enabled = !*enabled;
+                self.invalidate_setting(id);
             }
             SAVE => {
                 sound::menu_confirm();
@@ -343,13 +366,7 @@ impl App {
         }
         *current = value;
         sound::menu_move();
-        unsafe {
-            let _ = InvalidateRect(
-                Some(self.settings),
-                Some(&self.settings_regions[&id].bounds),
-                false,
-            );
-        }
+        unsafe { self.invalidate_setting(id) };
     }
 
     unsafe fn adjust_setting(&mut self, id: usize, delta: i32) {
@@ -479,12 +496,13 @@ impl App {
             self.activate_setting(id);
             return;
         }
-        if id == DANCE_TO_MUSIC {
+        if let Some(enabled) = self.setting_switch(id) {
             if key == VK_LEFT || key == VK_RIGHT {
                 let on = key == VK_RIGHT;
-                if self.settings_draft.dance_to_music != on {
+                if *enabled != on {
+                    *enabled = on;
                     sound::menu_move();
-                    self.toggle_music_dance();
+                    self.invalidate_setting(id);
                 }
             }
             return;

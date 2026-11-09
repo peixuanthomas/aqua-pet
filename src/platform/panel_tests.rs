@@ -503,6 +503,8 @@ fn hovering_keeps_one_selected_heart_and_only_repaints_changed_rows() {
         app.settings_mouse(WM_LBUTTONDOWN, WPARAM(0), mouse_point(dance));
         app.settings_mouse(WM_LBUTTONUP, WPARAM(0), mouse_point(dance));
         app.settings_key(VK_DOWN);
+        assert_eq!(app.settings_ui.focus, Some(DEBUG_MODE));
+        app.settings_key(VK_DOWN);
         assert_eq!(app.settings_ui.focus, Some(settings::SAVE));
         app.settings_key(VK_RETURN);
         assert!(app.settings_save == settings::SaveState::Saved);
@@ -517,6 +519,50 @@ fn hovering_keeps_one_selected_heart_and_only_repaints_changed_rows() {
         assert!(app.settings_save == settings::SaveState::Saved);
         app.settings_key(VK_ESCAPE);
         assert!(app.settings_save == settings::SaveState::Editing);
+    }
+}
+
+#[test]
+fn only_saved_debug_mode_exposes_the_action_preview_menu() {
+    unsafe {
+        let settings = Window::new(WS_EX_COMPOSITED);
+        let mut app = App::new(
+            Catalog::load_desktop().unwrap(),
+            HWND::default(),
+            HWND::default(),
+            settings.0,
+            true,
+        );
+        app.create_settings_panel();
+        let shows_preview = |app: &App| {
+            let menu = app.context_menu().unwrap();
+            let present = GetMenuState(menu, MENU_DEBUG, MF_BYCOMMAND) != u32::MAX;
+            DestroyMenu(menu).unwrap();
+            present
+        };
+        assert!(!shows_preview(&app));
+
+        app.settings_ui.focus = Some(DEBUG_MODE);
+        app.settings_key(VK_RIGHT);
+        assert!(app.settings_draft.debug_mode);
+        assert!(!shows_preview(&app));
+        app.close_settings();
+        assert!(!app.settings_draft.debug_mode);
+
+        let row = app.settings_regions[&DEBUG_MODE].bounds;
+        app.settings_mouse(WM_LBUTTONDOWN, WPARAM(0), mouse_point(row));
+        app.settings_mouse(WM_LBUTTONUP, WPARAM(0), mouse_point(row));
+        assert!(app.settings_draft.debug_mode);
+        app.settings_key(VK_DOWN);
+        app.settings_key(VK_RETURN);
+        assert!(shows_preview(&app));
+
+        app.settings_key(VK_ESCAPE);
+        app.settings_ui.focus = Some(DEBUG_MODE);
+        app.settings_key(VK_LEFT);
+        app.settings_key(VK_DOWN);
+        app.settings_key(VK_RETURN);
+        assert!(!shows_preview(&app));
     }
 }
 

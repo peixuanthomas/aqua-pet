@@ -11,6 +11,7 @@ mod settings;
 mod sound;
 mod tray;
 mod ui;
+mod uia;
 
 use crate::{
     catalog::Catalog,
@@ -65,8 +66,9 @@ const WALK_CHANCE: usize = 500;
 const DISTANCE_BIAS: usize = 506;
 const DANCE_TO_MUSIC: usize = 507;
 const BACK: usize = 508;
+const DEBUG_MODE: usize = 511;
 const SETTINGS_WIDTH: i32 = 532;
-const SETTINGS_HEIGHT: i32 = 316;
+const SETTINGS_HEIGHT: i32 = 350;
 const SHOW_DEBUG: u32 = WM_APP + 1;
 const RATES: [f64; 7] = [0.25, 0.5, 0.75, 1.0, 1.5, 2.0, 4.0];
 
@@ -102,6 +104,7 @@ struct Preferences {
     walk_probability: u8,
     walk_distance_bias: u8,
     dance_to_music: bool,
+    debug_mode: bool,
 }
 
 impl Default for Preferences {
@@ -110,6 +113,7 @@ impl Default for Preferences {
             walk_probability: DEFAULT_WALK_CHANCE,
             walk_distance_bias: DEFAULT_DISTANCE_BIAS,
             dance_to_music: true,
+            debug_mode: false,
         }
     }
 }
@@ -274,6 +278,8 @@ struct App {
     desktop: desktop::Desktop,
     music: Option<music::Monitor>,
     dance_to_music: bool,
+    debug_mode: bool,
+    inspector: Option<uia::Inspector>,
     poses: Poses,
     auto_pose: Pose,
     wander: Wander,
@@ -344,6 +350,8 @@ impl App {
             desktop: desktop::Desktop::new(&[pet, debug, settings]),
             music: None,
             dance_to_music: preferences.dance_to_music,
+            debug_mode: preferences.debug_mode,
+            inspector: None,
             poses,
             auto_pose: Pose::Idle,
             wander,
@@ -467,16 +475,25 @@ impl App {
             walk_probability: self.wander.probability(),
             walk_distance_bias: self.wander.distance_bias(),
             dance_to_music: self.dance_to_music,
+            debug_mode: self.debug_mode,
         }
     }
 
-    fn apply_preferences(&mut self, preferences: Preferences) {
+    unsafe fn apply_preferences(&mut self, preferences: Preferences) {
         self.wander.set_probability(preferences.walk_probability);
         self.wander
             .set_distance_bias(preferences.walk_distance_bias);
         self.dance_to_music = preferences.dance_to_music;
         if !self.dance_to_music {
             self.music = None;
+        }
+        if self.debug_mode != preferences.debug_mode {
+            self.debug_mode = preferences.debug_mode;
+            self.inspector = if self.debug_mode && !self.smoke {
+                uia::Inspector::new(self.pet).ok()
+            } else {
+                None
+            };
         }
     }
 
@@ -578,19 +595,30 @@ impl App {
         self.closing = true;
         self.save_settings();
         self.tray.take();
+        self.inspector.take();
         let _ = KillTimer(Some(self.pet), 1);
         let _ = DestroyWindow(self.debug);
         let _ = DestroyWindow(self.settings);
         let _ = DestroyWindow(self.pet);
         PostQuitMessage(0);
     }
+    unsafe fn context_menu(&self) -> windows::core::Result<HMENU> {
+        let menu = CreatePopupMenu()?;
+        let _ = AppendMenuW(menu, MF_STRING, MENU_SETTINGS as usize, w!("设置"));
+        if self.debug_mode {
+            let _ = AppendMenuW(menu, MF_STRING, MENU_DEBUG as usize, w!("Debug · 动作预览"));
+        }
+        let _ = AppendMenuW(menu, MF_STRING, MENU_EXIT as usize, w!("关闭"));
+        Ok(menu)
+    }
+
     unsafe fn menu(&mut self, point: Option<POINT>) {
-        let Ok(menu) = CreatePopupMenu() else {
+        let Ok(menu) = self.context_menu() else {
             return;
         };
-        let _ = AppendMenuW(menu, MF_STRING, MENU_SETTINGS as usize, w!("设置"));
-        let _ = AppendMenuW(menu, MF_STRING, MENU_DEBUG as usize, w!("Debug · 动作预览"));
-        let _ = AppendMenuW(menu, MF_STRING, MENU_EXIT as usize, w!("关闭"));
+        if let Some(inspector) = &mut self.inspector {
+            inspector.hide();
+        }
         let point = point.unwrap_or_else(|| {
             let mut point = POINT::default();
             let _ = GetCursorPos(&mut point);
@@ -632,6 +660,9 @@ impl App {
         let now = Instant::now();
         let dt = now.duration_since(self.last_clock).as_secs_f64();
         self.last_clock = now;
+        if let Some(inspector) = &mut self.inspector {
+            inspector.update(now);
+        }
         let was_playing = self.player.playing;
         // Resuming from sleep or a suspended process should not jump across an entire scene.
         if dt < 2.0 {
@@ -826,9 +857,14 @@ impl App {
         } else {
             // A stationary pet still needs to notice nearby input between animation frames.
             let ticks_left = clip.step_start(index) + clip.steps[index].ticks - self.player.tick;
-            (ticks_left * 1000.0 / self.catalog.game_fps)
-                .ceil()
-                .clamp(16.0, 100.0) as u32
+            (ticks_left * 1000.0 / self.catalog.game_fps).ceil().clamp(
+                16.0,
+                if self.inspector.is_some() {
+                    50.0
+                } else {
+                    100.0
+                },
+            ) as u32
         };
         if interval != self.timer_ms {
             if SetTimer(Some(self.pet), 1, interval, None) == 0 {
@@ -1267,6 +1303,7 @@ mod settings_tests {
             DEFAULT_DISTANCE_BIAS
         );
         assert!(settings.preferences.dance_to_music);
+        assert!(!settings.preferences.debug_mode);
     }
 
     #[test]
@@ -1331,5 +1368,15 @@ mod settings_tests {
                 serde_json::from_slice(&serde_json::to_vec(&settings).unwrap()).unwrap();
             assert_eq!(restored.preferences.dance_to_music, dance_to_music);
         }
+    }
+
+    #[test]
+    fn enabled_debug_mode_round_trips() {
+        let settings: Settings =
+            serde_json::from_str(r#"{"anchor_x":100,"anchor_y":200,"scale":4,"debug_mode":true}"#)
+                .unwrap();
+        let restored: Settings =
+            serde_json::from_slice(&serde_json::to_vec(&settings).unwrap()).unwrap();
+        assert!(restored.preferences.debug_mode);
     }
 }
