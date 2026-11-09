@@ -177,7 +177,7 @@ fn dragging_uses_sleeve_frames_and_releases_in_place() {
             assert_eq!(
                 app.wander.pose(),
                 if moved && release == WM_LBUTTONUP {
-                    Pose::Clap
+                    Pose::ClapJump
                 } else {
                     Pose::Idle
                 }

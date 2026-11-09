@@ -88,7 +88,6 @@ pub struct Wander {
     probability: u8,
     distance_bias: u8,
     pose_seconds: [f64; Pose::ALL.len()],
-    drop_clap_seconds: f64,
     last_daily: Option<Pose>,
     wave_cooldown: f64,
     computer_idle: bool,
@@ -98,7 +97,6 @@ pub struct Wander {
 
 impl Wander {
     pub fn new(seed: u64, mut pose_seconds: [f64; Pose::ALL.len()]) -> Self {
-        let drop_clap_seconds = 3.0 * pose_seconds[Pose::Clap as usize];
         // Repeat whole loops so short daily actions stay visible without slowing their animation.
         for pose in [Pose::Sleeve, Pose::Clap, Pose::Spin] {
             let seconds = &mut pose_seconds[pose as usize];
@@ -113,7 +111,6 @@ impl Wander {
             probability: DEFAULT_WALK_CHANCE,
             distance_bias: DEFAULT_DISTANCE_BIAS,
             pose_seconds,
-            drop_clap_seconds,
             last_daily: None,
             wave_cooldown: 0.0,
             computer_idle: false,
@@ -159,7 +156,7 @@ impl Wander {
         match self.motion {
             Motion::Idle => self.dance.map_or(Pose::Idle, |dance| dance.pose),
             Motion::Action(pose) | Motion::Rest(pose) => pose,
-            Motion::DropClap => Pose::Clap,
+            Motion::DropClap => Pose::ClapJump,
             Motion::Perch => Pose::Perch,
             Motion::Wave { seated: true } => Pose::PerchWave,
             Motion::Wave { seated: false } => Pose::Wave,
@@ -519,7 +516,9 @@ impl Wander {
                 self.start(Motion::Rest(pose));
             }
             match self.motion {
-                Motion::DropClap if self.motion_seconds + 1e-9 >= self.drop_clap_seconds => {
+                Motion::DropClap
+                    if self.motion_seconds + 1e-9 >= self.pose_seconds[Pose::ClapJump as usize] =>
+                {
                     // Give the default sway one full loop before the music can resume.
                     self.start(Motion::Action(Pose::Idle));
                 }

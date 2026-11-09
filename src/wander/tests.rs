@@ -43,7 +43,7 @@ fn grounded(world: &Ledges, x: f64) -> Wander {
 }
 
 #[test]
-fn a_drag_drop_claps_three_times_after_landing_then_sways() {
+fn a_drag_drop_plays_one_clap_jump_cycle_after_landing_then_sways() {
     let world = desktop(&[window(1, 250.0, 300.0, 800.0, 600.0)]);
     for (x, edge) in [(100.0, world.edges[0]), (300.0, world.edges[1])] {
         let mut pet = Wander::for_test(42);
@@ -53,10 +53,10 @@ fn a_drag_drop_claps_three_times_after_landing_then_sways() {
         pet.advance((90.0_f64 / 900.0).sqrt(), 30.0, 1, &world);
         assert_eq!(pet.support.unwrap().window, edge.window);
         assert_eq!(pet.foot, (x, edge.y));
-        assert_eq!(pet.pose(), Pose::Clap);
+        assert_eq!(pet.pose(), Pose::ClapJump);
         pet.observe(true, false, 0.01);
         pet.advance(0.99, 30.0, 1, &world);
-        assert_eq!(pet.pose(), Pose::Clap);
+        assert_eq!(pet.pose(), Pose::ClapJump);
         pet.advance(0.01, 30.0, 1, &world);
         assert_eq!(pet.pose(), Pose::Idle);
         pet.advance(1.6, 30.0, 1, &world);

@@ -16,6 +16,7 @@ pub enum Pose {
     Wave,
     Sleeve,
     Clap,
+    ClapJump,
     Spin,
     Dance,
     CliffSpin,
@@ -28,7 +29,7 @@ pub enum Pose {
 }
 
 impl Pose {
-    pub const ALL: [Self; 18] = [
+    pub const ALL: [Self; 19] = [
         Self::Idle,
         Self::Left,
         Self::Right,
@@ -38,6 +39,7 @@ impl Pose {
         Self::Wave,
         Self::Sleeve,
         Self::Clap,
+        Self::ClapJump,
         Self::Spin,
         Self::Dance,
         Self::CliffSpin,
@@ -61,6 +63,7 @@ impl Pose {
             Self::Wave => ("wave-cliff", 12.0),
             Self::Sleeve => ("sleeve-garden", 7.0),
             Self::Clap => ("clap-cafe", 10.0),
+            Self::ClapJump => ("clap-jumping-cafe", 10.0),
             Self::Spin => ("battle-spin", 10.0),
             Self::Dance => ("battle-dance", 9.0),
             Self::CliffSpin => ("spin-cliff", 10.0),
@@ -141,6 +144,7 @@ impl Poses {
                     let contact_y = match pose {
                         Pose::Perch => 13.0,
                         Pose::PerchWave => 14.0,
+                        Pose::ClapJump => visible.bottom - step.root_y,
                         _ => visible.bottom,
                     };
                     body.point(visible.left - foot_x, visible.top - contact_y);
@@ -215,7 +219,12 @@ mod tests {
                     if matches!(pose, Pose::Perch | Pose::PerchWave) {
                         assert!((1.0..=PERCH_DEPTH * scale as f64).contains(&below));
                     } else {
-                        assert_eq!(below, 0.0, "{pose:?} frame {index}");
+                        let height = if pose == Pose::ClapJump {
+                            step.root_y
+                        } else {
+                            0.0
+                        };
+                        assert_eq!(below, height * scale as f64, "{pose:?} frame {index}");
                     }
                 }
             }
