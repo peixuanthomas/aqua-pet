@@ -206,6 +206,21 @@ impl App {
         );
     }
 
+    unsafe fn activate_setting(&mut self, id: usize) {
+        match id {
+            DANCE_TO_MUSIC => {
+                sound::menu_confirm();
+                self.toggle_music_dance();
+            }
+            BACK => {
+                sound::menu_confirm();
+                self.close_settings();
+            }
+            CLOSE => self.close_settings(),
+            _ => {}
+        }
+    }
+
     fn setting_at(&self, point: POINT) -> Option<usize> {
         self.settings_regions
             .iter()
@@ -221,6 +236,9 @@ impl App {
         self.settings_ui.hot = next.map(ui::Hover::Control);
         if next.is_some_and(|id| id != CLOSE) {
             self.settings_ui.focus = next;
+            if next != old_focus {
+                sound::menu_move();
+            }
         }
         for id in [old_hot, old_focus, next, self.settings_ui.focus]
             .into_iter()
@@ -243,6 +261,7 @@ impl App {
             }
             _ => return,
         }
+        sound::menu_move();
         if save {
             self.save_settings();
         }
@@ -269,6 +288,7 @@ impl App {
         let next = (current + delta).rem_euclid(ORDER.len() as i32);
         self.settings_ui.focus = Some(ORDER[next as usize]);
         self.settings_ui.hot = None;
+        sound::menu_move();
         let _ = SetFocus(Some(self.settings));
         let _ = InvalidateRect(Some(self.settings), None, false);
     }
@@ -331,14 +351,10 @@ impl App {
                 if let Some(id) = self.settings_ui.active.take() {
                     let _ = ReleaseCapture();
                     if self.setting_at(point) == Some(id) {
-                        if id == CLOSE {
-                            self.close_settings();
-                        } else if id == DANCE_TO_MUSIC {
-                            self.toggle_music_dance();
-                        } else if id == BACK {
-                            self.close_settings();
-                        } else {
+                        if self.setting_amount(id).is_some() {
                             self.save_settings();
+                        } else {
+                            self.activate_setting(id);
                         }
                     } else if self.setting_amount(id).is_some() {
                         self.save_settings();
@@ -371,17 +387,14 @@ impl App {
             return;
         }
         if key == VK_RETURN || key == VK_SPACE {
-            if id == DANCE_TO_MUSIC {
-                self.toggle_music_dance();
-            } else if id == BACK {
-                self.close_settings();
-            }
+            self.activate_setting(id);
             return;
         }
         if id == DANCE_TO_MUSIC {
             if key == VK_LEFT || key == VK_RIGHT {
                 let on = key == VK_RIGHT;
                 if self.dance_to_music != on {
+                    sound::menu_move();
                     self.toggle_music_dance();
                 }
             }

@@ -8,6 +8,7 @@ mod music;
 #[cfg(test)]
 mod panel_tests;
 mod settings;
+mod sound;
 mod tray;
 mod ui;
 
