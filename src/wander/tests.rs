@@ -1,6 +1,9 @@
 use super::*;
 use crate::{catalog::Catalog, poses::Poses};
-use crate::{ledges::Window, render::Bounds};
+use crate::{
+    ledges::{ControlTop, Window, WindowControls},
+    render::Bounds,
+};
 use std::sync::OnceLock;
 
 impl Wander {
@@ -32,6 +35,7 @@ fn desktop(windows: &[Window]) -> Ledges {
         window(0, 0.0, 0.0, 1200.0, 900.0).rect,
         window(0, -15.0, -36.0, 15.0, 0.0).rect,
         windows,
+        &[],
     )
 }
 
@@ -51,7 +55,7 @@ fn a_drag_drop_plays_one_clap_jump_cycle_after_landing_then_sways() {
         pet.drop_at((x, edge.y - 45.0), (0.0, 0.0));
         assert_eq!(pet.pose(), Pose::Fall);
         pet.advance((90.0_f64 / 900.0).sqrt(), 30.0, 1, &world);
-        assert_eq!(pet.support.unwrap().window, edge.window);
+        assert_eq!(pet.support.unwrap().id, edge.id);
         assert_eq!(pet.foot, (x, edge.y));
         assert_eq!(pet.pose(), Pose::ClapJump);
         pet.observe(true, false, 0.01);
@@ -90,7 +94,7 @@ fn a_throw_lands_on_the_first_ledge_in_its_path_and_holds_for_a_second_after_sli
     assert!((pet.foot.0 - 280.0).abs() < 1e-7);
     assert!((pet.foot.1 - 308.0).abs() < 1e-7);
     pet.advance(2.0 / 3.0 - 0.4, 30.0, 1, &world);
-    assert_eq!(pet.support.unwrap().window, 1);
+    assert_eq!(pet.support.unwrap().id, LedgeId::Window(1));
     assert_eq!(pet.foot.1, 340.0);
     assert_eq!(pet.pose(), Pose::Collapsed);
     let landing_x = pet.foot.0;
@@ -116,12 +120,12 @@ fn sliding_stops_at_the_edge_of_the_landing_ledge() {
     let mut pet = Wander::for_test(42);
     pet.drop_at((134.0, 384.5), (-180.0, 110.0));
     pet.advance(0.1, 30.0, 1, &world);
-    assert_eq!(pet.support.unwrap().window, 1);
+    assert_eq!(pet.support.unwrap().id, LedgeId::Window(1));
     assert!((pet.foot.0 - 116.0).abs() < 1e-7);
     pet.advance(0.2, 30.0, 1, &world);
     assert_eq!(pet.foot, (world.edges[1].left, 400.0));
     assert_eq!(pet.pose(), Pose::Collapsed);
-    assert_eq!(pet.support.unwrap().window, 1);
+    assert_eq!(pet.support.unwrap().id, LedgeId::Window(1));
 }
 
 #[test]
@@ -199,6 +203,7 @@ fn neighboring_windows(scale: u32, gap: f64, height: f64) -> Ledges {
                 850.0 * s,
             ),
         ],
+        &[],
     )
 }
 
@@ -259,7 +264,7 @@ fn roll_jumps_land_sooner_without_speeding_up_the_animation() {
                         }
                     }
                     pet.advance(duration - elapsed, 30.0, scale, &world);
-                    assert_eq!(pet.riding().unwrap().window, target.window);
+                    assert_eq!(pet.riding().unwrap().id, target.id);
                     assert!((pet.foot.0 - to).abs() < 1e-7);
                     assert_eq!(pet.foot.1, target.y);
                     assert_eq!(pet.pose(), Pose::Idle);
@@ -304,7 +309,7 @@ fn long_jumps_reach_far_windows_and_roll_only_when_upward_or_level() {
             }
             assert_eq!(repeated_roll, height <= 0.0);
             assert_eq!(fell, height > 0.0);
-            assert_eq!(pet.riding().unwrap().window, target.window);
+            assert_eq!(pet.riding().unwrap().id, target.id);
             assert!((pet.foot.0 - target.left).abs() < 1e-7);
             assert_eq!(pet.foot.1, target.y);
         }
@@ -329,13 +334,12 @@ fn a_far_background_window_is_chosen_by_its_exposed_edge() {
         pet.place((edge.left, edge.y));
         pet.advance(0.01, 30.0, 1, &world);
         pet.choose(edge, &world, 60.0, 1.0);
-        if matches!(pet.motion, Motion::Walk { jump_to: Some(s), .. } if s.window == target.window)
-        {
+        if matches!(pet.motion, Motion::Walk { jump_to: Some(s), .. } if s.id == target.id) {
             let mut rolled = false;
             for _ in 0..60 * 12 {
                 pet.advance(1.0 / 60.0, 30.0, 1, &world);
                 rolled |= pet.pose() == Pose::Roll;
-                if pet.riding().is_some_and(|s| s.window == target.window) {
+                if pet.riding().is_some_and(|s| s.id == target.id) {
                     assert!(rolled);
                     return;
                 }
@@ -390,7 +394,7 @@ fn fully_covered_windows_are_not_selected_for_a_jump() {
             ..
         } = pet.motion
         {
-            assert_eq!(target.window, FLOOR);
+            assert_eq!(target.id, FLOOR);
         }
     }
 }
@@ -406,7 +410,7 @@ fn approaching_pet_rechecks_the_target_before_leaving_its_window() {
     pet.advance(0.01, 30.0, 1, &world);
     pet.walk_to(edge, edge.right, Some(target));
     pet.advance(0.1, 30.0, 1, &changed);
-    assert_eq!(pet.riding().unwrap().window, edge.window);
+    assert_eq!(pet.riding().unwrap().id, edge.id);
     assert_eq!(pet.pose(), Pose::Idle);
     assert_eq!(pet.foot, (edge.right, edge.y));
 }
@@ -424,7 +428,7 @@ fn a_window_that_disappears_during_the_look_is_not_jumped_to() {
     assert_eq!(pet.pose(), Pose::LookRight);
     let changed = desktop(&[window(1, 100.0, 350.0, 400.0, 800.0)]);
     pet.advance(0.1, 30.0, 1, &changed);
-    assert_eq!(pet.riding().unwrap().window, edge.window);
+    assert_eq!(pet.riding().unwrap().id, edge.id);
     assert_eq!(pet.pose(), Pose::Idle);
 }
 
@@ -455,7 +459,7 @@ fn a_missed_window_ends_the_roll_and_falls_normally() {
         assert_eq!(pet.pose(), Pose::Fall);
         assert!(pet.support.is_none());
         pet.advance(1.0, 30.0, 1, &changed);
-        assert_eq!(pet.support.unwrap().window, FLOOR);
+        assert_eq!(pet.support.unwrap().id, FLOOR);
         assert_eq!(pet.pose(), Pose::Idle);
     }
 }
@@ -484,7 +488,7 @@ fn taskbar_round_trips_roll_up_and_use_the_original_poses_down() {
             }
             assert_eq!(rolled, target.y < edge.y);
             assert_eq!(fell, target.y > edge.y);
-            assert_eq!(pet.support.unwrap().window, target.window);
+            assert_eq!(pet.support.unwrap().id, target.id);
         }
     }
 }
@@ -514,7 +518,7 @@ fn a_jump_near_the_screen_top_stays_inside_the_work_area() {
                 break;
             }
         }
-        assert_eq!(pet.riding().unwrap().window, world.edges[2].window);
+        assert_eq!(pet.riding().unwrap().id, world.edges[2].id);
     }
 }
 
@@ -537,12 +541,63 @@ fn walks_up_to_a_high_window_jumps_paces_and_gets_back_down() {
             assert!(world.edges[1].contains(pet.foot.0));
             paced = true;
         }
-        if paced && pet.support.is_some_and(|s| s.window == FLOOR) {
+        if paced && pet.support.is_some_and(|s| s.id == FLOOR) {
             assert!(approached && rose);
             return;
         }
     }
     panic!("AQUA did not complete the round trip");
+}
+
+#[test]
+fn random_jumps_can_reach_another_control_in_the_same_window() {
+    let work = window(0, 0.0, 0.0, 1200.0, 900.0).rect;
+    let body = window(0, -15.0, -36.0, 15.0, 0.0).rect;
+    let windows = [window(1, 0.0, 0.0, 1200.0, 780.0)];
+    let controls = [WindowControls {
+        owner: 1,
+        size: (1200.0, 780.0),
+        tops: vec![
+            ControlTop {
+                left: 130,
+                right: 150,
+                y: 420,
+            },
+            ControlTop {
+                left: 350,
+                right: 380,
+                y: 280,
+            },
+        ],
+    }];
+    let world = Ledges::new(work, body, &windows, &controls);
+    let start = world.edges[1];
+    let target = world.edges[2];
+    let mut pet = (1..32)
+        .find_map(|seed| {
+            let mut pet = Wander::for_test(seed);
+            pet.set_probability(100);
+            pet.place((140.0, start.y));
+            pet.advance(0.01, 30.0, 1, &world);
+            assert_eq!(pet.riding().unwrap().id, start.id);
+            pet.choose(start, &world, 60.0, 1.0);
+            matches!(pet.motion, Motion::Walk { jump_to: Some(s), .. } if s.id == target.id)
+                .then_some(pet)
+        })
+        .expect("the other control should be a random target");
+    for _ in 0..240 {
+        pet.advance(1.0 / 60.0, 30.0, 1, &world);
+        if pet.riding().is_some_and(|s| s.id == target.id) {
+            break;
+        }
+    }
+    assert_eq!(pet.riding().unwrap().id, target.id);
+    assert!(target.contains(pet.foot.0));
+    assert_eq!(pet.foot.1, target.y);
+
+    pet.advance(0.1, 30.0, 1, &Ledges::new(work, body, &windows, &[]));
+    assert!(pet.riding().is_none());
+    assert!(pet.foot.1 > target.y);
 }
 
 #[test]
@@ -561,10 +616,10 @@ fn falls_onto_first_edge_rides_it_and_drops_when_covered_or_removed() {
     for windows in [vec![cover, moved, low], vec![low]] {
         pet.place((220.0, 300.0));
         pet.advance(0.016, 30.0, 1, &desktop(&[moved, low]));
-        assert_eq!(pet.riding().unwrap().window, 1);
+        assert_eq!(pet.riding().unwrap().id, LedgeId::Window(1));
         pet.advance(1.5, 30.0, 1, &desktop(&windows));
         assert_eq!(pet.foot, (220.0, 600.0));
-        assert_eq!(pet.riding().unwrap().window, 2);
+        assert_eq!(pet.riding().unwrap().id, LedgeId::Window(2));
     }
 }
 
@@ -584,7 +639,7 @@ fn missing_target_and_zero_probability_in_midair_still_land() {
     for _ in 0..180 {
         pet.advance(1.0 / 60.0, 30.0, 1, &empty);
     }
-    assert_eq!(pet.support.unwrap().window, FLOOR);
+    assert_eq!(pet.support.unwrap().id, FLOOR);
     let landed = pet.foot;
     pet.advance(1.9, 30.0, 1, &empty);
     assert_eq!(pet.foot, landed);
@@ -600,7 +655,7 @@ fn moving_a_supported_window_to_a_negative_coordinate_monitor_keeps_local_offset
     let work = window(0, -1920.0, -200.0, 0.0, 840.0).rect;
     let body = window(0, -30.0, -72.0, 30.0, 0.0).rect;
     let moved = window(1, -1700.0, 50.0, -800.0, 600.0);
-    pet.advance(0.016, 30.0, 2, &Ledges::new(work, body, &[moved]));
+    pet.advance(0.016, 30.0, 2, &Ledges::new(work, body, &[moved], &[]));
     assert_eq!(pet.foot, (-1550.0, 50.0));
     assert_eq!(pet.riding().unwrap().offset, 150.0);
 }
@@ -695,7 +750,7 @@ fn sitting_is_random_and_requires_a_window_with_room_for_the_feet() {
             }
             if pet.pose() == Pose::Perch {
                 assert!(expected);
-                assert_eq!(pet.riding().unwrap().window, 1);
+                assert_eq!(pet.riding().unwrap().id, LedgeId::Window(1));
                 sitting += 1;
             }
         }
@@ -755,7 +810,7 @@ fn seated_and_waving_pets_follow_windows_and_fall_when_the_seat_disappears() {
             assert!(pet.foot.1 > 380.0);
             pet.advance(1.0, 30.0, 1, &desktop(&windows));
             assert_eq!(pet.foot, (230.0, 650.0));
-            assert_eq!(pet.riding().unwrap().window, 2);
+            assert_eq!(pet.riding().unwrap().id, LedgeId::Window(2));
         }
     }
 }

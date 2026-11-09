@@ -354,7 +354,7 @@ impl App {
             choices: HashMap::new(),
             bounds,
             motion_bounds: bounds,
-            desktop: desktop::Desktop::new(&[pet, debug, settings]),
+            desktop: desktop::Desktop::new(&[pet, debug, settings], !smoke),
             music: None,
             dance_to_music: preferences.dance_to_music,
             debug_mode: preferences.debug_mode,

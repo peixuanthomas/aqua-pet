@@ -197,7 +197,7 @@ fn dragging_uses_sleeve_frames_and_launches_from_the_release_position() {
             assert!((app.wander.foot.1 - expected_foot.1).abs() <= 0.5);
             let released_x = app.wander.foot.0;
             let scale = app.effective_scale;
-            let world = crate::ledges::Ledges::new(work, app.poses.body(scale), &[]);
+            let world = crate::ledges::Ledges::new(work, app.poses.body(scale), &[], &[]);
             for _ in 0..120 {
                 app.wander.advance(1.0 / 60.0, 30.0, scale, &world);
                 if app.wander.support.is_some() {

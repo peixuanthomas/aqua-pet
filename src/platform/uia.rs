@@ -51,11 +51,15 @@ impl Inspector {
         };
         SetLayeredWindowAttributes(outline, TRANSPARENT, 0, LWA_COLORKEY)?;
         SetWindowSubclass(outline, Some(paint_outline), 1, 0).ok()?;
-        std::thread::spawn(move || unsafe {
-            if CoInitializeEx(None, COINIT_MULTITHREADED).is_ok() {
-                let _ = read_controls(read_requests, write_results);
-                CoUninitialize();
+        spawn_reader(TreeScope_Element, move |reader| unsafe {
+            let walker = reader.automation.ControlViewWalker()?;
+            while let Ok(point) = read_requests.recv() {
+                let rect = reader.at_point(point, &walker);
+                if write_results.send(rect).is_err() {
+                    break;
+                }
             }
+            Ok(())
         });
         Ok(inspector)
     }
@@ -130,48 +134,115 @@ impl Drop for Inspector {
     }
 }
 
-unsafe fn read_controls(
-    requests: Receiver<POINT>,
-    results: Sender<Option<RECT>>,
-) -> windows::core::Result<()> {
-    let automation: IUIAutomation2 = CoCreateInstance(&CUIAutomation8, None, CLSCTX_INPROC_SERVER)?;
-    automation.SetConnectionTimeout(250)?;
-    automation.SetTransactionTimeout(250)?;
-    let cache = automation.CreateCacheRequest()?;
-    for property in [
-        UIA_IsControlElementPropertyId,
-        UIA_IsOffscreenPropertyId,
-        UIA_ControlTypePropertyId,
-        UIA_BoundingRectanglePropertyId,
-    ] {
-        cache.AddProperty(property)?;
-    }
-    let walker = automation.ControlViewWalker()?;
-    while let Ok(point) = requests.recv() {
-        let rect = (|| {
-            let hit = automation.ElementFromPointBuildCache(point, &cache).ok()?;
-            let control = if hit.CachedIsControlElement().ok()?.as_bool() {
-                hit
-            } else {
-                walker.NormalizeElementBuildCache(&hit, &cache).ok()?
-            };
-            let kind = control.CachedControlType().ok()?;
-            if control.CachedIsOffscreen().ok()?.as_bool()
-                || kind == UIA_WindowControlTypeId
-                || kind == UIA_PaneControlTypeId
-            {
-                return None;
-            }
-            control
-                .CachedBoundingRectangle()
-                .ok()
-                .filter(|rect| ui::contains(rect, point))
-        })();
-        if results.send(rect).is_err() {
-            break;
+pub(super) fn spawn_reader(
+    scope: TreeScope,
+    read: impl FnOnce(Reader) -> windows::core::Result<()> + Send + 'static,
+) {
+    std::thread::spawn(move || unsafe {
+        if CoInitializeEx(None, COINIT_MULTITHREADED).is_ok() {
+            let _ = Reader::new(scope).and_then(read);
+            CoUninitialize();
         }
+    });
+}
+
+pub(super) struct Reader {
+    automation: IUIAutomation2,
+    cache: IUIAutomationCacheRequest,
+}
+
+impl Reader {
+    unsafe fn new(scope: TreeScope) -> windows::core::Result<Self> {
+        let automation: IUIAutomation2 =
+            CoCreateInstance(&CUIAutomation8, None, CLSCTX_INPROC_SERVER)?;
+        automation.SetConnectionTimeout(250)?;
+        automation.SetTransactionTimeout(250)?;
+        let cache = automation.CreateCacheRequest()?;
+        for property in [
+            UIA_IsControlElementPropertyId,
+            UIA_IsOffscreenPropertyId,
+            UIA_ControlTypePropertyId,
+            UIA_BoundingRectanglePropertyId,
+        ] {
+            cache.AddProperty(property)?;
+        }
+        if scope == TreeScope_Subtree {
+            cache.SetTreeScope(scope)?;
+            cache.SetTreeFilter(&automation.ControlViewCondition()?)?;
+            cache.SetAutomationElementMode(AutomationElementMode_None)?;
+        }
+        Ok(Self { automation, cache })
     }
-    Ok(())
+
+    unsafe fn at_point(&self, point: POINT, walker: &IUIAutomationTreeWalker) -> Option<RECT> {
+        let hit = self
+            .automation
+            .ElementFromPointBuildCache(point, &self.cache)
+            .ok()?;
+        let control = if hit.CachedIsControlElement().ok()?.as_bool() {
+            hit
+        } else {
+            walker.NormalizeElementBuildCache(&hit, &self.cache).ok()?
+        };
+        if control.CachedIsOffscreen().ok()?.as_bool() || !is_control(&control) {
+            return None;
+        }
+        control
+            .CachedBoundingRectangle()
+            .ok()
+            .filter(|rect| ui::contains(rect, point))
+    }
+
+    pub unsafe fn window_controls(
+        &self,
+        hwnd: HWND,
+        frame: RECT,
+    ) -> windows::core::Result<Vec<RECT>> {
+        let root = self
+            .automation
+            .ElementFromHandleBuildCache(hwnd, &self.cache)?;
+        let mut stack = vec![(root, frame)];
+        let mut controls = Vec::new();
+        while let Some((element, mut clip)) = stack.pop() {
+            if element
+                .CachedIsOffscreen()
+                .is_ok_and(|offscreen| offscreen.as_bool())
+            {
+                continue;
+            }
+            if let Ok(rect) = element.CachedBoundingRectangle()
+                && rect.left < rect.right
+                && rect.top < rect.bottom
+            {
+                let mut intersection = RECT::default();
+                if !IntersectRect(&mut intersection, &rect, &clip).as_bool() {
+                    continue;
+                }
+                // A clipped top is outside the parent viewport, even if the control is partly visible.
+                if intersection.top == rect.top && is_control(&element) {
+                    controls.push(intersection);
+                }
+                clip = intersection;
+            }
+            if let Ok(children) = element.GetCachedChildren() {
+                for index in 0..children.Length()? {
+                    if let Ok(child) = children.GetElement(index) {
+                        stack.push((child, clip));
+                    }
+                }
+            }
+        }
+        Ok(controls)
+    }
+}
+
+unsafe fn is_control(element: &IUIAutomationElement) -> bool {
+    element
+        .CachedIsControlElement()
+        .is_ok_and(|is_control| is_control.as_bool())
+        && element
+            .CachedControlType()
+            .is_ok_and(|kind| kind != UIA_WindowControlTypeId && kind != UIA_PaneControlTypeId)
 }
 
 unsafe extern "system" fn paint_outline(

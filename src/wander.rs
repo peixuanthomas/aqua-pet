@@ -1,5 +1,5 @@
 use crate::{
-    ledges::{FLOOR, Ledge, Ledges},
+    ledges::{FLOOR, Ledge, LedgeId, Ledges},
     poses::{FLATTERY_HOLD_SECONDS, PERCH_DEPTH, Pose},
 };
 
@@ -22,14 +22,14 @@ const COLLAPSED_SECONDS: f64 = 1.0;
 
 #[derive(Clone, Copy, Debug)]
 pub struct Footing {
-    pub window: usize,
+    pub id: LedgeId,
     pub offset: f64,
 }
 
 impl Footing {
     fn new(edge: Ledge, x: f64) -> Self {
         Self {
-            window: edge.window,
+            id: edge.id,
             offset: x - edge.origin_x,
         }
     }
@@ -44,7 +44,7 @@ struct Dance {
 
 #[derive(Clone, Copy, Debug)]
 struct Jump {
-    window: usize,
+    target: LedgeId,
     landing: (f64, f64),
     duration: f64,
     gravity: f64,
@@ -62,7 +62,7 @@ enum Landing {
 struct Air {
     vx: f64,
     vy: f64,
-    skip: Option<usize>,
+    skip: Option<LedgeId>,
     jump: Option<Jump>,
     landing: Landing,
 }
@@ -285,7 +285,7 @@ impl Wander {
     }
 
     pub fn riding(&self) -> Option<Footing> {
-        self.support.filter(|s| s.window != FLOOR)
+        self.support.filter(|s| s.id != FLOOR)
     }
 
     fn can_perch(&self, world: &Ledges, scale: f64) -> bool {
@@ -352,7 +352,8 @@ impl Wander {
                 .edges
                 .iter()
                 .filter(|other| {
-                    other.window != edge.window
+                    other.id != edge.id
+                        && (other.y != edge.y || !other.contains(x))
                         && (edge.y > world.limits.top || other.y > world.limits.top)
                 })
                 .map(|&target| {
@@ -404,9 +405,9 @@ impl Wander {
         scale: f64,
         speed: f64,
     ) {
-        if edge.window == FLOOR || target.window == FLOOR {
+        if edge.id == FLOOR || target.id == FLOOR {
             self.jump(edge, target, world, scale, speed);
-        } else if let Some(landing) = world.at_offset(target.window, target.offset) {
+        } else if let Some(landing) = world.at_offset(target.id, target.offset) {
             self.start(Motion::Look {
                 target,
                 right: landing.origin_x + target.offset >= self.foot.0,
@@ -415,7 +416,7 @@ impl Wander {
     }
 
     fn jump(&mut self, edge: Ledge, target: Footing, world: &Ledges, scale: f64, speed: f64) {
-        let Some(landing) = world.at_offset(target.window, target.offset) else {
+        let Some(landing) = world.at_offset(target.id, target.offset) else {
             return;
         };
         let x = landing.origin_x + target.offset;
@@ -443,9 +444,9 @@ impl Wander {
         self.start(Motion::Air(Air {
             vx: dx / duration,
             vy: -gravity * rise * rate,
-            skip: (landing.y > edge.y).then_some(edge.window),
+            skip: (landing.y > edge.y).then_some(edge.id),
             jump: Some(Jump {
-                window: landing.window,
+                target: landing.id,
                 landing: (x, landing.y),
                 duration,
                 gravity: gravity * rate * rate,
@@ -461,7 +462,7 @@ impl Wander {
         air.jump = air.jump.filter(|jump| {
             self.motion_seconds - dt + 1e-9 < jump.duration
                 && world.edges.iter().any(|edge| {
-                    edge.window == jump.window
+                    edge.id == jump.target
                         && edge.y == jump.landing.1
                         && edge.contains(jump.landing.0)
                 })
@@ -474,7 +475,7 @@ impl Wander {
             let hit = world
                 .edges
                 .iter()
-                .filter(|e| Some(e.window) != skip)
+                .filter(|e| Some(e.id) != skip)
                 .filter_map(|e| {
                     let d = vy * vy + 2.0 * gravity * (e.y - y);
                     if d < -1e-6 {
@@ -515,7 +516,7 @@ impl Wander {
         }
         let support = self
             .support
-            .and_then(|s| world.at_offset(s.window, s.offset).map(|e| (e, s.offset)));
+            .and_then(|s| world.at_offset(s.id, s.offset).map(|e| (e, s.offset)));
         if let Some((edge, offset)) = support {
             self.foot = (edge.origin_x + offset, edge.y);
         } else if !matches!(self.motion, Motion::Air(_)) {
@@ -558,7 +559,7 @@ impl Wander {
             }
             let standing = self.support.expect("ground motion requires a ledge");
             let edge = world
-                .at_offset(standing.window, standing.offset)
+                .at_offset(standing.id, standing.offset)
                 .expect("standing on visible ledge");
             if self.computer_idle
                 && !matches!(
@@ -644,7 +645,7 @@ impl Wander {
                     }
                 }
                 Motion::Look { target, right } => {
-                    let Some(landing) = world.at_offset(target.window, target.offset) else {
+                    let Some(landing) = world.at_offset(target.id, target.offset) else {
                         self.start(Motion::Idle);
                         continue;
                     };
