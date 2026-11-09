@@ -1,7 +1,9 @@
 use super::*;
 
 const ORDER: [usize; 4] = [WALK_CHANCE, DISTANCE_BIAS, DANCE_TO_MUSIC, BACK];
+const CLOSE: usize = 509;
 const PANEL_MARGIN: f64 = 16.0;
+const PANEL_TOP: f64 = 40.0;
 const TITLE_TOP: f64 = 16.0;
 const FIRST_ROW_TOP: f64 = 69.0;
 const ROW_HEIGHT: f64 = 34.0;
@@ -15,9 +17,9 @@ fn panel_rect(dpi: f64, width: f64, height: f64) -> RECT {
     ui::rect(
         dpi,
         PANEL_MARGIN,
-        PANEL_MARGIN,
+        PANEL_TOP,
         (width - PANEL_MARGIN * 2.0).max(1.0),
-        (height - PANEL_MARGIN * 2.0).max(1.0),
+        (height - PANEL_TOP - PANEL_MARGIN).max(1.0),
     )
 }
 
@@ -38,7 +40,7 @@ impl App {
         let width = client.right as f64 / dpi;
         self.settings_regions.clear();
         for (index, id) in ORDER.into_iter().enumerate() {
-            let y = PANEL_MARGIN + FIRST_ROW_TOP + index as f64 * ROW_HEIGHT;
+            let y = PANEL_TOP + FIRST_ROW_TOP + index as f64 * ROW_HEIGHT;
             self.settings_regions.insert(
                 id,
                 Row {
@@ -52,6 +54,12 @@ impl App {
                 },
             );
         }
+        self.settings_regions.insert(
+            CLOSE,
+            Row {
+                bounds: ui::rect(dpi, width - PANEL_MARGIN - 24.0, 4.0, 24.0, 24.0),
+            },
+        );
         let _ = InvalidateRect(Some(self.settings), None, false);
     }
 
@@ -98,9 +106,9 @@ impl App {
             dc,
             ui::rect(
                 dpi,
-                PANEL_MARGIN,
-                PANEL_MARGIN + TITLE_TOP,
-                width - PANEL_MARGIN * 2.0,
+                panel.left as f64 / dpi,
+                panel.top as f64 / dpi + TITLE_TOP,
+                (panel.right - panel.left) as f64 / dpi,
                 32.0,
             ),
             "设置",
@@ -155,6 +163,16 @@ impl App {
                 );
             }
         }
+        ui::close(
+            dc,
+            dpi,
+            self.settings_regions[&CLOSE].bounds,
+            if self.settings_ui.hot_control() == Some(CLOSE) {
+                ui::YELLOW
+            } else {
+                ui::WHITE
+            },
+        );
     }
 
     fn setting_amount(&self, id: usize) -> Option<i32> {
@@ -201,7 +219,7 @@ impl App {
         }
         let old_focus = self.settings_ui.focus;
         self.settings_ui.hot = next.map(ui::Hover::Control);
-        if next.is_some() {
+        if next.is_some_and(|id| id != CLOSE) {
             self.settings_ui.focus = next;
         }
         for id in [old_hot, old_focus, next, self.settings_ui.focus]
@@ -260,6 +278,24 @@ impl App {
         let _ = ShowWindow(self.settings, SW_HIDE);
     }
 
+    pub unsafe fn settings_hit_test(&self, lp: LPARAM) -> LRESULT {
+        let mut point = POINT {
+            x: lp.0 as u16 as i16 as i32,
+            y: (lp.0 >> 16) as u16 as i16 as i32,
+        };
+        let _ = ScreenToClient(self.settings, &mut point);
+        let dpi = GetDpiForWindow(self.settings).max(96) as f64 / 96.0;
+        let close = self
+            .settings_regions
+            .get(&CLOSE)
+            .is_some_and(|row| ui::contains(&row.bounds, point));
+        if !close && point.y < (PANEL_TOP * dpi).round() as i32 {
+            LRESULT(HTCAPTION as isize)
+        } else {
+            LRESULT(HTCLIENT as isize)
+        }
+    }
+
     pub unsafe fn settings_mouse(&mut self, msg: u32, wp: WPARAM, lp: LPARAM) {
         let point = ui::point(lp);
         match msg {
@@ -272,7 +308,9 @@ impl App {
             }
             WM_LBUTTONDOWN => {
                 if let Some(id) = self.setting_at(point) {
-                    self.settings_ui.focus = Some(id);
+                    if id != CLOSE {
+                        self.settings_ui.focus = Some(id);
+                    }
                     self.settings_ui.hot = Some(ui::Hover::Control(id));
                     let _ = SetFocus(Some(self.settings));
                     self.settings_ui.active = Some(id);
@@ -293,7 +331,9 @@ impl App {
                 if let Some(id) = self.settings_ui.active.take() {
                     let _ = ReleaseCapture();
                     if self.setting_at(point) == Some(id) {
-                        if id == DANCE_TO_MUSIC {
+                        if id == CLOSE {
+                            self.close_settings();
+                        } else if id == DANCE_TO_MUSIC {
                             self.toggle_music_dance();
                         } else if id == BACK {
                             self.close_settings();
@@ -303,7 +343,7 @@ impl App {
                     } else if self.setting_amount(id).is_some() {
                         self.save_settings();
                     }
-                    if id != BACK {
+                    if id != BACK && id != CLOSE {
                         let _ = InvalidateRect(Some(self.settings), None, false);
                     }
                 }

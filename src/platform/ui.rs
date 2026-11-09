@@ -284,6 +284,38 @@ pub unsafe fn centered_label(dc: HDC, rect: RECT, value: &str, font: HFONT, colo
     );
 }
 
+pub unsafe fn close(dc: HDC, dpi: f64, rect: RECT, color: COLORREF) {
+    let inset = (6.0 * dpi).round() as i32;
+    let thickness = (2.0 * dpi).round().max(1.0) as i32;
+    let left = rect.left + inset;
+    let top = rect.top + inset;
+    let right = rect.right - inset;
+    let bottom = rect.bottom - inset;
+    let length = ((right - left).min(bottom - top) - thickness).max(0);
+    for offset in 0..length {
+        fill(
+            dc,
+            &RECT {
+                left: left + offset,
+                top: top + offset,
+                right: left + offset + thickness,
+                bottom: top + offset + thickness,
+            },
+            color,
+        );
+        fill(
+            dc,
+            &RECT {
+                left: right - offset - thickness,
+                top: top + offset,
+                right: right - offset,
+                bottom: top + offset + thickness,
+            },
+            color,
+        );
+    }
+}
+
 pub unsafe fn star(dc: HDC, dpi: f64, x: f64, y: f64) {
     const ROWS: [u16; 11] = [
         0b00000100000,

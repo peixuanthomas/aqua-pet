@@ -64,8 +64,8 @@ const WALK_CHANCE: usize = 500;
 const DISTANCE_BIAS: usize = 506;
 const DANCE_TO_MUSIC: usize = 507;
 const BACK: usize = 508;
-const SETTINGS_WIDTH: i32 = 548;
-const SETTINGS_HEIGHT: i32 = 330;
+const SETTINGS_WIDTH: i32 = 532;
+const SETTINGS_HEIGHT: i32 = 316;
 const SHOW_DEBUG: u32 = WM_APP + 1;
 const RATES: [f64; 7] = [0.25, 0.5, 0.75, 1.0, 1.5, 2.0, 4.0];
 
@@ -935,6 +935,7 @@ impl App {
                 self.layout_settings();
                 Some(LRESULT(0))
             }
+            WM_NCHITTEST if settings => Some(self.settings_hit_test(lp)),
             WM_PAINT if debug && self.debug_open => {
                 ui::paint_window(hwnd, |dc, client| self.paint(dc, client));
                 Some(LRESULT(0))
@@ -1105,7 +1106,7 @@ pub fn run(catalog: Catalog, debug: bool, smoke: bool) -> Result<(), String> {
             WS_EX_APPWINDOW | WS_EX_COMPOSITED,
             w!("AquaPetSettings"),
             w!("AQUA · 设置"),
-            WS_OVERLAPPED | WS_CAPTION | WS_SYSMENU | WS_MINIMIZEBOX | WS_CLIPCHILDREN,
+            WS_POPUP | WS_CLIPCHILDREN,
             CW_USEDEFAULT,
             CW_USEDEFAULT,
             SETTINGS_WIDTH,
