@@ -94,7 +94,7 @@ fn neighboring_windows(scale: u32, gap: f64, height: f64) -> Ledges {
 }
 
 #[test]
-fn window_hops_play_roll_once_and_land_on_time_at_every_scale_and_timer_rate() {
+fn roll_jumps_land_sooner_without_speeding_up_the_animation() {
     for scale in [1, 2, 4, 8] {
         for height in [-20.0, 0.0] {
             let world = neighboring_windows(scale, 20.0, height);
@@ -133,13 +133,15 @@ fn window_hops_play_roll_once_and_land_on_time_at_every_scale_and_timer_rate() {
                     assert_eq!(pet.pose(), Pose::Rise);
                     let rise = pet.pose_seconds[Pose::Rise as usize];
                     let roll = pet.pose_seconds[Pose::Roll as usize];
-                    let duration = rise + roll;
+                    let duration = (rise + roll) / 1.5;
                     let dt = 1.0 / rate as f64;
                     let mut elapsed = 0.0;
                     while elapsed + dt < duration - 1e-9 {
                         pet.advance(dt, 30.0, scale, &world);
                         elapsed += dt;
                         assert!(pet.support.is_none(), "landed early at {elapsed}");
+                        let expected_x = from + (to - from) * (elapsed / duration);
+                        assert!((pet.foot.0 - expected_x).abs() < 1e-7);
                         assert!(pet.foot.1 >= world.limits.top);
                         if elapsed + 1e-9 >= rise {
                             assert_eq!(pet.pose(), Pose::Roll);

@@ -15,6 +15,7 @@ const LOOK_SECONDS: f64 = 1.0;
 const MIN_DANCE_SECONDS: f64 = 60.0;
 const MAX_DANCE_SECONDS: f64 = 120.0;
 const GRAVITY: f64 = 900.0;
+const ROLL_JUMP_SPEED_FACTOR: f64 = 1.5;
 
 #[derive(Clone, Copy, Debug)]
 pub struct Footing {
@@ -397,7 +398,8 @@ impl Wander {
             let takeoff = self.pose_seconds[Pose::Rise as usize];
             let cycle = self.pose_seconds[Pose::Roll as usize];
             let loops = ((duration - takeoff) / cycle - 1e-9).ceil().max(1.0);
-            duration = takeoff + loops * cycle;
+            // Scale travel time after rounding so short jumps get the same speedup.
+            duration = (takeoff + loops * cycle) / ROLL_JUMP_SPEED_FACTOR;
         }
         let rate = natural_duration / duration;
         self.support = None;
