@@ -75,6 +75,53 @@ fn a_regular_fall_after_a_drag_does_not_clap_again() {
     assert_eq!(pet.pose(), Pose::Idle);
 }
 
+#[test]
+fn a_click_holds_the_last_flattery_frame_for_half_a_second() {
+    let catalog = Catalog::load_desktop().unwrap();
+    let clip = catalog
+        .clips
+        .iter()
+        .find(|c| c.id == "act-flattery")
+        .unwrap();
+    let last = clip.steps.len() - 1;
+    let hold_at = clip.step_start(last) / catalog.game_fps;
+    let frame = |pet: &Wander| clip.step_at(pet.animation_seconds() * catalog.game_fps);
+    let world = desktop(&[]);
+    let mut pet = grounded(&world, 100.0);
+    pet.set_music_playing(true);
+    pet.flatter();
+    assert_eq!(pet.pose(), Pose::Flattery);
+    assert_eq!(pet.animation_seconds(), 0.0);
+    pet.observe(true, false, 0.01);
+    pet.advance(hold_at - 0.01, catalog.game_fps, 1, &world);
+    assert_eq!(frame(&pet), last - 1);
+    pet.advance(0.01, catalog.game_fps, 1, &world);
+    assert_eq!(frame(&pet), last);
+    pet.advance(0.49, catalog.game_fps, 1, &world);
+    assert_eq!(pet.pose(), Pose::Flattery);
+    assert_eq!(frame(&pet), last);
+    pet.advance(0.01, catalog.game_fps, 1, &world);
+    assert_eq!(pet.pose(), Pose::Idle);
+    assert_eq!(pet.foot, (100.0, 900.0));
+}
+
+#[test]
+fn clicking_in_the_air_keeps_falling_while_flattery_plays() {
+    let world = desktop(&[]);
+    let mut pet = Wander::for_test(42);
+    pet.drop_at((100.0, 800.0), true);
+    pet.advance(0.2, 30.0, 1, &world);
+    pet.flatter();
+    pet.advance(0.1, 30.0, 1, &world);
+    assert!((pet.foot.1 - 840.5).abs() < 1e-7);
+    assert_eq!(pet.pose(), Pose::Flattery);
+    pet.advance(0.3, 30.0, 1, &world);
+    assert_eq!(pet.foot, (100.0, world.limits.bottom));
+    assert_eq!(pet.pose(), Pose::Flattery);
+    pet.advance(0.8, 30.0, 1, &world);
+    assert_eq!(pet.pose(), Pose::Idle);
+}
+
 fn neighboring_windows(scale: u32, gap: f64, height: f64) -> Ledges {
     let s = scale as f64;
     Ledges::new(

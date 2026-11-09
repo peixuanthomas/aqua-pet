@@ -1,6 +1,6 @@
 use crate::{
     ledges::{FLOOR, Ledge, Ledges},
-    poses::{PERCH_DEPTH, Pose},
+    poses::{FLATTERY_HOLD_SECONDS, PERCH_DEPTH, Pose},
 };
 
 // The original walk moves 240 world pixels in 60 game ticks, at 2x sprite scale.
@@ -88,6 +88,7 @@ pub struct Wander {
     probability: u8,
     distance_bias: u8,
     pose_seconds: [f64; Pose::ALL.len()],
+    flattery_seconds: Option<f64>,
     last_daily: Option<Pose>,
     wave_cooldown: f64,
     computer_idle: bool,
@@ -111,6 +112,7 @@ impl Wander {
             probability: DEFAULT_WALK_CHANCE,
             distance_bias: DEFAULT_DISTANCE_BIAS,
             pose_seconds,
+            flattery_seconds: None,
             last_daily: None,
             wave_cooldown: 0.0,
             computer_idle: false,
@@ -141,6 +143,11 @@ impl Wander {
     }
 
     pub fn drop_at(&mut self, foot: (f64, f64), clap_on_landing: bool) {
+        self.flattery_seconds = None;
+        self.fall_from(foot, clap_on_landing);
+    }
+
+    fn fall_from(&mut self, foot: (f64, f64), clap_on_landing: bool) {
         self.foot = foot;
         self.support = None;
         self.start(Motion::Air(Air {
@@ -152,7 +159,17 @@ impl Wander {
         }));
     }
 
+    pub fn flatter(&mut self) {
+        self.flattery_seconds = Some(0.0);
+        if let Motion::Air(air) = &mut self.motion {
+            air.clap_on_landing = false;
+        }
+    }
+
     pub fn pose(&self) -> Pose {
+        if self.flattery_seconds.is_some() {
+            return Pose::Flattery;
+        }
         match self.motion {
             Motion::Idle => self.dance.map_or(Pose::Idle, |dance| dance.pose),
             Motion::Action(pose) | Motion::Rest(pose) => pose,
@@ -183,6 +200,9 @@ impl Wander {
     }
 
     pub fn animation_seconds(&self) -> f64 {
+        if let Some(seconds) = self.flattery_seconds {
+            return seconds.min(self.pose_seconds[Pose::Flattery as usize] - FLATTERY_HOLD_SECONDS);
+        }
         match (self.motion, self.dance) {
             (Motion::Idle, Some(dance)) => dance.seconds,
             _ if self.pose() == Pose::Roll => {
@@ -207,6 +227,7 @@ impl Wander {
             && !idle
             && self.wave_cooldown == 0.0
             && self.support.is_some()
+            && self.flattery_seconds.is_none()
             && !matches!(self.motion, Motion::DropClap | Motion::Look { .. })
         {
             self.start(Motion::Wave { seated });
@@ -471,7 +492,7 @@ impl Wander {
         if let Some((edge, offset)) = support {
             self.foot = (edge.origin_x + offset, edge.y);
         } else if !matches!(self.motion, Motion::Air(_)) {
-            self.place(self.foot);
+            self.fall_from(self.foot, false);
         }
         self.foot.0 = self.foot.0.clamp(world.limits.left, world.limits.right);
         self.foot.1 = self.foot.1.clamp(world.limits.top, world.limits.bottom);
@@ -486,8 +507,20 @@ impl Wander {
             let dt = remaining.min(1.0 / 60.0);
             remaining -= dt;
             self.motion_seconds += dt;
+            if let Some(seconds) = &mut self.flattery_seconds {
+                *seconds += dt;
+                if *seconds + 1e-9 >= self.pose_seconds[Pose::Flattery as usize] {
+                    self.flattery_seconds = None;
+                    if self.support.is_some() {
+                        self.start(Motion::Action(Pose::Idle));
+                    }
+                }
+            }
             if let Motion::Air(air) = self.motion {
                 self.fly(dt, scale, world, air);
+                continue;
+            }
+            if self.flattery_seconds.is_some() {
                 continue;
             }
             if let Motion::Wave { seated } = self.motion {

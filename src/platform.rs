@@ -559,7 +559,7 @@ impl App {
                 let clip = &self.catalog.clips[self.player.selected];
                 self.player.tick =
                     (self.wander.animation_seconds() * self.catalog.game_fps) % clip.duration();
-            } else {
+            } else if self.debug_open || self.drag.as_ref().is_some_and(|drag| drag.moved) {
                 let clip = &self.catalog.clips[self.player.selected];
                 self.player.advance(dt, self.catalog.game_fps, clip);
             }
@@ -711,7 +711,7 @@ impl App {
             || self.wander.riding().is_some()
             || matches!(
                 self.auto_pose,
-                Pose::Left | Pose::Right | Pose::Rise | Pose::Fall | Pose::Roll
+                Pose::Left | Pose::Right | Pose::Rise | Pose::Fall | Pose::Roll | Pose::Flattery
             ) {
             16
         } else {
@@ -776,9 +776,6 @@ impl App {
             }
             WM_MOUSEACTIVATE if pet => Some(LRESULT(MA_NOACTIVATE as isize)),
             WM_LBUTTONDOWN if pet => {
-                if !self.debug_open {
-                    self.show_pose(Pose::Sleeve);
-                }
                 let mut p = POINT::default();
                 let _ = GetCursorPos(&mut p);
                 self.drag = Some(Drag {
@@ -799,29 +796,35 @@ impl App {
                         x: drag.anchor.x + p.x - drag.start.x,
                         y: drag.anchor.y + p.y - drag.start.y,
                     };
+                    if drag.moved && !self.debug_open {
+                        self.show_pose(Pose::Sleeve);
+                    }
                     let _ = self.update();
                 }
                 Some(LRESULT(0))
             }
             WM_LBUTTONUP if pet => {
-                let dropped = self.drag.take().is_some_and(|drag| drag.moved);
-                let _ = ReleaseCapture();
-                if !self.debug_open {
-                    self.show_pose(Pose::Idle);
+                if let Some(drag) = self.drag.take() {
+                    let _ = ReleaseCapture();
+                    if drag.moved {
+                        self.fit(true);
+                        self.save_settings();
+                    } else if !self.debug_open {
+                        self.wander.flatter();
+                    }
+                    self.last_clock = Instant::now();
+                    let _ = self.update();
                 }
-                self.fit(dropped);
-                self.last_frame = None;
-                self.save_settings();
                 Some(LRESULT(0))
             }
             WM_CAPTURECHANGED if pet => {
-                if self.drag.take().is_some() {
-                    if !self.debug_open {
-                        self.show_pose(Pose::Idle);
+                if let Some(drag) = self.drag.take() {
+                    if drag.moved {
+                        self.fit(false);
+                        self.save_settings();
                     }
-                    self.fit(false);
-                    self.last_frame = None;
-                    self.save_settings();
+                    self.last_clock = Instant::now();
+                    let _ = self.update();
                 }
                 Some(LRESULT(0))
             }

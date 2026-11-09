@@ -127,21 +127,19 @@ fn dragging_uses_sleeve_frames_and_releases_in_place() {
             x: ((work.left + work.right) / 2.0) as i32,
             y: ((work.top + work.bottom) / 2.0) as i32,
         };
-        for (release, pose, moved) in [
-            (WM_LBUTTONUP, Pose::Idle, false),
-            (WM_CAPTURECHANGED, Pose::Idle, true),
-            (WM_LBUTTONUP, Pose::Perch, true),
-            (WM_CAPTURECHANGED, Pose::PerchWave, false),
+        for (release, pose) in [
+            (WM_CAPTURECHANGED, Pose::Idle),
+            (WM_LBUTTONUP, Pose::Perch),
+            (WM_CAPTURECHANGED, Pose::PerchWave),
         ] {
             app.anchor = anchor;
             app.show_pose(pose);
             app.handle(pet.0, WM_LBUTTONDOWN, WPARAM(0), LPARAM(0));
+            assert_eq!(app.auto_pose, pose);
+            app.drag.as_mut().unwrap().start.x -= 20;
+            app.handle(pet.0, WM_MOUSEMOVE, WPARAM(0), LPARAM(0));
             assert_eq!(app.auto_pose, Pose::Sleeve);
             assert_eq!(app.catalog.clips[app.player.selected].id, "sleeve-garden");
-            if moved {
-                app.drag.as_mut().unwrap().start.x -= 20;
-                app.handle(pet.0, WM_MOUSEMOVE, WPARAM(0), LPARAM(0));
-            }
             let mut expected_foot = (0.0, 0.0);
             for scale in 1..=8 {
                 app.scale = scale;
@@ -176,13 +174,50 @@ fn dragging_uses_sleeve_frames_and_releases_in_place() {
             assert_eq!(app.wander.foot.1, world.limits.bottom);
             assert_eq!(
                 app.wander.pose(),
-                if moved && release == WM_LBUTTONUP {
+                if release == WM_LBUTTONUP {
                     Pose::ClapJump
                 } else {
                     Pose::Idle
                 }
             );
         }
+    }
+}
+
+#[test]
+#[ignore = "checks left clicks and flattery frames in a real Win32 window"]
+fn clicking_the_pet_plays_flattery_in_place() {
+    unsafe {
+        let pet = Window::new(WS_EX_LAYERED);
+        let mut app = App::new(
+            Catalog::load_desktop().unwrap(),
+            pet.0,
+            HWND::default(),
+            HWND::default(),
+            true,
+        );
+        app.auto_exit = None;
+        let work = App::work_bounds_at(POINT::default());
+        let foot = ((work.left + work.right) / 2.0, work.bottom);
+        app.wander.place(foot);
+        app.update().unwrap();
+
+        app.handle(pet.0, WM_LBUTTONDOWN, WPARAM(0), LPARAM(0));
+        assert_eq!(app.auto_pose, Pose::Idle);
+        app.handle(pet.0, WM_LBUTTONUP, WPARAM(0), LPARAM(0));
+        assert_eq!(app.auto_pose, Pose::Flattery);
+        let clip = &app.catalog.clips[app.player.selected];
+        assert_eq!(clip.id, "act-flattery");
+        assert_eq!(app.player.index(clip), 0);
+
+        app.last_clock = Instant::now() - Duration::from_millis(950);
+        app.update().unwrap();
+        let clip = &app.catalog.clips[app.player.selected];
+        assert_eq!(app.player.index(clip), clip.steps.len() - 1);
+        app.last_clock = Instant::now() - Duration::from_millis(250);
+        app.update().unwrap();
+        assert_eq!(app.auto_pose, Pose::Idle);
+        assert_eq!(app.wander.foot, foot);
     }
 }
 

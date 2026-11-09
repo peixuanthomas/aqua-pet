@@ -4,6 +4,7 @@ use crate::{
 };
 
 pub const PERCH_DEPTH: f64 = 5.0;
+pub const FLATTERY_HOLD_SECONDS: f64 = 0.5;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Pose {
@@ -17,6 +18,7 @@ pub enum Pose {
     Sleeve,
     Clap,
     ClapJump,
+    Flattery,
     Spin,
     Dance,
     CliffSpin,
@@ -29,7 +31,7 @@ pub enum Pose {
 }
 
 impl Pose {
-    pub const ALL: [Self; 19] = [
+    pub const ALL: [Self; 20] = [
         Self::Idle,
         Self::Left,
         Self::Right,
@@ -40,6 +42,7 @@ impl Pose {
         Self::Sleeve,
         Self::Clap,
         Self::ClapJump,
+        Self::Flattery,
         Self::Spin,
         Self::Dance,
         Self::CliffSpin,
@@ -64,6 +67,7 @@ impl Pose {
             Self::Sleeve => ("sleeve-garden", 7.0),
             Self::Clap => ("clap-cafe", 10.0),
             Self::ClapJump => ("clap-jumping-cafe", 10.0),
+            Self::Flattery => ("act-flattery", 9.0),
             Self::Spin => ("battle-spin", 10.0),
             Self::Dance => ("battle-dance", 9.0),
             Self::CliffSpin => ("spin-cliff", 10.0),
@@ -177,9 +181,15 @@ impl Poses {
     }
 
     pub fn durations(&self, catalog: &Catalog) -> [f64; Pose::ALL.len()] {
-        self.clips
-            .each_ref()
-            .map(|c| catalog.clips[c.index].duration() / catalog.game_fps)
+        Pose::ALL.map(|pose| {
+            let clip = &catalog.clips[self.get(pose).index];
+            if pose == Pose::Flattery {
+                // The desktop replaces the original wait for dialogue with a timed hold.
+                clip.step_start(clip.steps.len() - 1) / catalog.game_fps + FLATTERY_HOLD_SECONDS
+            } else {
+                clip.duration() / catalog.game_fps
+            }
+        })
     }
 }
 
