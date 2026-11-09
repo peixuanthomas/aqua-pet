@@ -48,7 +48,7 @@ fn a_drag_drop_plays_one_clap_jump_cycle_after_landing_then_sways() {
     for (x, edge) in [(100.0, world.edges[0]), (300.0, world.edges[1])] {
         let mut pet = Wander::for_test(42);
         pet.set_music_playing(true);
-        pet.drop_at((x, edge.y - 45.0), true);
+        pet.drop_at((x, edge.y - 45.0), (0.0, 0.0));
         assert_eq!(pet.pose(), Pose::Fall);
         pet.advance((90.0_f64 / 900.0).sqrt(), 30.0, 1, &world);
         assert_eq!(pet.support.unwrap().window, edge.window);
@@ -68,11 +68,73 @@ fn a_drag_drop_plays_one_clap_jump_cycle_after_landing_then_sways() {
 fn a_regular_fall_after_a_drag_does_not_clap_again() {
     let world = desktop(&[]);
     let mut pet = Wander::for_test(42);
-    pet.drop_at((100.0, 800.0), true);
+    pet.drop_at((100.0, 800.0), (0.0, 0.0));
     pet.place((100.0, 800.0));
     pet.advance(0.5, 30.0, 1, &world);
     assert_eq!(pet.foot, (100.0, world.limits.bottom));
     assert_eq!(pet.pose(), Pose::Idle);
+}
+
+#[test]
+fn a_throw_lands_on_the_first_ledge_in_its_path_and_holds_for_a_second_after_sliding() {
+    let world = desktop(&[
+        window(1, 270.0, 340.0, 630.0, 500.0),
+        window(2, 50.0, 550.0, 800.0, 900.0),
+    ]);
+    let mut pet = Wander::for_test(42);
+    pet.set_music_playing(true);
+    pet.drop_at((160.0, 380.0), (300.0, -360.0));
+    assert_eq!(pet.pose(), Pose::Rise);
+    pet.advance(0.4, 30.0, 1, &world);
+    assert!(pet.support.is_none());
+    assert!((pet.foot.0 - 280.0).abs() < 1e-7);
+    assert!((pet.foot.1 - 308.0).abs() < 1e-7);
+    pet.advance(2.0 / 3.0 - 0.4, 30.0, 1, &world);
+    assert_eq!(pet.support.unwrap().window, 1);
+    assert_eq!(pet.foot.1, 340.0);
+    assert_eq!(pet.pose(), Pose::Collapsed);
+    let landing_x = pet.foot.0;
+    assert!((landing_x - 360.0).abs() < 1e-7);
+
+    pet.observe(true, false, 0.01);
+    pet.advance(0.02, 30.0, 1, &world);
+    assert!((pet.foot.0 - landing_x - 1.75).abs() < 1e-7);
+    pet.advance(0.06, 30.0, 1, &world);
+    assert!((pet.foot.0 - landing_x - 4.0).abs() < 1e-7);
+    let stopped = pet.foot;
+    pet.observe(false, true, 0.01);
+    pet.advance(0.99, 30.0, 1, &world);
+    assert_eq!(pet.foot, stopped);
+    assert_eq!(pet.pose(), Pose::Collapsed);
+    pet.advance(0.01, 30.0, 1, &world);
+    assert_eq!(pet.pose(), Pose::Idle);
+}
+
+#[test]
+fn sliding_stops_at_the_edge_of_the_landing_ledge() {
+    let world = desktop(&[window(1, 100.0, 400.0, 400.0, 600.0)]);
+    let mut pet = Wander::for_test(42);
+    pet.drop_at((134.0, 384.5), (-180.0, 110.0));
+    pet.advance(0.1, 30.0, 1, &world);
+    assert_eq!(pet.support.unwrap().window, 1);
+    assert!((pet.foot.0 - 116.0).abs() < 1e-7);
+    pet.advance(0.2, 30.0, 1, &world);
+    assert_eq!(pet.foot, (world.edges[1].left, 400.0));
+    assert_eq!(pet.pose(), Pose::Collapsed);
+    assert_eq!(pet.support.unwrap().window, 1);
+}
+
+#[test]
+fn a_vertical_throw_starts_falling_again_after_reaching_the_top() {
+    let world = desktop(&[]);
+    let mut pet = Wander::for_test(42);
+    pet.drop_at((100.0, world.limits.top + 1.0), (0.0, -1200.0));
+    pet.advance(0.1, 30.0, 1, &world);
+    assert_eq!(pet.pose(), Pose::Fall);
+    assert!(pet.foot.1 > world.limits.top);
+    pet.advance(1.4, 30.0, 1, &world);
+    assert_eq!(pet.foot, (100.0, world.limits.bottom));
+    assert_eq!(pet.pose(), Pose::Collapsed);
 }
 
 #[test]
@@ -109,7 +171,7 @@ fn a_click_holds_the_last_flattery_frame_for_half_a_second() {
 fn clicking_in_the_air_keeps_falling_while_flattery_plays() {
     let world = desktop(&[]);
     let mut pet = Wander::for_test(42);
-    pet.drop_at((100.0, 800.0), true);
+    pet.drop_at((100.0, 800.0), (0.0, 0.0));
     pet.advance(0.2, 30.0, 1, &world);
     pet.flatter();
     pet.advance(0.1, 30.0, 1, &world);

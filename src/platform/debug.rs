@@ -415,7 +415,7 @@ impl App {
             SPEED => self.player.rate = RATES[index.min(RATES.len() - 1)],
             SCALE => {
                 self.scale = index as u32 + 1;
-                unsafe { self.fit(false) };
+                unsafe { self.fit(None) };
                 self.last_frame = None;
                 self.save_settings();
             }

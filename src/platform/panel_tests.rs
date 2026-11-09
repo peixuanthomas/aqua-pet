@@ -110,8 +110,31 @@ fn pet_recovers_topmost_when_an_ordinary_window_covers_it() {
 }
 
 #[test]
-#[ignore = "checks drag animation and release positions in a real Win32 window"]
-fn dragging_uses_sleeve_frames_and_releases_in_place() {
+fn release_velocity_tracks_recent_motion_and_expires_when_the_cursor_stops() {
+    let time = u32::MAX - 30;
+    let start = POINT { x: -200, y: 110 };
+    let mut drag = Drag::new(start, time, POINT::default());
+    drag.move_to(POINT { x: -180, y: 100 }, time.wrapping_add(20));
+    let end = POINT { x: -160, y: 90 };
+    drag.move_to(end, time.wrapping_add(40));
+    assert_eq!(
+        drag.release_velocity(time.wrapping_add(40)),
+        (1000.0, -500.0)
+    );
+
+    drag.move_to(end, time.wrapping_add(120));
+    assert_eq!(drag.release_velocity(time.wrapping_add(120)), (0.0, 0.0));
+
+    drag.move_to(POINT { x: -170, y: 95 }, time.wrapping_add(130));
+    drag.move_to(POINT { x: -180, y: 100 }, time.wrapping_add(140));
+    assert!(drag.release_velocity(time.wrapping_add(140)).0 < 0.0);
+    drag.move_to(POINT { x: -175, y: 100 }, time.wrapping_add(150));
+    assert_eq!(drag.release_velocity(time.wrapping_add(150)), (500.0, 0.0));
+}
+
+#[test]
+#[ignore = "checks drag animation, releases and throws in a real Win32 window"]
+fn dragging_uses_sleeve_frames_and_launches_from_the_release_position() {
     unsafe {
         let pet = Window::new(WS_EX_LAYERED);
         let mut app = App::new(
@@ -127,16 +150,18 @@ fn dragging_uses_sleeve_frames_and_releases_in_place() {
             x: ((work.left + work.right) / 2.0) as i32,
             y: ((work.top + work.bottom) / 2.0) as i32,
         };
-        for (release, pose) in [
+        for (release, landing) in [
             (WM_CAPTURECHANGED, Pose::Idle),
-            (WM_LBUTTONUP, Pose::Perch),
-            (WM_CAPTURECHANGED, Pose::PerchWave),
+            (WM_LBUTTONUP, Pose::ClapJump),
+            (WM_LBUTTONUP, Pose::Collapsed),
         ] {
             app.anchor = anchor;
-            app.show_pose(pose);
+            app.show_pose(Pose::Perch);
             app.handle(pet.0, WM_LBUTTONDOWN, WPARAM(0), LPARAM(0));
-            assert_eq!(app.auto_pose, pose);
-            app.drag.as_mut().unwrap().start.x -= 20;
+            assert_eq!(app.auto_pose, Pose::Perch);
+            let (mut start, time) = mouse_sample();
+            start.x -= 20;
+            app.drag = Some(Drag::new(start, time.wrapping_sub(40), anchor));
             app.handle(pet.0, WM_MOUSEMOVE, WPARAM(0), LPARAM(0));
             assert_eq!(app.auto_pose, Pose::Sleeve);
             assert_eq!(app.catalog.clips[app.player.selected].id, "sleeve-garden");
@@ -158,6 +183,11 @@ fn dragging_uses_sleeve_frames_and_releases_in_place() {
                     );
                 }
             }
+            if landing == Pose::ClapJump {
+                for (_, at) in &mut app.drag.as_mut().unwrap().samples {
+                    *at = at.wrapping_sub(DRAG_MOTION_MS + 1);
+                }
+            }
             app.handle(pet.0, release, WPARAM(0), LPARAM(0));
             assert!(app.drag.is_none());
             assert!(app.wander.support.is_none());
@@ -172,14 +202,10 @@ fn dragging_uses_sleeve_frames_and_releases_in_place() {
                 }
             }
             assert_eq!(app.wander.foot.1, world.limits.bottom);
-            assert_eq!(
-                app.wander.pose(),
-                if release == WM_LBUTTONUP {
-                    Pose::ClapJump
-                } else {
-                    Pose::Idle
-                }
-            );
+            assert_eq!(app.wander.pose(), landing);
+            if landing == Pose::Collapsed {
+                assert!(app.wander.foot.0 > expected_foot.0 + 5.0);
+            }
         }
     }
 }

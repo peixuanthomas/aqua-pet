@@ -21,7 +21,7 @@ use crate::{
 use serde::{Deserialize, Serialize};
 use std::{
     cell::RefCell,
-    collections::HashMap,
+    collections::{HashMap, VecDeque},
     ffi::c_void,
     mem::size_of,
     path::PathBuf,
@@ -168,10 +168,73 @@ fn bitmap_info(width: i32, height: i32) -> BITMAPINFO {
     }
 }
 
+const DRAG_MOTION_MS: u32 = 60;
+
 struct Drag {
     start: POINT,
     anchor: POINT,
     moved: bool,
+    samples: VecDeque<(POINT, u32)>,
+}
+
+impl Drag {
+    fn new(start: POINT, time: u32, anchor: POINT) -> Self {
+        Self {
+            start,
+            anchor,
+            moved: false,
+            samples: VecDeque::from([(start, time)]),
+        }
+    }
+
+    fn move_to(&mut self, point: POINT, time: u32) -> POINT {
+        let (previous, previous_time) = *self.samples.back().unwrap();
+        if point != previous {
+            self.moved = true;
+            while self.samples.len() > 1 && time.wrapping_sub(self.samples[0].1) > DRAG_MOTION_MS {
+                self.samples.pop_front();
+            }
+            let first = self.samples[0].0;
+            let dx = (point.x - previous.x) as f64;
+            let dy = (point.y - previous.y) as f64;
+            // Forget the older direction when the cursor reverses.
+            let direction = dx * (previous.x - first.x) as f64 + dy * (previous.y - first.y) as f64;
+            if direction < 0.0 {
+                self.samples.clear();
+                self.samples.push_back((previous, previous_time));
+            }
+            self.samples.push_back((point, time));
+        }
+        POINT {
+            x: self.anchor.x + point.x - self.start.x,
+            y: self.anchor.y + point.y - self.start.y,
+        }
+    }
+
+    fn release_velocity(&self, time: u32) -> (f64, f64) {
+        let (last, last_at) = *self.samples.back().unwrap();
+        if time.wrapping_sub(last_at) > DRAG_MOTION_MS {
+            return (0.0, 0.0);
+        }
+        let (first, first_at) = self.samples[0];
+        let seconds = last_at.wrapping_sub(first_at).clamp(10, DRAG_MOTION_MS) as f64 / 1000.0;
+        (
+            (last.x - first.x) as f64 / seconds,
+            (last.y - first.y) as f64 / seconds,
+        )
+    }
+}
+
+unsafe fn mouse_sample() -> (POINT, u32) {
+    // Use the position at the message time, even if the cursor has moved on.
+    let position = GetMessagePos();
+    (
+        POINT {
+            x: position as i16 as i32,
+            y: (position >> 16) as i16 as i32,
+        },
+        GetMessageTime() as u32,
+    )
 }
 
 struct App {
@@ -323,7 +386,7 @@ impl App {
             bottom: area.bottom as f64,
         }
     }
-    unsafe fn fit(&mut self, clap_on_landing: bool) {
+    unsafe fn fit(&mut self, release_velocity: Option<(f64, f64)>) {
         let work = Self::work_bounds_at(self.anchor);
         if !self.debug_open {
             self.effective_scale =
@@ -338,7 +401,11 @@ impl App {
                 (self.anchor.x as f64 + fx * s).clamp(limits.left, limits.right),
                 (self.anchor.y as f64 + fy * s).clamp(limits.top, limits.bottom),
             );
-            self.wander.drop_at(foot, clap_on_landing);
+            if let Some(velocity) = release_velocity {
+                self.wander.drop_at(foot, velocity);
+            } else {
+                self.wander.place(foot);
+            }
             self.sync_anchor();
             return;
         }
@@ -380,7 +447,7 @@ impl App {
                 y: area.bottom - 32 - (self.bounds.bottom * 4.0) as i32,
             };
         }
-        self.fit(false);
+        self.fit(None);
     }
     fn save_settings(&self) {
         if self.smoke {
@@ -408,7 +475,7 @@ impl App {
         self.last_frame = None;
         self.preview_dirty = true;
         unsafe {
-            self.fit(false);
+            self.fit(None);
             if self.debug_open {
                 self.sync_selection();
             }
@@ -465,7 +532,7 @@ impl App {
         self.visible.clear();
         self.preview = None;
         self.catalog.unload_composites();
-        self.fit(false);
+        self.fit(None);
         self.save_settings();
     }
     unsafe fn exit(&mut self) {
@@ -711,7 +778,13 @@ impl App {
             || self.wander.riding().is_some()
             || matches!(
                 self.auto_pose,
-                Pose::Left | Pose::Right | Pose::Rise | Pose::Fall | Pose::Roll | Pose::Flattery
+                Pose::Left
+                    | Pose::Right
+                    | Pose::Rise
+                    | Pose::Fall
+                    | Pose::Roll
+                    | Pose::Flattery
+                    | Pose::Collapsed
             ) {
             16
         } else {
@@ -776,26 +849,16 @@ impl App {
             }
             WM_MOUSEACTIVATE if pet => Some(LRESULT(MA_NOACTIVATE as isize)),
             WM_LBUTTONDOWN if pet => {
-                let mut p = POINT::default();
-                let _ = GetCursorPos(&mut p);
-                self.drag = Some(Drag {
-                    start: p,
-                    anchor: self.anchor,
-                    moved: false,
-                });
+                let (point, time) = mouse_sample();
+                self.drag = Some(Drag::new(point, time, self.anchor));
                 SetCapture(self.pet);
                 let _ = self.update();
                 Some(LRESULT(0))
             }
             WM_MOUSEMOVE if pet => {
                 if let Some(drag) = &mut self.drag {
-                    let mut p = POINT::default();
-                    let _ = GetCursorPos(&mut p);
-                    drag.moved |= p != drag.start;
-                    self.anchor = POINT {
-                        x: drag.anchor.x + p.x - drag.start.x,
-                        y: drag.anchor.y + p.y - drag.start.y,
-                    };
+                    let (point, time) = mouse_sample();
+                    self.anchor = drag.move_to(point, time);
                     if drag.moved && !self.debug_open {
                         self.show_pose(Pose::Sleeve);
                     }
@@ -804,10 +867,12 @@ impl App {
                 Some(LRESULT(0))
             }
             WM_LBUTTONUP if pet => {
-                if let Some(drag) = self.drag.take() {
+                if let Some(mut drag) = self.drag.take() {
+                    let (point, time) = mouse_sample();
+                    self.anchor = drag.move_to(point, time);
                     let _ = ReleaseCapture();
                     if drag.moved {
-                        self.fit(true);
+                        self.fit(Some(drag.release_velocity(time)));
                         self.save_settings();
                     } else if !self.debug_open {
                         self.wander.flatter();
@@ -820,7 +885,7 @@ impl App {
             WM_CAPTURECHANGED if pet => {
                 if let Some(drag) = self.drag.take() {
                     if drag.moved {
-                        self.fit(false);
+                        self.fit(None);
                         self.save_settings();
                     }
                     self.last_clock = Instant::now();
@@ -889,7 +954,7 @@ impl App {
             }
             WM_DISPLAYCHANGE => {
                 if self.debug_open {
-                    self.fit(false);
+                    self.fit(None);
                 }
                 self.last_frame = None;
                 Some(LRESULT(0))
@@ -915,7 +980,7 @@ impl App {
                     }
                 } else {
                     if self.debug_open {
-                        self.fit(false);
+                        self.fit(None);
                     }
                     self.last_frame = None;
                 }

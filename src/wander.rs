@@ -16,6 +16,9 @@ const MIN_DANCE_SECONDS: f64 = 60.0;
 const MAX_DANCE_SECONDS: f64 = 120.0;
 const GRAVITY: f64 = 900.0;
 const ROLL_JUMP_SPEED_FACTOR: f64 = 1.5;
+const MAX_SLIDE_SPEED: f64 = 100.0;
+const SLIDE_DECELERATION: f64 = 1250.0;
+const COLLAPSED_SECONDS: f64 = 1.0;
 
 #[derive(Clone, Copy, Debug)]
 pub struct Footing {
@@ -49,12 +52,19 @@ struct Jump {
 }
 
 #[derive(Clone, Copy, Debug)]
+enum Landing {
+    Idle,
+    Clap,
+    Collapse,
+}
+
+#[derive(Clone, Copy, Debug)]
 struct Air {
     vx: f64,
     vy: f64,
     skip: Option<usize>,
     jump: Option<Jump>,
-    clap_on_landing: bool,
+    landing: Landing,
 }
 
 #[derive(Clone, Copy, Debug)]
@@ -62,6 +72,9 @@ enum Motion {
     Idle,
     Action(Pose),
     DropClap,
+    Collapsed {
+        vx: f64,
+    },
     Rest(Pose),
     Perch,
     Wave {
@@ -139,30 +152,36 @@ impl Wander {
     }
 
     pub fn place(&mut self, foot: (f64, f64)) {
-        self.drop_at(foot, false);
-    }
-
-    pub fn drop_at(&mut self, foot: (f64, f64), clap_on_landing: bool) {
         self.flattery_seconds = None;
-        self.fall_from(foot, clap_on_landing);
+        self.fall_from(foot, (0.0, 0.0), Landing::Idle);
     }
 
-    fn fall_from(&mut self, foot: (f64, f64), clap_on_landing: bool) {
+    pub fn drop_at(&mut self, foot: (f64, f64), velocity: (f64, f64)) {
+        self.flattery_seconds = None;
+        let landing = if velocity == (0.0, 0.0) {
+            Landing::Clap
+        } else {
+            Landing::Collapse
+        };
+        self.fall_from(foot, velocity, landing);
+    }
+
+    fn fall_from(&mut self, foot: (f64, f64), (vx, vy): (f64, f64), landing: Landing) {
         self.foot = foot;
         self.support = None;
         self.start(Motion::Air(Air {
-            vx: 0.0,
-            vy: 0.0,
+            vx,
+            vy,
             skip: None,
             jump: None,
-            clap_on_landing,
+            landing,
         }));
     }
 
     pub fn flatter(&mut self) {
         self.flattery_seconds = Some(0.0);
         if let Motion::Air(air) = &mut self.motion {
-            air.clap_on_landing = false;
+            air.landing = Landing::Idle;
         }
     }
 
@@ -174,6 +193,7 @@ impl Wander {
             Motion::Idle => self.dance.map_or(Pose::Idle, |dance| dance.pose),
             Motion::Action(pose) | Motion::Rest(pose) => pose,
             Motion::DropClap => Pose::ClapJump,
+            Motion::Collapsed { .. } => Pose::Collapsed,
             Motion::Perch => Pose::Perch,
             Motion::Wave { seated: true } => Pose::PerchWave,
             Motion::Wave { seated: false } => Pose::Wave,
@@ -228,7 +248,10 @@ impl Wander {
             && self.wave_cooldown == 0.0
             && self.support.is_some()
             && self.flattery_seconds.is_none()
-            && !matches!(self.motion, Motion::DropClap | Motion::Look { .. })
+            && !matches!(
+                self.motion,
+                Motion::DropClap | Motion::Collapsed { .. } | Motion::Look { .. }
+            )
         {
             self.start(Motion::Wave { seated });
             self.wave_cooldown = 15.0;
@@ -428,7 +451,7 @@ impl Wander {
                 gravity: gravity * rate * rate,
                 roll,
             }),
-            clap_on_landing: false,
+            landing: Landing::Idle,
         }));
     }
 
@@ -466,19 +489,23 @@ impl Wander {
             if let Some((_, edge, at)) = hit {
                 self.foot = (at, edge.y);
                 self.support = Some(Footing::new(edge, at));
-                self.start(if air.clap_on_landing {
-                    Motion::DropClap
-                } else {
-                    Motion::Idle
+                self.start(match air.landing {
+                    Landing::Idle => Motion::Idle,
+                    Landing::Clap => Motion::DropClap,
+                    Landing::Collapse => Motion::Collapsed {
+                        vx: vx.clamp(-MAX_SLIDE_SPEED * scale, MAX_SLIDE_SPEED * scale),
+                    },
                 });
                 return;
             }
         }
-        self.foot = (
-            x_at(dt),
-            (y + vy * dt + 0.5 * gravity * dt * dt).max(world.limits.top),
-        );
-        air.vy = next_vy;
+        let next_y = y + vy * dt + 0.5 * gravity * dt * dt;
+        self.foot = (x_at(dt), next_y.max(world.limits.top));
+        air.vy = if next_y <= world.limits.top {
+            next_vy.max(0.0)
+        } else {
+            next_vy
+        };
         self.motion = Motion::Air(air);
     }
 
@@ -492,7 +519,7 @@ impl Wander {
         if let Some((edge, offset)) = support {
             self.foot = (edge.origin_x + offset, edge.y);
         } else if !matches!(self.motion, Motion::Air(_)) {
-            self.fall_from(self.foot, false);
+            self.fall_from(self.foot, (0.0, 0.0), Landing::Idle);
         }
         self.foot.0 = self.foot.0.clamp(world.limits.left, world.limits.right);
         self.foot.1 = self.foot.1.clamp(world.limits.top, world.limits.bottom);
@@ -536,7 +563,11 @@ impl Wander {
             if self.computer_idle
                 && !matches!(
                     self.motion,
-                    Motion::Rest(_) | Motion::Perch | Motion::DropClap
+                    Motion::Rest(_)
+                        | Motion::Perch
+                        | Motion::DropClap
+                        | Motion::Collapsed { .. }
+                        | Motion::Action(Pose::Idle)
                 )
             {
                 let pose = if self.can_perch(world, scale) {
@@ -553,6 +584,27 @@ impl Wander {
                     if self.motion_seconds + 1e-9 >= self.pose_seconds[Pose::ClapJump as usize] =>
                 {
                     // Give the default sway one full loop before the music can resume.
+                    self.start(Motion::Action(Pose::Idle));
+                }
+                Motion::Collapsed { vx } if vx != 0.0 => {
+                    let deceleration = SLIDE_DECELERATION * scale;
+                    let slide_speed = vx.abs();
+                    let slide_time = dt.min(slide_speed / deceleration);
+                    let speed_left = (slide_speed - deceleration * slide_time).max(0.0);
+                    let dx = vx.signum() * (slide_speed + speed_left) * 0.5 * slide_time;
+                    let x = self.foot.0 + dx;
+                    self.foot.0 = x.clamp(edge.left, edge.right);
+                    self.support = Some(Footing::new(edge, self.foot.0));
+                    if speed_left <= 1e-9 || self.foot.0 != x {
+                        self.start(Motion::Collapsed { vx: 0.0 });
+                        self.motion_seconds = dt - slide_time;
+                    } else {
+                        self.motion = Motion::Collapsed {
+                            vx: vx.signum() * speed_left,
+                        };
+                    }
+                }
+                Motion::Collapsed { .. } if self.motion_seconds + 1e-9 >= COLLAPSED_SECONDS => {
                     self.start(Motion::Action(Pose::Idle));
                 }
                 Motion::Perch if self.motion_seconds + 1e-9 >= PERCH_SECONDS => {
