@@ -345,10 +345,9 @@ mod tests {
         );
         let mut desktop = Desktop::new(&[]);
         let id = back.0.0 as usize;
+        let front_id = front.0.0 as usize;
         // The user's other open apps should not decide which test window wins.
-        desktop
-            .windows
-            .retain(|w| [id, front.0.0 as usize].contains(&w.id));
+        desktop.windows.retain(|w| [id, front_id].contains(&w.id));
         let now = Instant::now();
         desktop.refresh(now, None);
         let body = Bounds {
@@ -361,21 +360,27 @@ mod tests {
         let back_edges: Vec<_> = world.edges.iter().filter(|e| e.window == id).collect();
         assert_eq!(back_edges.len(), 2);
         assert!(back_edges[0].right < front_rect.left && back_edges[1].left > front_rect.right);
+        let front_edge = world.edges.iter().find(|e| e.window == front_id).unwrap();
+        assert_ne!(GetForegroundWindow(), back.0);
         let mut roaming = Wander::for_test(42);
         roaming.set_probability(100);
-        roaming.place((world.limits.right, world.limits.bottom));
-        let mut jumped = false;
-        let mut paced = false;
+        roaming.place((front_edge.left, front_edge.y));
+        let mut jumping_from_front = false;
+        let mut reached_back = false;
         for _ in 0..60 * 300 {
+            let preparing = matches!(roaming.pose(), Pose::LookLeft | Pose::LookRight)
+                && roaming.riding().is_some_and(|s| s.window == front_id);
             roaming.advance(1.0 / 60.0, 30.0, 1, world);
-            jumped |= roaming.pose() == Pose::Rise;
-            paced |=
-                roaming.riding().is_some() && matches!(roaming.pose(), Pose::Left | Pose::Right);
-            if jumped && paced {
-                break;
+            jumping_from_front |= preparing && roaming.support.is_none();
+            if jumping_from_front && let Some(support) = roaming.support {
+                if support.window == id {
+                    reached_back = true;
+                    break;
+                }
+                jumping_from_front = false;
             }
         }
-        assert!(jumped && paced);
+        assert!(reached_back);
         let foot = (back_rect.left + 60.0, back_rect.top);
         let mut pet = Wander::for_test(42);
         pet.set_probability(0);

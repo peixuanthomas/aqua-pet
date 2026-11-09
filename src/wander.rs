@@ -14,8 +14,7 @@ const PERCH_SECONDS: f64 = 12.0;
 const LOOK_SECONDS: f64 = 1.0;
 const MIN_DANCE_SECONDS: f64 = 60.0;
 const MAX_DANCE_SECONDS: f64 = 120.0;
-const MAX_HOP_X: f64 = 50.0;
-const MAX_HOP_Y: f64 = 35.0;
+const GRAVITY: f64 = 900.0;
 
 #[derive(Clone, Copy, Debug)]
 pub struct Footing {
@@ -40,6 +39,24 @@ struct Dance {
 }
 
 #[derive(Clone, Copy, Debug)]
+struct Jump {
+    window: usize,
+    landing: (f64, f64),
+    duration: f64,
+    gravity: f64,
+    roll: bool,
+}
+
+#[derive(Clone, Copy, Debug)]
+struct Air {
+    vx: f64,
+    vy: f64,
+    skip: Option<usize>,
+    jump: Option<Jump>,
+    clap_on_landing: bool,
+}
+
+#[derive(Clone, Copy, Debug)]
 enum Motion {
     Idle,
     Action(Pose),
@@ -58,13 +75,7 @@ enum Motion {
         target: Footing,
         right: bool,
     },
-    Air {
-        vx: f64,
-        vy: f64,
-        skip: Option<usize>,
-        roll: bool,
-        clap_on_landing: bool,
-    },
+    Air(Air),
 }
 
 pub struct Wander {
@@ -136,13 +147,13 @@ impl Wander {
     pub fn drop_at(&mut self, foot: (f64, f64), clap_on_landing: bool) {
         self.foot = foot;
         self.support = None;
-        self.start(Motion::Air {
+        self.start(Motion::Air(Air {
             vx: 0.0,
             vy: 0.0,
             skip: None,
-            roll: false,
+            jump: None,
             clap_on_landing,
-        });
+        }));
     }
 
     pub fn pose(&self) -> Pose {
@@ -157,23 +168,28 @@ impl Wander {
             Motion::Walk { right: false, .. } => Pose::Left,
             Motion::Look { right: true, .. } => Pose::LookRight,
             Motion::Look { right: false, .. } => Pose::LookLeft,
-            Motion::Air { roll: true, .. }
-                if self.motion_seconds + 1e-9 >= self.pose_seconds[Pose::Rise as usize]
-                    && self.motion_seconds + 1e-9
-                        < self.pose_seconds[Pose::Rise as usize]
-                            + self.pose_seconds[Pose::Roll as usize] =>
+            Motion::Air(Air {
+                jump:
+                    Some(Jump {
+                        roll: true,
+                        duration,
+                        ..
+                    }),
+                ..
+            }) if self.motion_seconds + 1e-9 >= self.pose_seconds[Pose::Rise as usize]
+                && self.motion_seconds + 1e-9 < duration =>
             {
                 Pose::Roll
             }
-            Motion::Air { vy, .. } if vy < 0.0 => Pose::Rise,
-            Motion::Air { .. } => Pose::Fall,
+            Motion::Air(Air { vy, .. }) if vy < 0.0 => Pose::Rise,
+            Motion::Air(_) => Pose::Fall,
         }
     }
 
     pub fn animation_seconds(&self) -> f64 {
         match (self.motion, self.dance) {
             (Motion::Idle, Some(dance)) => dance.seconds,
-            (Motion::Air { roll: true, .. }, _) if self.pose() == Pose::Roll => {
+            _ if self.pose() == Pose::Roll => {
                 (self.motion_seconds - self.pose_seconds[Pose::Rise as usize]).max(0.0)
             }
             _ => self.motion_seconds,
@@ -299,10 +315,9 @@ impl Wander {
                 .iter()
                 .filter(|other| {
                     other.window != edge.window
-                        && other.left <= edge.right + speed
-                        && other.right >= edge.left - speed
+                        && (edge.y > world.limits.top || other.y > world.limits.top)
                 })
-                .filter_map(|&target| {
+                .map(|&target| {
                     let mut landing = x.clamp(target.left, target.right);
                     if target.y > edge.y {
                         // Prefer jumping past an end of the current ledge when the lower one extends farther.
@@ -316,15 +331,7 @@ impl Wander {
                         }
                     }
                     let takeoff = landing.clamp(edge.left, edge.right);
-                    if edge.window != FLOOR
-                        && target.window != FLOOR
-                        && self
-                            .hop_velocity((takeoff, edge.y), (landing, target.y), scale, world)
-                            .is_none()
-                    {
-                        return None;
-                    }
-                    Some((takeoff, Footing::new(target, landing)))
+                    (takeoff, Footing::new(target, landing))
                 })
                 .collect();
             if !targets.is_empty() {
@@ -351,27 +358,6 @@ impl Wander {
         self.walk_to(edge, end, None);
     }
 
-    fn hop_velocity(
-        &self,
-        from: (f64, f64),
-        to: (f64, f64),
-        scale: f64,
-        world: &Ledges,
-    ) -> Option<(f64, f64)> {
-        let dx = to.0 - from.0;
-        let dy = to.1 - from.1;
-        if dx.abs() > MAX_HOP_X * scale + 1e-7 || dy.abs() > MAX_HOP_Y * scale + 1e-7 {
-            return None;
-        }
-        // Reach the next window as the one-shot roll ends, without slowing the original frames.
-        let duration =
-            self.pose_seconds[Pose::Rise as usize] + self.pose_seconds[Pose::Roll as usize];
-        let gravity = 900.0 * scale;
-        let vy = dy / duration - 0.5 * gravity * duration;
-        let peak = from.1 - vy * vy / (2.0 * gravity);
-        (peak >= world.limits.top).then_some((dx / duration, vy))
-    }
-
     fn prepare_jump(
         &mut self,
         edge: Ledge,
@@ -394,44 +380,54 @@ impl Wander {
         let Some(landing) = world.at_offset(target.window, target.offset) else {
             return;
         };
-        let dx = landing.origin_x + target.offset - self.foot.0;
-        if dx.abs() > speed + 0.01 {
+        let x = landing.origin_x + target.offset;
+        let dx = x - self.foot.0;
+        let gravity = GRAVITY * scale;
+        let peak = (edge.y.min(landing.y) - 12.0 * scale).max(world.limits.top);
+        let rise = (2.0 * (edge.y - peak) / gravity).sqrt();
+        let fall = (2.0 * (landing.y - peak) / gravity).sqrt();
+        let natural_duration = rise + fall;
+        if natural_duration == 0.0 {
             return;
         }
-        let roll = edge.window != FLOOR && landing.window != FLOOR;
-        let (vx, vy) = if roll {
-            let Some(velocity) = self.hop_velocity(
-                self.foot,
-                (landing.origin_x + target.offset, landing.y),
-                scale,
-                world,
-            ) else {
-                return;
-            };
-            velocity
-        } else {
-            let gravity = 900.0 * scale;
-            let peak = (edge.y.min(landing.y) - 12.0 * scale).max(world.limits.top);
-            let vy = -(2.0 * gravity * (edge.y - peak)).sqrt();
-            let duration = -vy / gravity + (2.0 * (landing.y - peak) / gravity).sqrt();
-            if duration <= 0.0 {
-                return;
-            }
-            (dx / duration, vy)
-        };
+        // Stretch wide jumps in time without making the arc rise off screen.
+        let mut duration = natural_duration.max(dx.abs() / (2.0 * speed));
+        let roll = landing.y <= edge.y;
+        if roll {
+            let takeoff = self.pose_seconds[Pose::Rise as usize];
+            let cycle = self.pose_seconds[Pose::Roll as usize];
+            let loops = ((duration - takeoff) / cycle - 1e-9).ceil().max(1.0);
+            duration = takeoff + loops * cycle;
+        }
+        let rate = natural_duration / duration;
         self.support = None;
-        self.start(Motion::Air {
-            vx,
-            vy,
+        self.start(Motion::Air(Air {
+            vx: dx / duration,
+            vy: -gravity * rise * rate,
             skip: (landing.y > edge.y).then_some(edge.window),
-            roll,
+            jump: Some(Jump {
+                window: landing.window,
+                landing: (x, landing.y),
+                duration,
+                gravity: gravity * rate * rate,
+                roll,
+            }),
             clap_on_landing: false,
-        });
+        }));
     }
 
-    fn fly(&mut self, dt: f64, scale: f64, world: &Ledges, vx: f64, vy: f64, skip: Option<usize>) {
+    fn fly(&mut self, dt: f64, scale: f64, world: &Ledges, mut air: Air) {
         let (x, y) = self.foot;
-        let gravity = 900.0 * scale;
+        let Air { vx, vy, skip, .. } = air;
+        air.jump = air.jump.filter(|jump| {
+            self.motion_seconds - dt + 1e-9 < jump.duration
+                && world.edges.iter().any(|edge| {
+                    edge.window == jump.window
+                        && edge.y == jump.landing.1
+                        && edge.contains(jump.landing.0)
+                })
+        });
+        let gravity = air.jump.map_or(GRAVITY * scale, |jump| jump.gravity);
         let next_vy = vy + gravity * dt;
         let x_at = |t: f64| (x + vx * t).clamp(world.limits.left, world.limits.right);
         if next_vy >= 0.0 {
@@ -454,19 +450,11 @@ impl Wander {
             if let Some((_, edge, at)) = hit {
                 self.foot = (at, edge.y);
                 self.support = Some(Footing::new(edge, at));
-                self.start(
-                    if matches!(
-                        self.motion,
-                        Motion::Air {
-                            clap_on_landing: true,
-                            ..
-                        }
-                    ) {
-                        Motion::DropClap
-                    } else {
-                        Motion::Idle
-                    },
-                );
+                self.start(if air.clap_on_landing {
+                    Motion::DropClap
+                } else {
+                    Motion::Idle
+                });
                 return;
             }
         }
@@ -474,9 +462,8 @@ impl Wander {
             x_at(dt),
             (y + vy * dt + 0.5 * gravity * dt * dt).max(world.limits.top),
         );
-        if let Motion::Air { vy, .. } = &mut self.motion {
-            *vy = next_vy;
-        }
+        air.vy = next_vy;
+        self.motion = Motion::Air(air);
     }
 
     pub fn advance(&mut self, seconds: f64, game_fps: f64, scale: u32, world: &Ledges) {
@@ -488,7 +475,7 @@ impl Wander {
             .and_then(|s| world.at_offset(s.window, s.offset).map(|e| (e, s.offset)));
         if let Some((edge, offset)) = support {
             self.foot = (edge.origin_x + offset, edge.y);
-        } else if !matches!(self.motion, Motion::Air { .. }) {
+        } else if !matches!(self.motion, Motion::Air(_)) {
             self.place(self.foot);
         }
         self.foot.0 = self.foot.0.clamp(world.limits.left, world.limits.right);
@@ -504,8 +491,8 @@ impl Wander {
             let dt = remaining.min(1.0 / 60.0);
             remaining -= dt;
             self.motion_seconds += dt;
-            if let Motion::Air { vx, vy, skip, .. } = self.motion {
-                self.fly(dt, scale, world, vx, vy, skip);
+            if let Motion::Air(air) = self.motion {
+                self.fly(dt, scale, world, air);
                 continue;
             }
             if let Motion::Wave { seated } = self.motion {

@@ -96,7 +96,7 @@ fn neighboring_windows(scale: u32, gap: f64, height: f64) -> Ledges {
 #[test]
 fn window_hops_play_roll_once_and_land_on_time_at_every_scale_and_timer_rate() {
     for scale in [1, 2, 4, 8] {
-        for height in [-35.0, 0.0, 35.0] {
+        for height in [-20.0, 0.0] {
             let world = neighboring_windows(scale, 20.0, height);
             for right in [false, true] {
                 let (edge, target, from, to) = if right {
@@ -114,6 +114,9 @@ fn window_hops_play_roll_once_and_land_on_time_at_every_scale_and_timer_rate() {
                         world.edges[1].right,
                     )
                 };
+                if target.y > edge.y {
+                    continue;
+                }
                 for rate in [10, 30, 60, 144] {
                     let mut pet = Wander::for_test(42);
                     pet.set_probability(0);
@@ -156,10 +159,10 @@ fn window_hops_play_roll_once_and_land_on_time_at_every_scale_and_timer_rate() {
 }
 
 #[test]
-fn window_hops_reject_excessive_horizontal_or_vertical_distance() {
+fn long_jumps_reach_far_windows_and_roll_only_when_upward_or_level() {
     for scale in [1, 2, 4, 8] {
-        for (gap, height) in [(20.1, 0.0), (20.0, -35.1), (20.0, 35.1)] {
-            let world = neighboring_windows(scale, gap, height);
+        for height in [-240.0, 0.0, 240.0] {
+            let world = neighboring_windows(scale, 250.0, height);
             let edge = world.edges[1];
             let target = world.edges[2];
             let mut pet = Wander::for_test(42);
@@ -172,17 +175,43 @@ fn window_hops_reject_excessive_horizontal_or_vertical_distance() {
                 scale as f64,
                 60.0 * scale as f64,
             );
-            assert_eq!(pet.riding().unwrap().window, edge.window);
-            assert_eq!(pet.pose(), Pose::Idle);
+            assert_eq!(pet.pose(), Pose::Rise);
+            let mut repeated_roll = false;
+            let mut fell = false;
+            for _ in 0..60 * 5 {
+                pet.advance(1.0 / 60.0, 30.0, scale, &world);
+                assert!(pet.foot.1 >= world.limits.top);
+                if pet.pose() == Pose::Roll {
+                    assert!(height <= 0.0);
+                    repeated_roll |=
+                        pet.animation_seconds() >= pet.pose_seconds[Pose::Roll as usize];
+                }
+                fell |= pet.pose() == Pose::Fall;
+                if pet.support.is_some() {
+                    break;
+                }
+            }
+            assert_eq!(repeated_roll, height <= 0.0);
+            assert_eq!(fell, height > 0.0);
+            assert_eq!(pet.riding().unwrap().window, target.window);
+            assert!((pet.foot.0 - target.left).abs() < 1e-7);
+            assert_eq!(pet.foot.1, target.y);
         }
     }
 }
 
 #[test]
-fn nearby_window_is_chosen_and_approached_before_hopping() {
-    let world = neighboring_windows(1, 20.0, -35.0);
+fn a_far_background_window_is_chosen_by_its_exposed_edge() {
+    let mut cover = window(3, 410.0, 250.0, 650.0, 600.0);
+    cover.can_stand = false;
+    let world = desktop(&[
+        cover,
+        window(1, 100.0, 350.0, 400.0, 800.0),
+        window(2, 420.0, 315.0, 900.0, 850.0),
+    ]);
     let edge = world.edges[1];
     let target = world.edges[2];
+    assert!(target.left > cover.rect.right);
     for seed in 1..=100 {
         let mut pet = Wander::for_test(seed);
         pet.set_probability(100);
@@ -192,7 +221,7 @@ fn nearby_window_is_chosen_and_approached_before_hopping() {
         if matches!(pet.motion, Motion::Walk { jump_to: Some(s), .. } if s.window == target.window)
         {
             let mut rolled = false;
-            for _ in 0..60 * 6 {
+            for _ in 0..60 * 12 {
                 pet.advance(1.0 / 60.0, 30.0, 1, &world);
                 rolled |= pet.pose() == Pose::Roll;
                 if pet.riding().is_some_and(|s| s.window == target.window) {
@@ -203,7 +232,7 @@ fn nearby_window_is_chosen_and_approached_before_hopping() {
             panic!("the selected window was not reached");
         }
     }
-    panic!("the neighboring window was never chosen");
+    panic!("the visible part of the background window was never chosen");
 }
 
 #[test]
@@ -231,33 +260,26 @@ fn a_cross_window_jump_looks_at_its_destination_for_one_second() {
 }
 
 #[test]
-fn far_or_covered_windows_are_not_selected_for_a_hop() {
+fn fully_covered_windows_are_not_selected_for_a_jump() {
     let source = window(1, 100.0, 350.0, 400.0, 800.0);
     let target = window(2, 420.0, 350.0, 900.0, 850.0);
     let mut cover = window(3, 410.0, 300.0, 910.0, 860.0);
     cover.can_stand = false;
-    let worlds = [
-        neighboring_windows(1, 21.0, 0.0),
-        neighboring_windows(1, 20.0, 36.0),
-        neighboring_windows(1, 20.0, -36.0),
-        desktop(&[cover, source, target]),
-    ];
-    for world in worlds {
-        let edge = *world.edges.iter().find(|e| e.window == 1).unwrap();
-        for seed in 1..=100 {
-            let mut pet = Wander::for_test(seed);
-            pet.set_probability(100);
-            pet.place((edge.left, edge.y));
-            pet.advance(0.01, 30.0, 1, &world);
-            pet.choose(edge, &world, 60.0, 1.0);
-            assert!(!matches!(pet.motion, Motion::Air { roll: true, .. }));
-            if let Motion::Walk {
-                jump_to: Some(target),
-                ..
-            } = pet.motion
-            {
-                assert_eq!(target.window, FLOOR);
-            }
+    let world = desktop(&[cover, source, target]);
+    let edge = world.edges[1];
+    for seed in 1..=100 {
+        let mut pet = Wander::for_test(seed);
+        pet.set_probability(100);
+        pet.place((edge.left, edge.y));
+        pet.advance(0.01, 30.0, 1, &world);
+        pet.choose(edge, &world, 60.0, 1.0);
+        assert!(!matches!(pet.motion, Motion::Look { .. }));
+        if let Motion::Walk {
+            jump_to: Some(target),
+            ..
+        } = pet.motion
+        {
+            assert_eq!(target.window, FLOOR);
         }
     }
 }
@@ -267,21 +289,15 @@ fn approaching_pet_rechecks_the_target_before_leaving_its_window() {
     let world = neighboring_windows(1, 20.0, 0.0);
     let edge = world.edges[1];
     let target = Footing::new(world.edges[2], world.edges[2].left);
-    for changed in [
-        neighboring_windows(1, 21.0, 0.0),
-        neighboring_windows(1, 20.0, 36.0),
-        desktop(&[window(1, 100.0, 350.0, 400.0, 800.0)]),
-    ] {
-        let mut pet = Wander::for_test(42);
-        pet.place((edge.right - 1.0, edge.y));
-        pet.advance(0.01, 30.0, 1, &world);
-        pet.walk_to(edge, edge.right, Some(target));
-        pet.advance(0.1, 30.0, 1, &changed);
-        pet.advance(1.0, 30.0, 1, &changed);
-        assert_eq!(pet.riding().unwrap().window, edge.window);
-        assert_eq!(pet.pose(), Pose::Idle);
-        assert_eq!(pet.foot, (edge.right, edge.y));
-    }
+    let changed = desktop(&[window(1, 100.0, 350.0, 400.0, 800.0)]);
+    let mut pet = Wander::for_test(42);
+    pet.place((edge.right - 1.0, edge.y));
+    pet.advance(0.01, 30.0, 1, &world);
+    pet.walk_to(edge, edge.right, Some(target));
+    pet.advance(0.1, 30.0, 1, &changed);
+    assert_eq!(pet.riding().unwrap().window, edge.window);
+    assert_eq!(pet.pose(), Pose::Idle);
+    assert_eq!(pet.foot, (edge.right, edge.y));
 }
 
 #[test]
@@ -303,7 +319,7 @@ fn a_window_that_disappears_during_the_look_is_not_jumped_to() {
 
 #[test]
 fn a_missed_window_ends_the_roll_and_falls_normally() {
-    let world = neighboring_windows(1, 20.0, 0.0);
+    let world = neighboring_windows(1, 250.0, 0.0);
     let edge = world.edges[1];
     let target = Footing::new(world.edges[2], world.edges[2].left);
     let source = window(1, 100.0, 350.0, 400.0, 800.0);
@@ -312,7 +328,7 @@ fn a_missed_window_ends_the_roll_and_falls_normally() {
     for changed in [
         desktop(&[source]),
         neighboring_windows(1, 300.0, 0.0),
-        desktop(&[cover, source, window(2, 420.0, 350.0, 900.0, 850.0)]),
+        desktop(&[cover, source, window(2, 650.0, 350.0, 900.0, 850.0)]),
     ] {
         let mut pet = Wander::for_test(42);
         pet.place((edge.right, edge.y));
@@ -334,7 +350,7 @@ fn a_missed_window_ends_the_roll_and_falls_normally() {
 }
 
 #[test]
-fn taskbar_round_trips_keep_the_existing_jump_poses() {
+fn taskbar_round_trips_roll_up_and_use_the_original_poses_down() {
     for top in [200.0, 880.0] {
         let world = desktop(&[window(1, 250.0, top, 600.0, 900.0)]);
         let mut pet = grounded(&world, 300.0);
@@ -345,37 +361,50 @@ fn taskbar_round_trips_keep_the_existing_jump_poses() {
         ] {
             pet.jump(edge, Footing::new(target, 300.0), &world, 1.0, 60.0);
             assert_eq!(pet.pose(), Pose::Rise);
+            let mut rolled = false;
+            let mut fell = false;
             for _ in 0..120 {
                 pet.advance(1.0 / 60.0, 30.0, 1, &world);
-                assert_ne!(pet.pose(), Pose::Roll);
+                rolled |= pet.pose() == Pose::Roll;
+                fell |= pet.pose() == Pose::Fall;
                 if pet.support.is_some() {
                     break;
                 }
             }
+            assert_eq!(rolled, target.y < edge.y);
+            assert_eq!(fell, target.y > edge.y);
             assert_eq!(pet.support.unwrap().window, target.window);
         }
     }
 }
 
 #[test]
-fn window_hops_need_headroom_for_the_whole_arc() {
-    let world = desktop(&[
-        window(1, 100.0, 40.0, 400.0, 800.0),
-        window(2, 420.0, 40.0, 900.0, 850.0),
-    ]);
-    let edge = world.edges[1];
-    let mut pet = Wander::for_test(42);
-    pet.place((edge.right, edge.y));
-    pet.advance(0.01, 30.0, 1, &world);
-    pet.jump(
-        edge,
-        Footing::new(world.edges[2], world.edges[2].left),
-        &world,
-        1.0,
-        60.0,
-    );
-    assert_eq!(pet.riding().unwrap().window, edge.window);
-    assert_eq!(pet.pose(), Pose::Idle);
+fn a_jump_near_the_screen_top_stays_inside_the_work_area() {
+    for top in [36.0, 40.0] {
+        let world = desktop(&[
+            window(1, 100.0, 40.0, 400.0, 800.0),
+            window(2, 420.0, top, 900.0, 850.0),
+        ]);
+        let edge = world.edges[1];
+        let mut pet = Wander::for_test(42);
+        pet.place((edge.right, edge.y));
+        pet.advance(0.01, 30.0, 1, &world);
+        pet.jump(
+            edge,
+            Footing::new(world.edges[2], world.edges[2].left),
+            &world,
+            1.0,
+            60.0,
+        );
+        for _ in 0..60 {
+            pet.advance(1.0 / 60.0, 30.0, 1, &world);
+            assert!(pet.foot.1 >= world.limits.top);
+            if pet.support.is_some() {
+                break;
+            }
+        }
+        assert_eq!(pet.riding().unwrap().window, world.edges[2].window);
+    }
 }
 
 #[test]
@@ -390,7 +419,7 @@ fn walks_up_to_a_high_window_jumps_paces_and_gets_back_down() {
         if pet.pose() == Pose::Right && pet.foot.1 == 900.0 {
             approached = true;
         }
-        if pet.pose() == Pose::Rise && pet.foot.1 < 125.0 {
+        if pet.pose() == Pose::Roll && pet.foot.1 < 125.0 {
             rose = true;
         }
         if pet.riding().is_some() && matches!(pet.pose(), Pose::Left | Pose::Right) {
