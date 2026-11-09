@@ -42,6 +42,39 @@ fn grounded(world: &Ledges, x: f64) -> Wander {
     pet
 }
 
+#[test]
+fn a_drag_drop_claps_three_times_after_landing_then_sways() {
+    let world = desktop(&[window(1, 250.0, 300.0, 800.0, 600.0)]);
+    for (x, edge) in [(100.0, world.edges[0]), (300.0, world.edges[1])] {
+        let mut pet = Wander::for_test(42);
+        pet.set_music_playing(true);
+        pet.drop_at((x, edge.y - 45.0), true);
+        assert_eq!(pet.pose(), Pose::Fall);
+        pet.advance((90.0_f64 / 900.0).sqrt(), 30.0, 1, &world);
+        assert_eq!(pet.support.unwrap().window, edge.window);
+        assert_eq!(pet.foot, (x, edge.y));
+        assert_eq!(pet.pose(), Pose::Clap);
+        pet.observe(true, false, 0.01);
+        pet.advance(0.99, 30.0, 1, &world);
+        assert_eq!(pet.pose(), Pose::Clap);
+        pet.advance(0.01, 30.0, 1, &world);
+        assert_eq!(pet.pose(), Pose::Idle);
+        pet.advance(1.6, 30.0, 1, &world);
+        assert!(matches!(pet.pose(), Pose::Dance | Pose::CliffSpin));
+    }
+}
+
+#[test]
+fn a_regular_fall_after_a_drag_does_not_clap_again() {
+    let world = desktop(&[]);
+    let mut pet = Wander::for_test(42);
+    pet.drop_at((100.0, 800.0), true);
+    pet.place((100.0, 800.0));
+    pet.advance(0.5, 30.0, 1, &world);
+    assert_eq!(pet.foot, (100.0, world.limits.bottom));
+    assert_eq!(pet.pose(), Pose::Idle);
+}
+
 fn neighboring_windows(scale: u32, gap: f64, height: f64) -> Ledges {
     let s = scale as f64;
     Ledges::new(

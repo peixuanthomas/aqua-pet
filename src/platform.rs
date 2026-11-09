@@ -168,6 +168,12 @@ fn bitmap_info(width: i32, height: i32) -> BITMAPINFO {
     }
 }
 
+struct Drag {
+    start: POINT,
+    anchor: POINT,
+    moved: bool,
+}
+
 struct App {
     catalog: Catalog,
     player: Player,
@@ -200,7 +206,7 @@ struct App {
     scale: u32,
     effective_scale: u32,
     anchor: POINT,
-    drag: Option<(POINT, POINT)>,
+    drag: Option<Drag>,
     surface: Option<Surface>,
     last_clock: Instant,
     timer_ms: u32,
@@ -317,7 +323,7 @@ impl App {
             bottom: area.bottom as f64,
         }
     }
-    unsafe fn fit(&mut self) {
+    unsafe fn fit(&mut self, clap_on_landing: bool) {
         let work = Self::work_bounds_at(self.anchor);
         if !self.debug_open {
             self.effective_scale =
@@ -332,7 +338,7 @@ impl App {
                 (self.anchor.x as f64 + fx * s).clamp(limits.left, limits.right),
                 (self.anchor.y as f64 + fy * s).clamp(limits.top, limits.bottom),
             );
-            self.wander.place(foot);
+            self.wander.drop_at(foot, clap_on_landing);
             self.sync_anchor();
             return;
         }
@@ -374,7 +380,7 @@ impl App {
                 y: area.bottom - 32 - (self.bounds.bottom * 4.0) as i32,
             };
         }
-        self.fit();
+        self.fit(false);
     }
     fn save_settings(&self) {
         if self.smoke {
@@ -402,7 +408,7 @@ impl App {
         self.last_frame = None;
         self.preview_dirty = true;
         unsafe {
-            self.fit();
+            self.fit(false);
             if self.debug_open {
                 self.sync_selection();
             }
@@ -456,7 +462,7 @@ impl App {
         self.visible.clear();
         self.preview = None;
         self.catalog.unload_composites();
-        self.fit();
+        self.fit(false);
         self.save_settings();
     }
     unsafe fn exit(&mut self) {
@@ -772,30 +778,35 @@ impl App {
                 }
                 let mut p = POINT::default();
                 let _ = GetCursorPos(&mut p);
-                self.drag = Some((p, self.anchor));
+                self.drag = Some(Drag {
+                    start: p,
+                    anchor: self.anchor,
+                    moved: false,
+                });
                 SetCapture(self.pet);
                 let _ = self.update();
                 Some(LRESULT(0))
             }
             WM_MOUSEMOVE if pet => {
-                if let Some((start, anchor)) = self.drag {
+                if let Some(drag) = &mut self.drag {
                     let mut p = POINT::default();
                     let _ = GetCursorPos(&mut p);
+                    drag.moved |= p != drag.start;
                     self.anchor = POINT {
-                        x: anchor.x + p.x - start.x,
-                        y: anchor.y + p.y - start.y,
+                        x: drag.anchor.x + p.x - drag.start.x,
+                        y: drag.anchor.y + p.y - drag.start.y,
                     };
                     let _ = self.update();
                 }
                 Some(LRESULT(0))
             }
             WM_LBUTTONUP if pet => {
-                self.drag = None;
+                let dropped = self.drag.take().is_some_and(|drag| drag.moved);
                 let _ = ReleaseCapture();
                 if !self.debug_open {
                     self.show_pose(Pose::Idle);
                 }
-                self.fit();
+                self.fit(dropped);
                 self.last_frame = None;
                 self.save_settings();
                 Some(LRESULT(0))
@@ -805,7 +816,7 @@ impl App {
                     if !self.debug_open {
                         self.show_pose(Pose::Idle);
                     }
-                    self.fit();
+                    self.fit(false);
                     self.last_frame = None;
                     self.save_settings();
                 }
@@ -872,7 +883,7 @@ impl App {
             }
             WM_DISPLAYCHANGE => {
                 if self.debug_open {
-                    self.fit();
+                    self.fit(false);
                 }
                 self.last_frame = None;
                 Some(LRESULT(0))
@@ -898,7 +909,7 @@ impl App {
                     }
                 } else {
                     if self.debug_open {
-                        self.fit();
+                        self.fit(false);
                     }
                     self.last_frame = None;
                 }

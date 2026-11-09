@@ -42,6 +42,7 @@ struct Dance {
 enum Motion {
     Idle,
     Action(Pose),
+    DropClap,
     Rest(Pose),
     Perch,
     Wave {
@@ -57,6 +58,7 @@ enum Motion {
         vy: f64,
         skip: Option<usize>,
         roll: bool,
+        clap_on_landing: bool,
     },
 }
 
@@ -69,6 +71,7 @@ pub struct Wander {
     probability: u8,
     distance_bias: u8,
     pose_seconds: [f64; Pose::ALL.len()],
+    drop_clap_seconds: f64,
     last_daily: Option<Pose>,
     mouse_near: bool,
     wave_cooldown: f64,
@@ -79,6 +82,7 @@ pub struct Wander {
 
 impl Wander {
     pub fn new(seed: u64, mut pose_seconds: [f64; Pose::ALL.len()]) -> Self {
+        let drop_clap_seconds = 3.0 * pose_seconds[Pose::Clap as usize];
         // Repeat whole loops so short daily actions stay visible without slowing their animation.
         for pose in [Pose::Sleeve, Pose::Clap, Pose::Spin] {
             let seconds = &mut pose_seconds[pose as usize];
@@ -93,6 +97,7 @@ impl Wander {
             probability: DEFAULT_WALK_CHANCE,
             distance_bias: DEFAULT_DISTANCE_BIAS,
             pose_seconds,
+            drop_clap_seconds,
             last_daily: None,
             mouse_near: false,
             wave_cooldown: 0.0,
@@ -120,6 +125,10 @@ impl Wander {
     }
 
     pub fn place(&mut self, foot: (f64, f64)) {
+        self.drop_at(foot, false);
+    }
+
+    pub fn drop_at(&mut self, foot: (f64, f64), clap_on_landing: bool) {
         self.foot = foot;
         self.support = None;
         self.start(Motion::Air {
@@ -127,6 +136,7 @@ impl Wander {
             vy: 0.0,
             skip: None,
             roll: false,
+            clap_on_landing,
         });
     }
 
@@ -134,6 +144,7 @@ impl Wander {
         match self.motion {
             Motion::Idle => self.dance.map_or(Pose::Idle, |dance| dance.pose),
             Motion::Action(pose) | Motion::Rest(pose) => pose,
+            Motion::DropClap => Pose::Clap,
             Motion::Perch => Pose::Perch,
             Motion::Wave { seated: true } => Pose::PerchWave,
             Motion::Wave { seated: false } => Pose::Wave,
@@ -173,7 +184,12 @@ impl Wander {
         if !idle && matches!(self.motion, Motion::Rest(_)) {
             self.start(Motion::Idle);
         }
-        if near && !self.mouse_near && !idle && self.wave_cooldown == 0.0 && self.support.is_some()
+        if near
+            && !self.mouse_near
+            && !idle
+            && self.wave_cooldown == 0.0
+            && self.support.is_some()
+            && !matches!(self.motion, Motion::DropClap)
         {
             self.start(Motion::Wave { seated });
             self.wave_cooldown = 15.0;
@@ -383,6 +399,7 @@ impl Wander {
             vy,
             skip: (landing.y > edge.y).then_some(edge.window),
             roll,
+            clap_on_landing: false,
         });
     }
 
@@ -411,7 +428,19 @@ impl Wander {
             if let Some((_, edge, at)) = hit {
                 self.foot = (at, edge.y);
                 self.support = Some(Footing::new(edge, at));
-                self.start(Motion::Idle);
+                self.start(
+                    if matches!(
+                        self.motion,
+                        Motion::Air {
+                            clap_on_landing: true,
+                            ..
+                        }
+                    ) {
+                        Motion::DropClap
+                    } else {
+                        Motion::Idle
+                    },
+                );
                 return;
             }
         }
@@ -463,7 +492,12 @@ impl Wander {
             let edge = world
                 .at_offset(standing.window, standing.offset)
                 .expect("standing on visible ledge");
-            if self.computer_idle && !matches!(self.motion, Motion::Rest(_) | Motion::Perch) {
+            if self.computer_idle
+                && !matches!(
+                    self.motion,
+                    Motion::Rest(_) | Motion::Perch | Motion::DropClap
+                )
+            {
                 let pose = if self.can_perch(world, scale) {
                     Pose::Perch
                 } else if self.random() < 0.5 {
@@ -474,6 +508,10 @@ impl Wander {
                 self.start(Motion::Rest(pose));
             }
             match self.motion {
+                Motion::DropClap if self.motion_seconds + 1e-9 >= self.drop_clap_seconds => {
+                    // Give the default sway one full loop before the music can resume.
+                    self.start(Motion::Action(Pose::Idle));
+                }
                 Motion::Perch if self.motion_seconds + 1e-9 >= PERCH_SECONDS => {
                     self.start(Motion::Idle)
                 }

@@ -127,17 +127,21 @@ fn dragging_uses_sleeve_frames_and_releases_in_place() {
             x: ((work.left + work.right) / 2.0) as i32,
             y: ((work.top + work.bottom) / 2.0) as i32,
         };
-        for (release, pose) in [
-            (WM_LBUTTONUP, Pose::Idle),
-            (WM_CAPTURECHANGED, Pose::Idle),
-            (WM_LBUTTONUP, Pose::Perch),
-            (WM_CAPTURECHANGED, Pose::PerchWave),
+        for (release, pose, moved) in [
+            (WM_LBUTTONUP, Pose::Idle, false),
+            (WM_CAPTURECHANGED, Pose::Idle, true),
+            (WM_LBUTTONUP, Pose::Perch, true),
+            (WM_CAPTURECHANGED, Pose::PerchWave, false),
         ] {
             app.anchor = anchor;
             app.show_pose(pose);
             app.handle(pet.0, WM_LBUTTONDOWN, WPARAM(0), LPARAM(0));
             assert_eq!(app.auto_pose, Pose::Sleeve);
             assert_eq!(app.catalog.clips[app.player.selected].id, "sleeve-garden");
+            if moved {
+                app.drag.as_mut().unwrap().start.x -= 20;
+                app.handle(pet.0, WM_MOUSEMOVE, WPARAM(0), LPARAM(0));
+            }
             let mut expected_foot = (0.0, 0.0);
             for scale in 1..=8 {
                 app.scale = scale;
@@ -161,6 +165,23 @@ fn dragging_uses_sleeve_frames_and_releases_in_place() {
             assert!(app.wander.support.is_none());
             assert!((app.wander.foot.0 - expected_foot.0).abs() <= 0.5);
             assert!((app.wander.foot.1 - expected_foot.1).abs() <= 0.5);
+            let scale = app.effective_scale;
+            let world = crate::ledges::Ledges::new(work, app.poses.body(scale), &[]);
+            for _ in 0..120 {
+                app.wander.advance(1.0 / 60.0, 30.0, scale, &world);
+                if app.wander.support.is_some() {
+                    break;
+                }
+            }
+            assert_eq!(app.wander.foot.1, world.limits.bottom);
+            assert_eq!(
+                app.wander.pose(),
+                if moved && release == WM_LBUTTONUP {
+                    Pose::Clap
+                } else {
+                    Pose::Idle
+                }
+            );
         }
     }
 }
