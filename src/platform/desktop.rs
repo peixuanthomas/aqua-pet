@@ -38,20 +38,14 @@ fn idle_for_two_minutes(now: u32, last_input: u32) -> bool {
     now.wrapping_sub(last_input) >= 120_000
 }
 
-pub(super) unsafe fn activity(foot: (f64, f64), body: Bounds) -> (bool, bool) {
-    let mut point = POINT::default();
-    let near = GetCursorPos(&mut point).is_ok() && {
+fn cursor_approached(previous: POINT, current: POINT, foot: (f64, f64), body: Bounds) -> bool {
+    let near = |point: POINT| {
         let (x, y) = (point.x as f64 - foot.0, point.y as f64 - foot.1);
         (x - x.clamp(body.left, body.right)).hypot(y - y.clamp(body.top, body.bottom))
             <= body.width()
     };
-    let mut last = LASTINPUTINFO {
-        cbSize: size_of::<LASTINPUTINFO>() as u32,
-        ..Default::default()
-    };
-    let idle =
-        GetLastInputInfo(&mut last).as_bool() && idle_for_two_minutes(GetTickCount(), last.dwTime);
-    (near, idle)
+    // Compare both cursor positions against the same pet position.
+    near(current) && !near(previous)
 }
 
 unsafe fn visible_frame(hwnd: HWND) -> Option<Bounds> {
@@ -132,6 +126,7 @@ pub(super) struct Desktop {
     snapshots: Receiver<windows::core::Result<Vec<Window>>>,
     scanning: bool,
     cached: Option<(Bounds, Bounds, Ledges)>,
+    cursor: Option<POINT>,
 }
 
 impl Desktop {
@@ -180,7 +175,26 @@ impl Desktop {
             snapshots,
             scanning: false,
             cached: None,
+            cursor: None,
         }
+    }
+
+    pub fn activity(&mut self, foot: (f64, f64), body: Bounds) -> (bool, bool) {
+        let mut point = POINT::default();
+        let current = unsafe { GetCursorPos(&mut point) }.is_ok().then_some(point);
+        let previous = std::mem::replace(&mut self.cursor, current);
+        let approached = previous
+            .zip(current)
+            .is_some_and(|(previous, current)| cursor_approached(previous, current, foot, body));
+        let mut last = LASTINPUTINFO {
+            cbSize: size_of::<LASTINPUTINFO>() as u32,
+            ..Default::default()
+        };
+        let idle = unsafe {
+            GetLastInputInfo(&mut last).as_bool()
+                && idle_for_two_minutes(GetTickCount(), last.dwTime)
+        };
+        (approached, idle)
     }
 
     pub unsafe fn refresh(&mut self, now: Instant, riding: Option<Footing>) -> Option<(f64, f64)> {
@@ -447,6 +461,23 @@ mod tests {
     }
 
     #[test]
+    fn a_pet_moving_into_range_of_a_still_cursor_is_not_an_approach() {
+        let body = Bounds {
+            left: -15.0,
+            right: 15.0,
+            top: -36.0,
+            bottom: 0.0,
+        };
+        let foot = (190.0, 900.0);
+        let far = POINT { x: 310, y: 880 };
+        let near = POINT { x: 220, y: 880 };
+        assert!(!cursor_approached(far, near, (100.0, 900.0), body));
+        assert!(!cursor_approached(near, near, foot, body));
+        assert!(!cursor_approached(near, far, foot, body));
+        assert!(cursor_approached(far, near, foot, body));
+    }
+
+    #[test]
     fn idle_threshold_survives_the_windows_tick_counter_wrapping() {
         let last = u32::MAX - 10;
         assert!(!idle_for_two_minutes(last.wrapping_add(119_999), last));
@@ -467,6 +498,7 @@ mod tests {
             snapshots,
             scanning: false,
             cached: None,
+            cursor: None,
         };
         let refresh = |desktop: &mut Desktop, ms| unsafe {
             desktop.refresh(now + Duration::from_millis(ms), None);

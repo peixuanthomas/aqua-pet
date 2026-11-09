@@ -549,8 +549,8 @@ impl App {
                         .get_or_insert_with(music::Monitor::new)
                         .playing(now);
                 self.wander.set_music_playing(music_playing);
-                let (near, idle) = desktop::activity((x, y), body);
-                self.wander.observe(near, idle, dt);
+                let (approached, idle) = self.desktop.activity((x, y), body);
+                self.wander.observe(approached, idle, dt);
                 let world = self.desktop.ledges(work, body);
                 self.wander
                     .advance(dt, self.catalog.game_fps, self.effective_scale, world);

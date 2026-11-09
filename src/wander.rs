@@ -90,7 +90,6 @@ pub struct Wander {
     pose_seconds: [f64; Pose::ALL.len()],
     drop_clap_seconds: f64,
     last_daily: Option<Pose>,
-    mouse_near: bool,
     wave_cooldown: f64,
     computer_idle: bool,
     dance: Option<Dance>,
@@ -116,7 +115,6 @@ impl Wander {
             pose_seconds,
             drop_clap_seconds,
             last_daily: None,
-            mouse_near: false,
             wave_cooldown: 0.0,
             computer_idle: false,
             dance: None,
@@ -201,15 +199,14 @@ impl Wander {
         self.probability
     }
 
-    pub fn observe(&mut self, near: bool, idle: bool, elapsed: f64) {
+    pub fn observe(&mut self, approached: bool, idle: bool, elapsed: f64) {
         self.wave_cooldown = (self.wave_cooldown - elapsed).max(0.0);
         self.computer_idle = idle;
         let seated = self.pose() == Pose::Perch;
         if !idle && matches!(self.motion, Motion::Rest(_)) {
             self.start(Motion::Idle);
         }
-        if near
-            && !self.mouse_near
+        if approached
             && !idle
             && self.wave_cooldown == 0.0
             && self.support.is_some()
@@ -218,7 +215,6 @@ impl Wander {
             self.start(Motion::Wave { seated });
             self.wave_cooldown = 15.0;
         }
-        self.mouse_near = near;
     }
 
     pub fn set_music_playing(&mut self, playing: bool) {

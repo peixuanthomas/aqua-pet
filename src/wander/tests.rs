@@ -563,7 +563,7 @@ fn wave_needs_a_fresh_approach_and_fifteen_seconds_between_greetings() {
     pet.observe(false, false, 5.0);
     pet.observe(true, false, 5.0);
     assert_eq!(pet.pose(), Pose::Idle);
-    pet.observe(true, false, 5.0);
+    pet.observe(false, false, 5.0);
     assert_eq!(pet.pose(), Pose::Idle);
     pet.observe(false, false, 0.01);
     pet.observe(true, false, 0.01);
