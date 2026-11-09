@@ -219,8 +219,12 @@ impl App {
         }
         let old_focus = self.settings_ui.focus;
         self.settings_ui.hot = next.map(ui::Hover::Control);
+        let focus_changed = next.is_some_and(|id| id != CLOSE && Some(id) != old_focus);
         if next.is_some_and(|id| id != CLOSE) {
             self.settings_ui.focus = next;
+        }
+        if focus_changed {
+            sound::menu_move();
         }
         for id in [old_hot, old_focus, next, self.settings_ui.focus]
             .into_iter()
@@ -269,6 +273,7 @@ impl App {
         let next = (current + delta).rem_euclid(ORDER.len() as i32);
         self.settings_ui.focus = Some(ORDER[next as usize]);
         self.settings_ui.hot = None;
+        sound::menu_move();
         let _ = SetFocus(Some(self.settings));
         let _ = InvalidateRect(Some(self.settings), None, false);
     }
@@ -309,6 +314,9 @@ impl App {
             WM_LBUTTONDOWN => {
                 if let Some(id) = self.setting_at(point) {
                     if id != CLOSE {
+                        if self.settings_ui.focus != Some(id) {
+                            sound::menu_move();
+                        }
                         self.settings_ui.focus = Some(id);
                     }
                     self.settings_ui.hot = Some(ui::Hover::Control(id));
