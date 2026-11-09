@@ -84,6 +84,59 @@ pub struct Fonts {
     pub value: HFONT,
 }
 
+const UI_FONT: &[u8] =
+    include_bytes!("../../assets/fonts/fusion-pixel-12px-proportional-zh_hans-subset.ttf");
+const UI_FONT_FACE: PCWSTR = w!("Fusion Pixel 12px Prop zh-Hans");
+
+#[derive(Default)]
+pub struct PixelFonts {
+    pub font: HFONT,
+}
+
+impl PixelFonts {
+    pub unsafe fn new(window: HWND) -> Self {
+        static REGISTER: std::sync::Once = std::sync::Once::new();
+        REGISTER.call_once(|| {
+            let mut count = 0u32;
+            let _ = AddFontMemResourceEx(
+                UI_FONT.as_ptr().cast(),
+                UI_FONT.len() as u32,
+                None,
+                &mut count as *mut u32 as *const u32,
+            );
+        });
+        let dpi = GetDpiForWindow(window).max(96) as i32;
+        Self {
+            font: CreateFontW(
+                -24 * dpi / 96,
+                0,
+                0,
+                0,
+                400,
+                0,
+                0,
+                0,
+                DEFAULT_CHARSET,
+                OUT_DEFAULT_PRECIS,
+                CLIP_DEFAULT_PRECIS,
+                NONANTIALIASED_QUALITY,
+                0,
+                UI_FONT_FACE,
+            ),
+        }
+    }
+}
+
+impl Drop for PixelFonts {
+    fn drop(&mut self) {
+        if !self.font.is_invalid() {
+            unsafe {
+                let _ = DeleteObject(self.font.into());
+            }
+        }
+    }
+}
+
 impl Fonts {
     pub unsafe fn new(window: HWND) -> Self {
         let dpi = GetDpiForWindow(window).max(96) as i32;
@@ -217,6 +270,53 @@ pub unsafe fn label(dc: HDC, rect: RECT, value: &str, font: HFONT, color: COLORR
         color,
         DT_SINGLELINE | DT_VCENTER | DT_NOPREFIX | DT_END_ELLIPSIS,
     );
+}
+
+pub unsafe fn centered_label(dc: HDC, rect: RECT, value: &str, font: HFONT, color: COLORREF) {
+    let mut rect = rect;
+    text(
+        dc,
+        &mut rect,
+        value,
+        font,
+        color,
+        DT_SINGLELINE | DT_VCENTER | DT_CENTER | DT_NOPREFIX,
+    );
+}
+
+pub unsafe fn star(dc: HDC, dpi: f64, x: f64, y: f64) {
+    const ROWS: [u16; 11] = [
+        0b00000100000,
+        0b00000100000,
+        0b00001110000,
+        0b00011111000,
+        0b11111111111,
+        0b11111111111,
+        0b11111111111,
+        0b00011111000,
+        0b00001110000,
+        0b00000100000,
+        0b00000100000,
+    ];
+    let unit = (2.0 * dpi).round().max(1.0) as i32;
+    let left = (x * dpi).round() as i32 - 5 * unit;
+    let top = (y * dpi).round() as i32 - 5 * unit;
+    for (row, bits) in ROWS.iter().enumerate() {
+        for column in 0..11 {
+            if bits & (1 << (10 - column)) != 0 {
+                fill(
+                    dc,
+                    &RECT {
+                        left: left + column * unit,
+                        top: top + row as i32 * unit,
+                        right: left + (column + 1) * unit,
+                        bottom: top + (row as i32 + 1) * unit,
+                    },
+                    WHITE,
+                );
+            }
+        }
+    }
 }
 
 pub unsafe fn heart(dc: HDC, dpi: f64, x: f64, y: f64) {

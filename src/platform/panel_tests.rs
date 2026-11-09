@@ -454,20 +454,20 @@ fn hovering_keeps_one_selected_heart_and_only_repaints_changed_rows() {
         let distance = app.settings_regions[&DISTANCE_BIAS].bounds;
         let dance = app.settings_regions[&DANCE_TO_MUSIC].bounds;
         app.settings_mouse(WM_MOUSEMOVE, WPARAM(0), mouse_point(distance));
-        check_markers(settings.0, walk, distance, true, |dc, client| {
+        check_markers(settings.0, distance, distance, true, |dc, client| {
             app.paint_settings(dc, client)
         });
         app.settings_mouse(WM_MOUSELEAVE, WPARAM(0), LPARAM(0));
-        check_markers(settings.0, walk, distance, false, |dc, client| {
+        check_markers(settings.0, distance, distance, true, |dc, client| {
             app.paint_settings(dc, client)
         });
 
         app.settings_tab(true);
-        assert_eq!(app.settings_ui.focus, Some(DANCE_TO_MUSIC));
-        app.settings_tab(false);
         assert_eq!(app.settings_ui.focus, Some(WALK_CHANCE));
+        app.settings_tab(false);
+        assert_eq!(app.settings_ui.focus, Some(DISTANCE_BIAS));
         app.settings_mouse(WM_MOUSEMOVE, WPARAM(0), mouse_point(dance));
-        check_markers(settings.0, walk, dance, true, |dc, client| {
+        check_markers(settings.0, dance, dance, true, |dc, client| {
             app.paint_settings(dc, client)
         });
         app.settings_mouse(WM_LBUTTONDOWN, WPARAM(0), mouse_point(dance));
@@ -484,6 +484,14 @@ fn hovering_keeps_one_selected_heart_and_only_repaints_changed_rows() {
         assert!(app.dance_to_music);
         app.handle(settings.0, WM_KEYDOWN, space, LPARAM(1 << 30));
         assert!(app.dance_to_music);
+
+        app.settings_ui.focus = Some(WALK_CHANCE);
+        let before = app.wander.probability();
+        app.settings_key(VK_RIGHT);
+        assert_eq!(app.wander.probability(), (before + 5).min(100));
+        app.settings_mouse(WM_LBUTTONDOWN, WPARAM(0), mouse_point(walk));
+        app.settings_mouse(WM_LBUTTONUP, WPARAM(0), mouse_point(walk));
+        assert_eq!(app.wander.probability(), (before + 10).min(100));
     }
 }
 

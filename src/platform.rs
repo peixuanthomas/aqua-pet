@@ -63,7 +63,9 @@ const MENU_SETTINGS: u32 = 402;
 const WALK_CHANCE: usize = 500;
 const DISTANCE_BIAS: usize = 506;
 const DANCE_TO_MUSIC: usize = 507;
-const SETTINGS_HEIGHT: i32 = 480;
+const BACK: usize = 508;
+const SETTINGS_WIDTH: i32 = 548;
+const SETTINGS_HEIGHT: i32 = 330;
 const SHOW_DEBUG: u32 = WM_APP + 1;
 const RATES: [f64; 7] = [0.25, 0.5, 0.75, 1.0, 1.5, 2.0, 4.0];
 
@@ -246,7 +248,7 @@ struct App {
     tray: Option<tray::TrayIcon>,
     search: HWND,
     fonts: ui::Fonts,
-    settings_fonts: ui::Fonts,
+    settings_fonts: ui::PixelFonts,
     debug_ui: ui::State,
     settings_ui: ui::State,
     debug_regions: HashMap<usize, RECT>,
@@ -307,7 +309,7 @@ impl App {
             tray: None,
             search: HWND::default(),
             fonts: ui::Fonts::default(),
-            settings_fonts: ui::Fonts::default(),
+            settings_fonts: ui::PixelFonts::default(),
             debug_ui: ui::State {
                 focus: Some(LIST),
                 ..Default::default()
@@ -915,7 +917,7 @@ impl App {
             }
             WM_KEYDOWN if settings => {
                 let key = VIRTUAL_KEY(wp.0 as u16);
-                if key != VK_SPACE || lp.0 & (1 << 30) == 0 {
+                if (key != VK_SPACE && key != VK_RETURN) || lp.0 & (1 << 30) == 0 {
                     self.settings_key(key);
                 }
                 Some(LRESULT(0))
@@ -1106,7 +1108,7 @@ pub fn run(catalog: Catalog, debug: bool, smoke: bool) -> Result<(), String> {
             WS_OVERLAPPED | WS_CAPTION | WS_SYSMENU | WS_MINIMIZEBOX | WS_CLIPCHILDREN,
             CW_USEDEFAULT,
             CW_USEDEFAULT,
-            480,
+            SETTINGS_WIDTH,
             SETTINGS_HEIGHT,
             None,
             None,
