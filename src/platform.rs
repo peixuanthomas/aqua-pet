@@ -60,7 +60,6 @@ const CLEAR_FILTERS: usize = 214;
 const MENU_DEBUG: u32 = 400;
 const MENU_EXIT: u32 = 401;
 const MENU_SETTINGS: u32 = 402;
-const MENU_SIT: u32 = 403;
 const WALK_CHANCE: usize = 500;
 const DISTANCE_BIAS: usize = 506;
 const DANCE_TO_MUSIC: usize = 507;
@@ -477,12 +476,6 @@ impl App {
         let Ok(menu) = CreatePopupMenu() else {
             return;
         };
-        let sit_flags = if self.debug_open || self.drag.is_some() || self.wander.support.is_none() {
-            MF_STRING | MF_GRAYED
-        } else {
-            MF_STRING
-        };
-        let _ = AppendMenuW(menu, sit_flags, MENU_SIT as usize, w!("坐下"));
         let _ = AppendMenuW(menu, MF_STRING, MENU_SETTINGS as usize, w!("设置"));
         let _ = AppendMenuW(menu, MF_STRING, MENU_DEBUG as usize, w!("Debug · 动作预览"));
         let _ = AppendMenuW(menu, MF_STRING, MENU_EXIT as usize, w!("关闭"));
@@ -506,14 +499,7 @@ impl App {
         let _ = PostMessageW(Some(self.pet), WM_NULL, WPARAM(0), LPARAM(0));
         let _ = DestroyMenu(menu);
         self.last_clock = Instant::now();
-        if command == MENU_SIT {
-            let work = Self::work_bounds_at(self.anchor);
-            let world = self
-                .desktop
-                .ledges(work, self.poses.body(self.effective_scale));
-            self.wander.sit(world, self.effective_scale);
-            let _ = self.update();
-        } else if command == MENU_SETTINGS {
+        if command == MENU_SETTINGS {
             self.show_settings();
         } else if command == MENU_DEBUG {
             if let Err(error) = self.show_debug() {

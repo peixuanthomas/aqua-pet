@@ -43,7 +43,6 @@ enum Motion {
     Idle,
     Action(Pose),
     Rest(Pose),
-    Sit,
     Perch,
     Wave {
         seated: bool,
@@ -135,7 +134,6 @@ impl Wander {
         match self.motion {
             Motion::Idle => self.dance.map_or(Pose::Idle, |dance| dance.pose),
             Motion::Action(pose) | Motion::Rest(pose) => pose,
-            Motion::Sit => Pose::Sit,
             Motion::Perch => Pose::Perch,
             Motion::Wave { seated: true } => Pose::PerchWave,
             Motion::Wave { seated: false } => Pose::Wave,
@@ -215,19 +213,6 @@ impl Wander {
 
     fn can_perch(&self, world: &Ledges, scale: f64) -> bool {
         self.riding().is_some() && self.foot.1 + PERCH_DEPTH * scale <= world.limits.bottom
-    }
-
-    pub fn sit(&mut self, world: &Ledges, scale: u32) {
-        if self.support.is_none() {
-            return;
-        }
-        self.start(if self.can_perch(world, scale as f64) {
-            Motion::Perch
-        } else {
-            Motion::Sit
-        });
-        // Opening the pet's menu must not immediately count as a new greeting.
-        self.mouse_near = true;
     }
 
     pub fn set_probability(&mut self, probability: u8) {
@@ -478,9 +463,7 @@ impl Wander {
             let edge = world
                 .at_offset(standing.window, standing.offset)
                 .expect("standing on visible ledge");
-            if self.computer_idle
-                && !matches!(self.motion, Motion::Rest(_) | Motion::Sit | Motion::Perch)
-            {
+            if self.computer_idle && !matches!(self.motion, Motion::Rest(_) | Motion::Perch) {
                 let pose = if self.can_perch(world, scale) {
                     Pose::Perch
                 } else if self.random() < 0.5 {
@@ -491,7 +474,7 @@ impl Wander {
                 self.start(Motion::Rest(pose));
             }
             match self.motion {
-                Motion::Sit | Motion::Perch if self.motion_seconds + 1e-9 >= PERCH_SECONDS => {
+                Motion::Perch if self.motion_seconds + 1e-9 >= PERCH_SECONDS => {
                     self.start(Motion::Idle)
                 }
                 Motion::Action(pose)
