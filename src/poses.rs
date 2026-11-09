@@ -19,6 +19,7 @@ pub enum Pose {
     Clap,
     ClapJump,
     Collapsed,
+    CollapsedLeft,
     Flattery,
     Spin,
     Dance,
@@ -32,7 +33,7 @@ pub enum Pose {
 }
 
 impl Pose {
-    pub const ALL: [Self; 21] = [
+    pub const ALL: [Self; 22] = [
         Self::Idle,
         Self::Left,
         Self::Right,
@@ -44,6 +45,7 @@ impl Pose {
         Self::Clap,
         Self::ClapJump,
         Self::Collapsed,
+        Self::CollapsedLeft,
         Self::Flattery,
         Self::Spin,
         Self::Dance,
@@ -69,7 +71,7 @@ impl Pose {
             Self::Sleeve => ("sleeve-garden", 7.0),
             Self::Clap => ("clap-cafe", 10.0),
             Self::ClapJump => ("clap-jumping-cafe", 10.0),
-            Self::Collapsed => ("collapsed", 24.5),
+            Self::Collapsed | Self::CollapsedLeft => ("collapsed", 24.5),
             Self::Flattery => ("act-flattery", 9.0),
             Self::Spin => ("battle-spin", 10.0),
             Self::Dance => ("battle-dance", 9.0),
@@ -117,7 +119,7 @@ impl Poses {
                 .expect("Missing desktop pose");
             let clip = &catalog.clips[index];
             let bounds = render::clip_bounds(catalog, clip, false);
-            let mirror = pose == Pose::LookRight;
+            let mirror = matches!(pose, Pose::LookRight | Pose::CollapsedLeft);
             let foot_x = if mirror {
                 bounds.left + bounds.right - foot_x
             } else {
@@ -212,7 +214,7 @@ mod tests {
                     let mut expected = vec![[0; 4]; frame.width * frame.height];
                     let mut scaled = vec![[255; 4]; expected.len()];
                     frame.write_bgra(&mut expected, 1);
-                    if pose == Pose::LookRight {
+                    if matches!(pose, Pose::LookRight | Pose::CollapsedLeft) {
                         for row in expected.chunks_exact_mut(frame.width) {
                             row.reverse();
                         }

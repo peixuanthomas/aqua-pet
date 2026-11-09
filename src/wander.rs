@@ -74,6 +74,7 @@ enum Motion {
     DropClap,
     Collapsed {
         vx: f64,
+        left: bool,
     },
     Rest(Pose),
     Perch,
@@ -193,6 +194,7 @@ impl Wander {
             Motion::Idle => self.dance.map_or(Pose::Idle, |dance| dance.pose),
             Motion::Action(pose) | Motion::Rest(pose) => pose,
             Motion::DropClap => Pose::ClapJump,
+            Motion::Collapsed { left: true, .. } => Pose::CollapsedLeft,
             Motion::Collapsed { .. } => Pose::Collapsed,
             Motion::Perch => Pose::Perch,
             Motion::Wave { seated: true } => Pose::PerchWave,
@@ -495,6 +497,7 @@ impl Wander {
                     Landing::Clap => Motion::DropClap,
                     Landing::Collapse => Motion::Collapsed {
                         vx: vx.clamp(-MAX_SLIDE_SPEED * scale, MAX_SLIDE_SPEED * scale),
+                        left: vx < 0.0,
                     },
                 });
                 return;
@@ -587,7 +590,7 @@ impl Wander {
                     // Give the default sway one full loop before the music can resume.
                     self.start(Motion::Action(Pose::Idle));
                 }
-                Motion::Collapsed { vx } if vx != 0.0 => {
+                Motion::Collapsed { vx, left } if vx != 0.0 => {
                     let deceleration = SLIDE_DECELERATION * scale;
                     let slide_speed = vx.abs();
                     let slide_time = dt.min(slide_speed / deceleration);
@@ -597,11 +600,12 @@ impl Wander {
                     self.foot.0 = x.clamp(edge.left, edge.right);
                     self.support = Some(Footing::new(edge, self.foot.0));
                     if speed_left <= 1e-9 || self.foot.0 != x {
-                        self.start(Motion::Collapsed { vx: 0.0 });
+                        self.start(Motion::Collapsed { vx: 0.0, left });
                         self.motion_seconds = dt - slide_time;
                     } else {
                         self.motion = Motion::Collapsed {
                             vx: vx.signum() * speed_left,
+                            left,
                         };
                     }
                 }

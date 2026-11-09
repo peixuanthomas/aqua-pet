@@ -156,6 +156,7 @@ fn dragging_uses_sleeve_frames_and_launches_from_the_release_position() {
             (WM_LBUTTONUP, 20, false, Pose::ClapJump),
             (WM_LBUTTONUP, 80, true, Pose::ClapJump),
             (WM_LBUTTONUP, 80, false, Pose::Collapsed),
+            (WM_LBUTTONUP, -80, false, Pose::CollapsedLeft),
         ] {
             app.anchor = anchor;
             app.show_pose(Pose::Perch);
@@ -206,10 +207,10 @@ fn dragging_uses_sleeve_frames_and_launches_from_the_release_position() {
             }
             assert_eq!(app.wander.foot.1, world.limits.bottom);
             assert_eq!(app.wander.pose(), landing);
-            if landing == Pose::Collapsed {
-                assert!(app.wander.foot.0 > expected_foot.0 + 5.0);
-            } else {
-                assert_eq!(app.wander.foot.0, released_x);
+            match landing {
+                Pose::Collapsed => assert!(app.wander.foot.0 > expected_foot.0 + 5.0),
+                Pose::CollapsedLeft => assert!(app.wander.foot.0 < expected_foot.0 - 5.0),
+                _ => assert_eq!(app.wander.foot.0, released_x),
             }
         }
     }

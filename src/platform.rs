@@ -859,6 +859,7 @@ impl App {
                     | Pose::Roll
                     | Pose::Flattery
                     | Pose::Collapsed
+                    | Pose::CollapsedLeft
             ) {
             16
         } else {

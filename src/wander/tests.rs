@@ -122,9 +122,10 @@ fn sliding_stops_at_the_edge_of_the_landing_ledge() {
     pet.advance(0.1, 30.0, 1, &world);
     assert_eq!(pet.support.unwrap().id, LedgeId::Window(1));
     assert!((pet.foot.0 - 116.0).abs() < 1e-7);
+    assert_eq!(pet.pose(), Pose::CollapsedLeft);
     pet.advance(0.2, 30.0, 1, &world);
     assert_eq!(pet.foot, (world.edges[1].left, 400.0));
-    assert_eq!(pet.pose(), Pose::Collapsed);
+    assert_eq!(pet.pose(), Pose::CollapsedLeft);
     assert_eq!(pet.support.unwrap().id, LedgeId::Window(1));
 }
 
