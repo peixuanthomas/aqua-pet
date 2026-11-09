@@ -2,6 +2,8 @@
 // Rust 1.98's lint also inspects the standard macro's internal lazy initializer.
 #![allow(clippy::missing_const_for_thread_local)]
 
+#[allow(dead_code)]
+mod bubble;
 mod debug;
 mod desktop;
 mod music;
