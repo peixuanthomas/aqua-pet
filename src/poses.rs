@@ -23,10 +23,12 @@ pub enum Pose {
     Sit,
     Perch,
     PerchWave,
+    LookLeft,
+    LookRight,
 }
 
 impl Pose {
-    pub const ALL: [Self; 16] = [
+    pub const ALL: [Self; 18] = [
         Self::Idle,
         Self::Left,
         Self::Right,
@@ -43,6 +45,8 @@ impl Pose {
         Self::Sit,
         Self::Perch,
         Self::PerchWave,
+        Self::LookLeft,
+        Self::LookRight,
     ];
 
     // Keep the planted foot centered when an arm or sleeve extends to one side.
@@ -64,6 +68,7 @@ impl Pose {
             Self::Sit => ("sit-smile", -2.0),
             Self::Perch => ("sit-smile", 1.0),
             Self::PerchWave => ("sit-wave", 3.0),
+            Self::LookLeft | Self::LookRight => ("headtilt", 9.5),
         }
     }
 }
@@ -102,11 +107,27 @@ impl Poses {
                 .expect("Missing desktop pose");
             let clip = &catalog.clips[index];
             let bounds = render::clip_bounds(catalog, clip, false);
+            let mirror = pose == Pose::LookRight;
+            let foot_x = if mirror {
+                bounds.left + bounds.right - foot_x
+            } else {
+                foot_x
+            };
             let frames = clip
                 .steps
                 .iter()
                 .map(|step| {
-                    let frame = render::render(catalog, step, bounds, 1.0, false);
+                    let mut frame = render::render(catalog, step, bounds, 1.0, false);
+                    if mirror {
+                        for row in frame
+                            .rgba
+                            .as_chunks_mut::<4>()
+                            .0
+                            .chunks_exact_mut(frame.width)
+                        {
+                            row.reverse();
+                        }
+                    }
                     let mut visible = Bounds::empty();
                     for (i, pixel) in frame.rgba.as_chunks::<4>().0.iter().enumerate() {
                         if pixel[3] != 0 {
@@ -174,6 +195,11 @@ mod tests {
                     let mut expected = vec![[0; 4]; frame.width * frame.height];
                     let mut scaled = vec![[255; 4]; expected.len()];
                     frame.write_bgra(&mut expected, 1);
+                    if pose == Pose::LookRight {
+                        for row in expected.chunks_exact_mut(frame.width) {
+                            row.reverse();
+                        }
+                    }
                     p.frame(index).write_bgra(&mut scaled, scale);
                     assert!(scaled == expected, "{pose:?} frame {index} at {scale}x");
                     let bottom = frame

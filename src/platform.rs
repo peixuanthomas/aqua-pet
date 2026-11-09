@@ -417,6 +417,9 @@ impl App {
     }
     fn show_pose(&mut self, pose: Pose) {
         let clip = self.poses.get(pose);
+        if self.auto_pose != pose {
+            self.last_frame = None;
+        }
         self.auto_pose = pose;
         if self.player.selected != clip.index {
             self.player

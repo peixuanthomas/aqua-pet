@@ -11,6 +11,7 @@ const IDLE_SECONDS: f64 = 6.4;
 const MIN_DAILY_SECONDS: f64 = 6.0;
 const MOUSE_WAVE_SECONDS: f64 = 2.0;
 const PERCH_SECONDS: f64 = 12.0;
+const LOOK_SECONDS: f64 = 1.0;
 const MIN_DANCE_SECONDS: f64 = 60.0;
 const MAX_DANCE_SECONDS: f64 = 120.0;
 const MAX_HOP_X: f64 = 50.0;
@@ -52,6 +53,10 @@ enum Motion {
         right: bool,
         end: f64,
         jump_to: Option<Footing>,
+    },
+    Look {
+        target: Footing,
+        right: bool,
     },
     Air {
         vx: f64,
@@ -150,6 +155,8 @@ impl Wander {
             Motion::Wave { seated: false } => Pose::Wave,
             Motion::Walk { right: true, .. } => Pose::Right,
             Motion::Walk { right: false, .. } => Pose::Left,
+            Motion::Look { right: true, .. } => Pose::LookRight,
+            Motion::Look { right: false, .. } => Pose::LookLeft,
             Motion::Air { roll: true, .. }
                 if self.motion_seconds + 1e-9 >= self.pose_seconds[Pose::Rise as usize]
                     && self.motion_seconds + 1e-9
@@ -189,7 +196,7 @@ impl Wander {
             && !idle
             && self.wave_cooldown == 0.0
             && self.support.is_some()
-            && !matches!(self.motion, Motion::DropClap)
+            && !matches!(self.motion, Motion::DropClap | Motion::Look { .. })
         {
             self.start(Motion::Wave { seated });
             self.wave_cooldown = 15.0;
@@ -233,7 +240,8 @@ impl Wander {
 
     pub fn set_probability(&mut self, probability: u8) {
         self.probability = probability.min(100);
-        if self.probability == 0 && matches!(self.motion, Motion::Walk { .. }) {
+        if self.probability == 0 && matches!(self.motion, Motion::Walk { .. } | Motion::Look { .. })
+        {
             self.start(Motion::Idle);
         }
     }
@@ -322,7 +330,7 @@ impl Wander {
             if !targets.is_empty() {
                 let (takeoff, target) = targets[(self.random() * targets.len() as f64) as usize];
                 if (takeoff - x).abs() < 0.5 {
-                    self.jump(edge, target, world, scale, speed);
+                    self.prepare_jump(edge, target, world, scale, speed);
                 } else {
                     self.walk_to(edge, takeoff, Some(target));
                 }
@@ -362,6 +370,24 @@ impl Wander {
         let vy = dy / duration - 0.5 * gravity * duration;
         let peak = from.1 - vy * vy / (2.0 * gravity);
         (peak >= world.limits.top).then_some((dx / duration, vy))
+    }
+
+    fn prepare_jump(
+        &mut self,
+        edge: Ledge,
+        target: Footing,
+        world: &Ledges,
+        scale: f64,
+        speed: f64,
+    ) {
+        if edge.window == FLOOR || target.window == FLOOR {
+            self.jump(edge, target, world, scale, speed);
+        } else if let Some(landing) = world.at_offset(target.window, target.offset) {
+            self.start(Motion::Look {
+                target,
+                right: landing.origin_x + target.offset >= self.foot.0,
+            });
+        }
     }
 
     fn jump(&mut self, edge: Ledge, target: Footing, world: &Ledges, scale: f64, speed: f64) {
@@ -544,8 +570,24 @@ impl Wander {
                     if dx.abs() <= speed * dt {
                         self.start(Motion::Idle);
                         if let Some(target) = jump_to {
-                            self.jump(edge, target, world, scale, speed);
+                            self.prepare_jump(edge, target, world, scale, speed);
                         }
+                    }
+                }
+                Motion::Look { target, right } => {
+                    let Some(landing) = world.at_offset(target.window, target.offset) else {
+                        self.start(Motion::Idle);
+                        continue;
+                    };
+                    let dx = landing.origin_x + target.offset - self.foot.0;
+                    if dx != 0.0 && (dx > 0.0) != right {
+                        self.start(Motion::Look {
+                            target,
+                            right: !right,
+                        });
+                    } else if self.motion_seconds + 1e-9 >= LOOK_SECONDS {
+                        self.start(Motion::Idle);
+                        self.jump(edge, target, world, scale, speed);
                     }
                 }
                 _ => {}

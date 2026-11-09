@@ -207,6 +207,30 @@ fn nearby_window_is_chosen_and_approached_before_hopping() {
 }
 
 #[test]
+fn a_cross_window_jump_looks_at_its_destination_for_one_second() {
+    let world = neighboring_windows(1, 20.0, 0.0);
+    let left = world.edges[1];
+    let right = world.edges[2];
+    for (edge, from, target, to, look) in [
+        (left, left.right, right, right.left, Pose::LookRight),
+        (right, right.left, left, left.right, Pose::LookLeft),
+    ] {
+        let mut pet = Wander::for_test(42);
+        pet.place((from, edge.y));
+        pet.advance(0.01, 30.0, 1, &world);
+        pet.prepare_jump(edge, Footing::new(target, to), &world, 1.0, 60.0);
+        pet.observe(true, false, 0.01);
+        assert_eq!(pet.pose(), look);
+        pet.advance(0.99, 30.0, 1, &world);
+        assert_eq!(pet.pose(), look);
+        assert_eq!(pet.foot, (from, edge.y));
+        pet.advance(0.01, 30.0, 1, &world);
+        assert!(pet.support.is_none());
+        assert_eq!(pet.pose(), Pose::Rise);
+    }
+}
+
+#[test]
 fn far_or_covered_windows_are_not_selected_for_a_hop() {
     let source = window(1, 100.0, 350.0, 400.0, 800.0);
     let target = window(2, 420.0, 350.0, 900.0, 850.0);
@@ -253,10 +277,28 @@ fn approaching_pet_rechecks_the_target_before_leaving_its_window() {
         pet.advance(0.01, 30.0, 1, &world);
         pet.walk_to(edge, edge.right, Some(target));
         pet.advance(0.1, 30.0, 1, &changed);
+        pet.advance(1.0, 30.0, 1, &changed);
         assert_eq!(pet.riding().unwrap().window, edge.window);
         assert_eq!(pet.pose(), Pose::Idle);
         assert_eq!(pet.foot, (edge.right, edge.y));
     }
+}
+
+#[test]
+fn a_window_that_disappears_during_the_look_is_not_jumped_to() {
+    let world = neighboring_windows(1, 20.0, 0.0);
+    let edge = world.edges[1];
+    let target = world.edges[2];
+    let mut pet = Wander::for_test(42);
+    pet.place((edge.right, edge.y));
+    pet.advance(0.01, 30.0, 1, &world);
+    pet.prepare_jump(edge, Footing::new(target, target.left), &world, 1.0, 60.0);
+    pet.advance(0.9, 30.0, 1, &world);
+    assert_eq!(pet.pose(), Pose::LookRight);
+    let changed = desktop(&[window(1, 100.0, 350.0, 400.0, 800.0)]);
+    pet.advance(0.1, 30.0, 1, &changed);
+    assert_eq!(pet.riding().unwrap().window, edge.window);
+    assert_eq!(pet.pose(), Pose::Idle);
 }
 
 #[test]
